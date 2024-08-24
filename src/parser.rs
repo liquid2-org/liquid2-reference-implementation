@@ -18,7 +18,7 @@ impl LiquidParser {
     }
 
     pub fn parse_dump(&self, template: &str) {
-        let blocks = Liquid::parse(Rule::primitive, template);
-        println!("{:#?}", blocks);
+        let elements = Liquid::parse(Rule::liquid, template);
+        println!("{:#?}", elements);
     }
 }

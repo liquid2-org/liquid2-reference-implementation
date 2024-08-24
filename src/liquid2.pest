@@ -1,13 +1,16 @@
 // TODO: implicit whitespace
-liquid = { SOI ~ primitive* ~ EOI }
+liquid = { SOI ~ element* ~ EOI }
 
 // TODO: literal, tag, output
 // TODO: move jsonpath_query to liquid expressions
-primitive = _{ jsonpath_query }
+element = _{ jsonpath_query }
 
-// TODO: optional root identifier
-jsonpath_query =  { root_identifier ~ segments }
-segments       = _{ (S ~ segment)* }
+jsonpath_query = {
+    (root_identifier ~ segments)
+  | (implicit_root_segment ~ segments)
+}
+
+segments = _{ (S ~ segment)* }
 
 B = _{ "\x20" | "\x09" | "\x0A" | "\x0D" }
 S = _{ B* }
@@ -78,20 +81,24 @@ non_surrogate = _{
   | (^"D" ~ '\u{30}'..'\u{37}' ~ ASCII_HEX_DIGIT{2})
 }
 
-high_surrogate          = _{ ^"D" ~ ("8" | "9" | ^"A" | ^"B") ~ ASCII_HEX_DIGIT{2} }
-low_surrogate           = _{ ^"D" ~ (^"C" | ^"D" | ^"E" | ^"F") ~ ASCII_HEX_DIGIT{2} }
-wildcard_selector       =  { "*" }
-index_selector          = @{ int }
-int                     =  { "0" | ("-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
-slice_selector          =  { (start ~ S)? ~ ":" ~ S ~ (stop ~ S)? ~ (":" ~ (S ~ step)?)? }
-start                   = @{ int }
-stop                    = @{ int }
-step                    = @{ int }
-filter_selector         =  { "?" ~ S ~ logical_expr }
-logical_expr            = _{ logical_or_expr }
-logical_or_expr         =  { logical_and_expr ~ (S ~ "||" ~ S ~ logical_and_expr)* }
-logical_and_expr        =  { basic_expr ~ (S ~ "&&" ~ S ~ basic_expr)* }
-singular_query_selector =  { root_identifier ~ singular_query_segments }
+high_surrogate    = _{ ^"D" ~ ("8" | "9" | ^"A" | ^"B") ~ ASCII_HEX_DIGIT{2} }
+low_surrogate     = _{ ^"D" ~ (^"C" | ^"D" | ^"E" | ^"F") ~ ASCII_HEX_DIGIT{2} }
+wildcard_selector =  { "*" }
+index_selector    = @{ int }
+int               =  { "0" | ("-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
+slice_selector    =  { (start ~ S)? ~ ":" ~ S ~ (stop ~ S)? ~ (":" ~ (S ~ step)?)? }
+start             = @{ int }
+stop              = @{ int }
+step              = @{ int }
+filter_selector   =  { "?" ~ S ~ logical_expr }
+logical_expr      = _{ logical_or_expr }
+logical_or_expr   =  { logical_and_expr ~ (S ~ "||" ~ S ~ logical_and_expr)* }
+logical_and_expr  =  { basic_expr ~ (S ~ "&&" ~ S ~ basic_expr)* }
+
+singular_query_selector = {
+    (root_identifier ~ singular_query_segments)
+  | ((implicit_root_name_segment | index_segment) ~ singular_query_segments)
+}
 
 basic_expr = _{
     paren_expr
@@ -144,6 +151,11 @@ name_segment = {
   | ("." ~ member_name_shorthand)
 }
 
+implicit_root_name_segment = {
+    ("[" ~ name_selector ~ "]")
+  | member_name_shorthand
+}
+
 index_segment       =  { "[" ~ index_selector ~ "]" }
 number              =  { (int | "-0") ~ frac? ~ exp? }
 frac                =  { "." ~ ASCII_DIGIT+ }
@@ -174,6 +186,11 @@ segment = _{
 child_segment = {
     bracketed_selection
   | ("." ~ (wildcard_selector | member_name_shorthand))
+}
+
+implicit_root_segment = {
+    bracketed_selection
+  | (wildcard_selector | member_name_shorthand)
 }
 
 bracketed_selection   = { "[" ~ S ~ selector ~ (S ~ "," ~ S ~ selector)* ~ S ~ "]" }
