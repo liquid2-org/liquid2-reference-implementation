@@ -1,21 +1,26 @@
 liquid = { SOI ~ element* ~ EOI }
 
 // TODO: tag, comment
-element = _{ output_statement | content }
+element = _{ tag | output_statement | content }
 
-output_statement = { "{{" ~ WC ~ S ~ filtered_expr ~ S ~ WC ~ "}}" }
+tag              = _{ end_tag | standard_tag | common_tag }
+output_statement =  { "{{" ~ WC ~ S ~ filtered_expr ~ S ~ WC ~ "}}" }
 
 // whitespace control
 WC = { ("+" | "-" | "~")? }
 
-filtered_expr = { object ~ (S ~ filter)? }
+// TODO: inline "if"
+filtered_expr = { basic ~ (S ~ filter)? }
 
-// TODO: better name for `object`
+// TODO: range?
 // NOTE: borrowing jsonpath literal
-object = _{
+basic = _{
     literal
   | jsonpath_query
 }
+
+// NOTE: borrowing name_char from JSONPath
+identifier = { name_first ~ name_char* }
 
 filter = {
     "|" ~ S ~ filter_name ~ S ~ (":" ~ S ~ (filter_argument ~ (S ~ "," ~ S ~ filter_argument)*))?
@@ -24,14 +29,70 @@ filter = {
 // NOTE: borrowing function_name from JSONPath
 filter_name         = { function_name_first ~ function_name_char* }
 filter_argument     = { positional_argument | keyword_argument }
-positional_argument = { object }
-keyword_argument    = { filter_name ~ S ~ ":" ~ S ~ object }
+positional_argument = { basic }
+keyword_argument    = { filter_name ~ S ~ ":" ~ S ~ basic }
 
 content      =  { content_char+ }
 content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
 
-// Modified JSONPath
+/* Tags */
+// NOTE: borrowing function_name from JSONPath
+tag_name     =  { function_name_first ~ function_name_char* }
+tag_argument =  { positional_argument | keyword_argument }
+tag_start    = _{ "{%" ~ WC }
+tag_end      = _{ WC ~ "%}" }
 
+end_tag = { tag_start ~ S ~ "end" ~ tag_name ~ S ~ tag_end }
+
+standard_tag = {
+    assign_tag
+  | capture_tag
+  | case_tag
+  | when_tag
+  | else_tag
+  | cycle_tag
+  | decrement_tag
+  | echo_tag
+  | for_tag
+  | break_tag
+  | continue_tag
+}
+
+assign_tag = {
+    tag_start ~ S ~ "assign" ~ s ~ identifier ~ S ~ "=" ~ S ~ filtered_expr ~ S ~ tag_end
+}
+
+capture_tag = { tag_start ~ S ~ "capture" ~ s ~ identifier ~ S ~ tag_end }
+case_tag    = { tag_start ~ S ~ "case" ~ s ~ basic ~ S ~ tag_end }
+
+// NOTE: no "or" separated objects
+when_tag      = { tag_start ~ S ~ "when" ~ s ~ basic ~ (S ~ "," ~ S ~ basic)* ~ S ~ tag_end }
+else_tag      = { tag_start ~ S ~ "else" ~ S ~ tag_end }
+cycle_tag     = { tag_start ~ S ~ "cycle" ~ s ~ basic ~ (S ~ "," ~ S ~ basic)* ~ S ~ tag_end }
+decrement_tag = { tag_start ~ S ~ "decrement" ~ s ~ identifier ~ S ~ tag_end }
+echo_tag      = { tag_start ~ S ~ "echo" ~ s ~ filtered_expr ~ S ~ tag_end }
+
+for_tag = {
+    tag_start ~ S ~ "for" ~ s ~ identifier ~ s ~ "in" ~ s ~ basic ~ s ~ (for_tag_argument ~ (s ~ for_tag_argument)*)? ~ S ~ tag_end
+}
+
+// TODO: variable limit and offset?
+// NOTE: borrowing int from JSONPath
+for_tag_argument = {
+    ("limit" ~ S ~ ":" ~ S ~ int)
+  | ("offset" ~ S ~ ":" ~ S ~ (int | "continue"))
+  | "reversed"
+}
+
+break_tag    = { tag_start ~ S ~ "break" ~ S ~ tag_end }
+continue_tag = { tag_start ~ S ~ "continue" ~ S ~ tag_end }
+
+// TODO: common reserved words?
+common_tag = {
+    tag_start ~ S ~ tag_name ~ s ~ (tag_argument ~ (S ~ "," ~ S ~ tag_argument)*)? ~ S ~ tag_end
+}
+
+/* Modified JSONPath */
 jsonpath_query = {
     (root_identifier ~ segments)
   | (implicit_root_segment ~ segments)
@@ -41,6 +102,7 @@ segments = _{ (S ~ segment)* }
 
 B = _{ "\x20" | "\x09" | "\x0A" | "\x0D" }
 S = _{ B* }
+s = _{ B+ }
 
 root_identifier = _{ "$" }
 
