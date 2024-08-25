@@ -1,9 +1,36 @@
-// TODO: implicit whitespace
 liquid = { SOI ~ element* ~ EOI }
 
-// TODO: literal, tag, output
-// TODO: move jsonpath_query to liquid expressions
-element = _{ jsonpath_query }
+// TODO: tag, comment
+element = _{ output_statement | content }
+
+output_statement = { "{{" ~ WC ~ S ~ filtered_expr ~ S ~ WC ~ "}}" }
+
+// whitespace control
+WC = { ("+" | "-" | "~")? }
+
+filtered_expr = { object ~ (S ~ filter)? }
+
+// TODO: better name for `object`
+// NOTE: borrowing jsonpath literal
+object = _{
+    literal
+  | jsonpath_query
+}
+
+filter = {
+    "|" ~ S ~ filter_name ~ S ~ (":" ~ S ~ (filter_argument ~ (S ~ "," ~ S ~ filter_argument)*))?
+}
+
+// NOTE: borrowing function_name from JSONPath
+filter_name         = { function_name_first ~ function_name_char* }
+filter_argument     = { positional_argument | keyword_argument }
+positional_argument = { object }
+keyword_argument    = { filter_name ~ S ~ ":" ~ S ~ object }
+
+content      =  { content_char+ }
+content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
+
+// Modified JSONPath
 
 jsonpath_query = {
     (root_identifier ~ segments)
@@ -139,7 +166,7 @@ comparison_op = {
 }
 
 // TODO: silencing singular_query and/or singular_query_segments leads to
-// undesirable error messaages.
+// undesirable error messages.
 
 singular_query          = _{ rel_singular_query | abs_singular_query }
 rel_singular_query      =  { current_node_identifier ~ singular_query_segments }
