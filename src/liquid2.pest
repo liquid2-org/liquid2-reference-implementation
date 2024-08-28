@@ -3,17 +3,26 @@ liquid = { SOI ~ (markup | content)* ~ EOI }
 // TODO: raw, comment
 markup = _{ tag | output_statement }
 
+content      =  { content_char+ }
+content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
+
+tag_start       = _{ "{%" ~ WC ~ S }
+tag_end         = _{ S ~ WC ~ "%}" }
+statement_start = _{ "{{" ~ WC ~ S }
+statement_end   = _{ S ~ WC ~ "}}" }
+
 tag              = _{ end_tag | standard_tag | common_tag }
-output_statement =  { "{{" ~ WC ~ S ~ filtered_expr ~ S ~ WC ~ "}}" }
+output_statement =  { statement_start ~ filtered_expr ~ statement_end }
 
 // whitespace control
 WC = { ("+" | "-" | "~")? }
 
+// TODO: nil as an alias for null?
 // NOTE: borrowing JSONPath literal
 primitive = _{
     literal
   | range
-  | jsonpath_query
+  | query
 }
 
 // NOTE: borrowing int from JSONPath
@@ -24,13 +33,13 @@ identifier = { name_first ~ name_char* }
 
 filtered_expr    =  { primitive ~ (S ~ filter)* ~ (s ~ inline_condition)? }
 inline_condition =  { "if" ~ s ~ boolean_expr ~ (s ~ "else" ~ s ~ boolean_expr)? ~ (S ~ filter)* ~ (S ~ tail_filter)? }
-filter_expr      = _{ filter_name ~ S ~ (":" ~ S ~ filter_argument ~ (S ~ "," ~ S ~ filter_argument)*)? }
+filter_expr      = _{ filter_name ~ S ~ (":" ~ S ~ common_arguments)? }
 filter           =  { "|" ~ S ~ filter_expr }
 tail_filter      =  { "||" ~ S ~ filter_expr ~ (S ~ filter)* }
+filter_name      =  { function_name_first ~ function_name_char* }
 
-// NOTE: borrowing function_name from JSONPath
-filter_name         = { function_name_first ~ function_name_char* }
-filter_argument     = { positional_argument | keyword_argument }
+common_arguments    = { common_argument ~ (S ~ "," ~ S ~ common_argument)* }
+common_argument     = { positional_argument | keyword_argument }
 positional_argument = { primitive }
 keyword_argument    = { filter_name ~ S ~ ":" ~ S ~ primitive }
 
@@ -39,8 +48,11 @@ boolean_or_expr    = { boolean_and_expr ~ (s ~ "or" ~ s ~ boolean_and_expr)* }
 boolean_and_expr   = { boolean_basic_expr ~ (s ~ "and" ~ s ~ boolean_basic_expr)* }
 boolean_basic_expr = { (("not" ~ s)? ~ (primitive | grouped_expr) | compare_expr | membership_expr) }
 grouped_expr       = { "(" ~ S ~ boolean_expr ~ S ~ ")" }
-compare_expr       = { primitive ~ S ~ comparison_op ~ S ~ primitive }
-membership_expr    = { primitive ~ S ~ membership_op ~ S ~ primitive }
+
+// NOTE: borrowing comparison_op from JSONPath
+// TODO: <> alias for !=
+compare_expr    = { primitive ~ S ~ comparison_op ~ S ~ primitive }
+membership_expr = { primitive ~ S ~ membership_op ~ S ~ primitive }
 
 membership_op = {
     "contains"
@@ -49,72 +61,133 @@ membership_op = {
   | "not in"
 }
 
-content      =  { content_char+ }
-content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
-
 /* Tags */
 // NOTE: borrowing function_name from JSONPath
-tag_name     =  { function_name_first ~ function_name_char* }
-tag_argument =  { positional_argument | keyword_argument }
-tag_start    = _{ "{%" ~ WC ~ S }
-tag_end      = _{ S ~ WC ~ "%}" }
+tag_name     = { function_name_first ~ function_name_char* }
+tag_argument = { positional_argument | keyword_argument }
 
-end_tag = { tag_start ~ "end" ~ tag_name ~ tag_end }
+end_tag      = { tag_start ~ "end" ~ tag_name ~ tag_end }
+standard_tag = { tag_start ~ standard_tag_expr ~ tag_end }
 
 // NOTE: ifchanged is excluded
 // NOTE: tablerow is excluded
-standard_tag = {
-    assign_tag
-  | capture_tag
-  | case_tag
-  | when_tag
-  | else_tag
-  | cycle_tag
-  | decrement_tag
-  | increment_tag
-  | echo_tag
-  | for_tag
-  | break_tag
-  | continue_tag
-  | if_tag
-  | elsif_tag
-  | unless_tag
+standard_tag_expr = {
+    assign_expr
+  | capture_expr
+  | case_expr
+  | when_expr
+  | else_expr
+  | cycle_expr
+  | decrement_expr
+  | increment_expr
+  | echo_expr
+  | for_expr
+  | break_expr
+  | continue_expr
+  | if_expr
+  | elsif_expr
+  | unless_expr
+  | include_expr
+  | render_expr
+  | liquid_expr
 }
 
-assign_tag    = { tag_start ~ "assign" ~ s ~ identifier ~ S ~ "=" ~ S ~ filtered_expr ~ tag_end }
-capture_tag   = { tag_start ~ "capture" ~ s ~ identifier ~ tag_end }
-case_tag      = { tag_start ~ "case" ~ s ~ primitive ~ tag_end }
-when_tag      = { tag_start ~ "when" ~ s ~ primitive ~ ((S ~ "," ~ S | s ~ "or" ~ s) ~ primitive)* ~ tag_end }
-else_tag      = { tag_start ~ "else" ~ tag_end }
-cycle_tag     = { tag_start ~ "cycle" ~ s ~ primitive ~ (S ~ "," ~ S ~ primitive)* ~ tag_end }
-decrement_tag = { tag_start ~ "decrement" ~ s ~ identifier ~ tag_end }
-increment_tag = { tag_start ~ "increment" ~ s ~ identifier ~ tag_end }
-echo_tag      = { tag_start ~ "echo" ~ s ~ filtered_expr ~ tag_end }
-
-for_tag = {
-    tag_start ~ "for" ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ s ~ (for_tag_argument ~ (s ~ for_tag_argument)*)? ~ tag_end
-}
-
-// NOTE: accepting primitive values, the parser will raise syntax error if the primitive does not resolve to an int
-for_tag_argument = {
+assign_expr       = { "assign" ~ s ~ identifier ~ S ~ "=" ~ S ~ filtered_expr }
+capture_expr      = { "capture" ~ s ~ identifier }
+case_expr         = { "case" ~ s ~ primitive }
+when_expr         = { "when" ~ s ~ primitive ~ ((S ~ "," ~ S) | (s ~ "or" ~ s) ~ primitive)* }
+else_expr         = { "else" }
+cycle_expr        = { "cycle" ~ s ~ primitive ~ (S ~ "," ~ S ~ primitive)* }
+decrement_expr    = { "decrement" ~ s ~ identifier }
+increment_expr    = { "increment" ~ s ~ identifier }
+echo_expr         = { "echo" ~ s ~ filtered_expr }
+for_expr          = { "for" ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments)? }
+for_tag_arguments = { for_tag_argument ~ (s ~ for_tag_argument)* }
+for_tag_argument  = {
     ("limit" ~ S ~ ":" ~ S ~ primitive)
   | ("offset" ~ S ~ ":" ~ S ~ (primitive | "continue"))
   | "reversed"
 }
 
-break_tag    = { tag_start ~ "break" ~ tag_end }
-continue_tag = { tag_start ~ "continue" ~ tag_end }
-if_tag       = { tag_start ~ "if" ~ s ~ boolean_expr ~ S ~ tag_end }
-elsif_tag    = { tag_start ~ ("elsif" | "elif") ~ s ~ boolean_expr ~ S ~ tag_end }
-unless_tag   = { tag_start ~ "unless" ~ s ~ boolean_expr ~ S ~ tag_end }
+break_expr    = { "break" }
+continue_expr = { "continue" }
+if_expr       = { "if" ~ s ~ boolean_expr }
+elsif_expr    = { ("elsif" | "elif") ~ s ~ boolean_expr }
+unless_expr   = { "unless" ~ s ~ boolean_expr }
 
-// TODO: common reserved words?
-common_tag = {
-    tag_start ~ tag_name ~ s ~ (tag_argument ~ (S ~ "," ~ S ~ tag_argument)*)? ~ tag_end
+// NOTE: no leading comma allowed in arguments
+include_expr          = { "include" ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
+include_tag_arguments = { ("with" | "for") ~ s ~ primitive ~ (s ~ "as" ~ s ~ primitive)? ~ common_arguments? }
+render_expr           = { "render" ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
+
+// TODO: need "line" versions of boolean and filtered expression
+liquid_expr = { "liquid" ~ (s ~ line_exprs)? }
+line_exprs  = { line_expr ~ (LS ~ "\x0A"+ ~ LS ~ line_expr)* }
+line_expr   = { standard_line_tag_expr | common_line_tag_expr }
+
+standard_line_tag_expr = {
+    assign_line_expr
+  | capture_line_expr
+  | case_line_expr
+  | when_line_expr
+  | else_line_expr
+  | cycle_line_expr
+  | decrement_line_expr
+  | increment_line_expr
+  | echo_line_expr
+  | for_line_expr
+  | break_line_expr
+  | continue_line_expr
+  | if_line_expr
+  | elsif_line_expr
+  | unless_line_expr
+  | include_line_expr
+  | render_line_expr
 }
 
+LS = _{ ("\x20" | "\x09" | "\x0D")* }
+ls = _{ ("\x20" | "\x09" | "\x0D")+ }
+
+assign_line_expr       = { "assign" ~ ls ~ identifier ~ LS ~ "=" ~ LS ~ filtered_expr }
+capture_line_expr      = { "capture" ~ ls ~ identifier }
+case_line_expr         = { "case" ~ ls ~ primitive }
+when_line_expr         = { "when" ~ ls ~ primitive ~ ((LS ~ "," ~ LS) | (ls ~ "or" ~ ls) ~ primitive)* }
+else_line_expr         = { "else" }
+cycle_line_expr        = { "cycle" ~ ls ~ primitive ~ (LS ~ "," ~ LS ~ primitive)* }
+decrement_line_expr    = { "decrement" ~ ls ~ identifier }
+increment_line_expr    = { "increment" ~ ls ~ identifier }
+echo_line_expr         = { "echo" ~ ls ~ filtered_expr }
+for_line_expr          = { "for" ~ ls ~ identifier ~ ls ~ "in" ~ ls ~ primitive ~ (ls ~ for_tag_line_arguments)? }
+for_tag_line_arguments = { for_tag_line_argument ~ (ls ~ for_tag_line_argument)* }
+for_tag_line_argument  = {
+    ("limit" ~ LS ~ ":" ~ LS ~ primitive)
+  | ("offset" ~ LS ~ ":" ~ LS ~ (primitive | "continue"))
+  | "reversed"
+}
+
+break_line_expr    = { "break" }
+continue_line_expr = { "continue" }
+if_line_expr       = { "if" ~ ls ~ boolean_expr }
+elsif_line_expr    = { ("elsif" | "elif") ~ ls ~ boolean_expr }
+unless_line_expr   = { "unless" ~ ls ~ boolean_expr }
+
+// NOTE: no leading comma allowed in arguments
+include_line_expr          = { "include" ~ ls ~ primitive ~ (ls ~ include_tag_line_arguments)? }
+include_tag_line_arguments = { ("with" | "for") ~ ls ~ primitive ~ (ls ~ "as" ~ ls ~ primitive)? ~ ls ~ common_line_arguments? }
+render_line_expr           = { "render" ~ s ~ primitive ~ (s ~ include_tag_line_arguments)? }
+
+common_line_arguments = { common_line_argument ~ (LS ~ "," ~ LS ~ common_line_argument)* }
+common_line_argument  = { positional_argument | keyword_line_argument }
+keyword_line_argument = { filter_name ~ LS ~ ":" ~ LS ~ primitive }
+line_tag_argument     = { positional_argument | keyword_line_argument }
+
+// TODO: common reserved words?
+common_tag           = { tag_start ~ common_tag_expr ~ tag_end }
+common_tag_expr      = { tag_name ~ s ~ (tag_argument ~ (S ~ "," ~ S ~ tag_argument)*)? }
+common_line_tag_expr = { tag_name ~ ls ~ (line_tag_argument ~ (LS ~ "," ~ LS ~ line_tag_argument)*)? }
+
 /* Modified JSONPath */
-jsonpath_query = {
+query = {
     (root_identifier ~ segments)
   | (implicit_root_segment ~ segments)
 }
@@ -220,7 +293,7 @@ paren_expr              =  { (logical_not_op ~ S)? ~ "(" ~ S ~ logical_expr ~ S 
 logical_not_op          =  { "!" }
 test_expr               =  { (logical_not_op ~ S)? ~ (filter_query | function_expr) }
 filter_query            = _{ rel_query | root_query }
-root_query              =  { jsonpath_query }
+root_query              =  { query }
 rel_query               =  { current_node_identifier ~ segments }
 current_node_identifier = _{ "@" }
 comparison_expr         =  { comparable ~ S ~ comparison_op ~ S ~ comparable }
