@@ -1,6 +1,6 @@
 liquid = { SOI ~ (markup | content)* ~ EOI }
 
-// TODO: raw, comment
+// TODO: comment
 markup       = _{ tag | output_statement }
 content      =  { content_char+ }
 content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
@@ -10,7 +10,7 @@ tag_end         = _{ S ~ WC ~ "%}" }
 statement_start = _{ "{{" ~ WC ~ S }
 statement_end   = _{ S ~ WC ~ "}}" }
 
-tag              = _{ end_tag | standard_tag | common_tag }
+tag              = _{ raw_tag | end_tag | standard_tag | common_tag }
 output_statement =  { statement_start ~ filtered_expr ~ statement_end }
 
 // whitespace control
@@ -78,6 +78,10 @@ tag_argument = { positional_argument | keyword_argument }
 
 end_tag      = { tag_start ~ "end" ~ tag_name ~ tag_end }
 standard_tag = { tag_start ~ standard_tag_expr ~ tag_end }
+
+raw_tag          =  { tag_start ~ "raw" ~ tag_end ~ raw_content ~ tag_start ~ "endraw" ~ tag_end }
+raw_content      =  { raw_content_char* }
+raw_content_char = _{ !(tag_start ~ "endraw" ~ tag_end) ~ ANY }
 
 // NOTE: ifchanged is excluded
 // NOTE: tablerow is excluded
