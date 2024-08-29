@@ -1,8 +1,7 @@
 liquid = { SOI ~ (markup | content)* ~ EOI }
 
 // TODO: raw, comment
-markup = _{ tag | output_statement }
-
+markup       = _{ tag | output_statement }
 content      =  { content_char+ }
 content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
 
@@ -17,16 +16,27 @@ output_statement =  { statement_start ~ filtered_expr ~ statement_end }
 // whitespace control
 WC = { ("+" | "-" | "~")? }
 
-// TODO: nil as an alias for null?
-// NOTE: borrowing JSONPath literal
+// "line" expression whitespace
+// NOTE: "\n" and "\r" are not allowed in line expressions.
+LS = _{ ("\x20" | "\x09")* }
+ls = _{ ("\x20" | "\x09")+ }
+
+// XXX: multi-line string literals?
+// NOTE: borrowing literals from JSONPath
 primitive = _{
-    literal
+    number
+  | string_literal
+  | true_literal
+  | false_literal
+  | "null"
+  | "nil"
   | range
   | query
 }
 
 // NOTE: borrowing int from JSONPath
-range = { "(" ~ S ~ int ~ S ~ ".." ~ S ~ int ~ S ~ ")" }
+// NOTE: range literals can't contain newlines
+range = { "(" ~ LS ~ int ~ LS ~ ".." ~ LS ~ int ~ LS ~ ")" }
 
 // NOTE: borrowing name_char from JSONPath
 identifier = { name_first ~ name_char* }
@@ -120,12 +130,29 @@ include_expr          = { "include" ~ s ~ primitive ~ (s ~ include_tag_arguments
 include_tag_arguments = { ("with" | "for") ~ s ~ primitive ~ (s ~ "as" ~ s ~ primitive)? ~ common_arguments? }
 render_expr           = { "render" ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
 
-// TODO: need "line" versions of boolean and filtered expression
 liquid_expr = { "liquid" ~ (s ~ line_exprs)? }
 line_exprs  = { line_expr ~ (LS ~ "\x0A"+ ~ LS ~ line_expr)* }
-line_expr   = { standard_line_tag_expr | common_line_tag_expr }
+line_expr   = { standard_tag_line_expr | common_line_tag_expr }
 
-standard_line_tag_expr = {
+/* Newline sensitive expressions for the "liquid" tag. */
+filtered_line_expr    =  { primitive ~ (LS ~ line_filter)* ~ (ls ~ line_inline_condition)? }
+line_inline_condition =  { "if" ~ ls ~ boolean_line_expr ~ (ls ~ "else" ~ ls ~ boolean_line_expr)? ~ (LS ~ line_filter)* ~ (LS ~ line_tail_filter)? }
+filter_line_expr      = _{ filter_name ~ LS ~ (":" ~ LS ~ common_line_arguments)? }
+line_filter           =  { "|" ~ LS ~ filter_line_expr }
+line_tail_filter      =  { "||" ~ LS ~ filter_line_expr ~ (LS ~ line_filter)* }
+
+boolean_line_expr       = { boolean_or_line_expr }
+boolean_or_line_expr    = { boolean_and_line_expr ~ (ls ~ "or" ~ ls ~ boolean_and_line_expr)* }
+boolean_and_line_expr   = { boolean_basic_line_expr ~ (ls ~ "and" ~ ls ~ boolean_basic_expr)* }
+boolean_basic_line_expr = { (("not" ~ ls)? ~ (primitive | grouped_line_expr) | compare_line_expr | membership_line_expr) }
+grouped_line_expr       = { "(" ~ LS ~ boolean_line_expr ~ LS ~ ")" }
+
+// NOTE: borrowing comparison_op from JSONPath
+// TODO: <> alias for !=
+compare_line_expr    = { primitive ~ LS ~ comparison_op ~ LS ~ primitive }
+membership_line_expr = { primitive ~ LS ~ membership_op ~ LS ~ primitive }
+
+standard_tag_line_expr = {
     assign_line_expr
   | capture_line_expr
   | case_line_expr
@@ -145,10 +172,7 @@ standard_line_tag_expr = {
   | render_line_expr
 }
 
-LS = _{ ("\x20" | "\x09" | "\x0D")* }
-ls = _{ ("\x20" | "\x09" | "\x0D")+ }
-
-assign_line_expr       = { "assign" ~ ls ~ identifier ~ LS ~ "=" ~ LS ~ filtered_expr }
+assign_line_expr       = { "assign" ~ ls ~ identifier ~ LS ~ "=" ~ LS ~ filtered_line_expr }
 capture_line_expr      = { "capture" ~ ls ~ identifier }
 case_line_expr         = { "case" ~ ls ~ primitive }
 when_line_expr         = { "when" ~ ls ~ primitive ~ ((LS ~ "," ~ LS) | (ls ~ "or" ~ ls) ~ primitive)* }
@@ -156,7 +180,7 @@ else_line_expr         = { "else" }
 cycle_line_expr        = { "cycle" ~ ls ~ primitive ~ (LS ~ "," ~ LS ~ primitive)* }
 decrement_line_expr    = { "decrement" ~ ls ~ identifier }
 increment_line_expr    = { "increment" ~ ls ~ identifier }
-echo_line_expr         = { "echo" ~ ls ~ filtered_expr }
+echo_line_expr         = { "echo" ~ ls ~ filtered_line_expr }
 for_line_expr          = { "for" ~ ls ~ identifier ~ ls ~ "in" ~ ls ~ primitive ~ (ls ~ for_tag_line_arguments)? }
 for_tag_line_arguments = { for_tag_line_argument ~ (ls ~ for_tag_line_argument)* }
 for_tag_line_argument  = {
@@ -167,14 +191,14 @@ for_tag_line_argument  = {
 
 break_line_expr    = { "break" }
 continue_line_expr = { "continue" }
-if_line_expr       = { "if" ~ ls ~ boolean_expr }
-elsif_line_expr    = { ("elsif" | "elif") ~ ls ~ boolean_expr }
-unless_line_expr   = { "unless" ~ ls ~ boolean_expr }
+if_line_expr       = { "if" ~ ls ~ boolean_line_expr }
+elsif_line_expr    = { ("elsif" | "elif") ~ ls ~ boolean_line_expr }
+unless_line_expr   = { "unless" ~ ls ~ boolean_line_expr }
 
 // NOTE: no leading comma allowed in arguments
 include_line_expr          = { "include" ~ ls ~ primitive ~ (ls ~ include_tag_line_arguments)? }
 include_tag_line_arguments = { ("with" | "for") ~ ls ~ primitive ~ (ls ~ "as" ~ ls ~ primitive)? ~ ls ~ common_line_arguments? }
-render_line_expr           = { "render" ~ s ~ primitive ~ (s ~ include_tag_line_arguments)? }
+render_line_expr           = { "render" ~ ls ~ primitive ~ (ls ~ include_tag_line_arguments)? }
 
 common_line_arguments = { common_line_argument ~ (LS ~ "," ~ LS ~ common_line_argument)* }
 common_line_argument  = { positional_argument | keyword_line_argument }
