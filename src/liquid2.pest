@@ -1,7 +1,6 @@
-liquid = { SOI ~ (markup | content)* ~ EOI }
+liquid =  { SOI ~ (markup | content)* ~ EOI }
+markup = _{ tag | output_statement | comment }
 
-// TODO: comment
-markup       = _{ tag | output_statement }
 content      =  { content_char+ }
 content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
 
@@ -9,9 +8,6 @@ tag_start       = _{ "{%" ~ WC ~ S }
 tag_end         = _{ S ~ WC ~ "%}" }
 statement_start = _{ "{{" ~ WC ~ S }
 statement_end   = _{ S ~ WC ~ "}}" }
-
-tag              = _{ raw_tag | end_tag | standard_tag | common_tag }
-output_statement =  { statement_start ~ filtered_expr ~ statement_end }
 
 // whitespace control
 WC = { ("+" | "-" | "~")? }
@@ -21,7 +17,13 @@ WC = { ("+" | "-" | "~")? }
 LS = _{ ("\x20" | "\x09")* }
 ls = _{ ("\x20" | "\x09")+ }
 
+tag              = _{ raw_tag | end_tag | standard_tag | common_tag }
+output_statement =  { statement_start ~ filtered_expr ~ statement_end }
+comment          =  { "{" ~ PUSH("#"+) ~ WC ~ comment_text ~ POP ~ WC ~ "}" }
+comment_text     =  { (!(PEEK ~ WC ~ "}") ~ ANY)* }
+
 // XXX: multi-line string literals?
+// TODO: string interpolation?
 // NOTE: borrowing literals from JSONPath
 primitive = _{
     number
