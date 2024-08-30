@@ -1,8 +1,11 @@
 liquid =  { SOI ~ (markup | content)* ~ EOI }
 markup = _{ tag | output_statement | comment }
 
-content      =  { content_char+ }
-content_char = _{ !("{{" | "{%" | "{#") ~ ANY }
+tag              = _{ raw_tag | end_tag | standard_tag | common_tag }
+output_statement =  { statement_start ~ filtered_expr ~ statement_end }
+comment          =  { "{" ~ PUSH("#"+) ~ WC ~ comment_text ~ WC ~ POP ~ "}" }
+comment_text     =  { (!(WC ~ PEEK ~ "}") ~ ANY)* }
+content          =  { (!("{{" | "{%" | "{#") ~ ANY)+ }
 
 tag_start       = _{ "{%" ~ WC ~ S }
 tag_end         = _{ S ~ WC ~ "%}" }
@@ -12,15 +15,12 @@ statement_end   = _{ S ~ WC ~ "}}" }
 // whitespace control
 WC = { ("+" | "-" | "~")? }
 
-// "line" expression whitespace
 // NOTE: "\n" and "\r" are not allowed in line expressions.
+B  = _{ "\x20" | "\x09" | "\x0A" | "\x0D" }
+S  = _{ B* }
+s  = _{ B+ }
 LS = _{ ("\x20" | "\x09")* }
 ls = _{ ("\x20" | "\x09")+ }
-
-tag              = _{ raw_tag | end_tag | standard_tag | common_tag }
-output_statement =  { statement_start ~ filtered_expr ~ statement_end }
-comment          =  { "{" ~ PUSH("#"+) ~ WC ~ comment_text ~ POP ~ WC ~ "}" }
-comment_text     =  { (!(PEEK ~ WC ~ "}") ~ ANY)* }
 
 // TODO: string interpolation?
 // NOTE: borrowing literals from JSONPath
@@ -246,6 +246,7 @@ keyword_line_argument = { filter_name ~ LS ~ ":" ~ LS ~ primitive }
 line_tag_argument     = { positional_argument | keyword_line_argument }
 
 // TODO: common reserved words?
+// TODO: boolean flags, like "reversed"?
 common_tag           = { tag_start ~ common_tag_expr ~ tag_end }
 common_tag_expr      = { tag_name ~ s ~ (tag_argument ~ (S ~ "," ~ S ~ tag_argument)*)? }
 common_line_tag_expr = { tag_name ~ ls ~ (line_tag_argument ~ (LS ~ "," ~ LS ~ line_tag_argument)*)? }
@@ -256,13 +257,8 @@ query = {
   | (implicit_root_segment ~ segments)
 }
 
-segments = _{ (S ~ segment)* }
-
-B = _{ "\x20" | "\x09" | "\x0A" | "\x0D" }
-S = _{ B* }
-s = _{ B+ }
-
 root_identifier = _{ "$" }
+segments        = _{ (S ~ segment)* }
 
 selector = _{
     name_selector
