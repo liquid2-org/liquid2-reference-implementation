@@ -22,12 +22,11 @@ output_statement =  { statement_start ~ filtered_expr ~ statement_end }
 comment          =  { "{" ~ PUSH("#"+) ~ WC ~ comment_text ~ POP ~ WC ~ "}" }
 comment_text     =  { (!(PEEK ~ WC ~ "}") ~ ANY)* }
 
-// XXX: multi-line string literals?
 // TODO: string interpolation?
 // NOTE: borrowing literals from JSONPath
 primitive = _{
     number
-  | string_literal
+  | multiline_string_literal
   | true_literal
   | false_literal
   | "null"
@@ -39,6 +38,37 @@ primitive = _{
 // NOTE: borrowing int from JSONPath
 // NOTE: range literals can't contain newlines
 range = { "(" ~ LS ~ int ~ LS ~ ".." ~ LS ~ int ~ LS ~ ")" }
+
+multiline_string_literal = _{
+    ("\x22" ~ multiline_double_quoted ~ "\x22")
+  | ("\x27" ~ multiline_single_quoted ~ "\x27")
+}
+
+multiline_double_quoted = { multiline_double_quoted_char* }
+multiline_single_quoted = { multiline_single_quoted_char* }
+
+multiline_double_quoted_char = _{
+    multiline_unescaped
+  | "\x27"
+  | (ESC ~ "\x22")
+  | (ESC ~ escapable)
+}
+
+multiline_single_quoted_char = _{
+    multiline_unescaped
+  | "\x22"
+  | (ESC ~ "\x27")
+  | (ESC ~ escapable)
+}
+
+multiline_unescaped = _{
+    "\u{0A}"
+  | '\u{20}'..'\u{21}'
+  | '\u{23}'..'\u{26}'
+  | '\u{28}'..'\u{5B}'
+  | '\u{5D}'..'\u{D7FF}'
+  | '\u{E000}'..'\u{10FFFF}'
+}
 
 // NOTE: borrowing name_char from JSONPath
 identifier = { name_first ~ name_char* }
@@ -60,11 +90,18 @@ boolean_or_expr    = { boolean_and_expr ~ (s ~ "or" ~ s ~ boolean_and_expr)* }
 boolean_and_expr   = { boolean_basic_expr ~ (s ~ "and" ~ s ~ boolean_basic_expr)* }
 boolean_basic_expr = { (("not" ~ s)? ~ (primitive | grouped_expr) | compare_expr | membership_expr) }
 grouped_expr       = { "(" ~ S ~ boolean_expr ~ S ~ ")" }
+compare_expr       = { primitive ~ S ~ compare_op ~ S ~ primitive }
+membership_expr    = { primitive ~ S ~ membership_op ~ S ~ primitive }
 
-// NOTE: borrowing comparison_op from JSONPath
-// TODO: <> alias for !=
-compare_expr    = { primitive ~ S ~ comparison_op ~ S ~ primitive }
-membership_expr = { primitive ~ S ~ membership_op ~ S ~ primitive }
+compare_op = {
+    "=="
+  | "!="
+  | "<>"
+  | "<="
+  | ">="
+  | "<"
+  | ">"
+}
 
 membership_op = {
     "contains"
@@ -152,11 +189,8 @@ boolean_or_line_expr    = { boolean_and_line_expr ~ (ls ~ "or" ~ ls ~ boolean_an
 boolean_and_line_expr   = { boolean_basic_line_expr ~ (ls ~ "and" ~ ls ~ boolean_basic_expr)* }
 boolean_basic_line_expr = { (("not" ~ ls)? ~ (primitive | grouped_line_expr) | compare_line_expr | membership_line_expr) }
 grouped_line_expr       = { "(" ~ LS ~ boolean_line_expr ~ LS ~ ")" }
-
-// NOTE: borrowing comparison_op from JSONPath
-// TODO: <> alias for !=
-compare_line_expr    = { primitive ~ LS ~ comparison_op ~ LS ~ primitive }
-membership_line_expr = { primitive ~ LS ~ membership_op ~ LS ~ primitive }
+compare_line_expr       = { primitive ~ LS ~ compare_op ~ LS ~ primitive }
+membership_line_expr    = { primitive ~ LS ~ membership_op ~ LS ~ primitive }
 
 standard_tag_line_expr = {
     assign_line_expr
