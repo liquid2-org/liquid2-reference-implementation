@@ -37,6 +37,7 @@ primitive = _{
 
 // NOTE: borrowing int from JSONPath
 // NOTE: range literals can't contain newlines
+// TODO: negative ranges?
 range = { "(" ~ LS ~ int ~ LS ~ ".." ~ LS ~ int ~ LS ~ ")" }
 
 multiline_string_literal = _{
@@ -145,18 +146,19 @@ standard_tag_expr = {
   | liquid_expr
 }
 
-assign_expr       = { "assign" ~ s ~ identifier ~ S ~ "=" ~ S ~ filtered_expr }
-capture_expr      = { "capture" ~ s ~ identifier }
-case_expr         = { "case" ~ s ~ primitive }
-when_expr         = { "when" ~ s ~ primitive ~ ((S ~ "," ~ S) | (s ~ "or" ~ s) ~ primitive)* }
-else_expr         = { "else" }
-cycle_expr        = { "cycle" ~ s ~ primitive ~ (S ~ "," ~ S ~ primitive)* }
-decrement_expr    = { "decrement" ~ s ~ identifier }
-increment_expr    = { "increment" ~ s ~ identifier }
-echo_expr         = { "echo" ~ s ~ filtered_expr }
-for_expr          = { "for" ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments)? }
-for_tag_arguments = { for_tag_argument ~ (s ~ for_tag_argument)* }
-for_tag_argument  = {
+assign_expr       =  { "assign" ~ s ~ identifier ~ S ~ "=" ~ S ~ filtered_expr }
+capture_expr      =  { "capture" ~ s ~ identifier }
+case_expr         =  { "case" ~ s ~ primitive }
+when_expr         =  { "when" ~ s ~ primitive ~ ((S ~ "," ~ S) | (s ~ "or" ~ s) ~ primitive)* }
+else_expr         =  { "else" }
+cycle_expr        =  { "cycle" ~ s ~ (cycle_group ~ S ~ ":" ~ S)? ~ primitive ~ (S ~ "," ~ S ~ primitive)* }
+cycle_group       = @{ primitive }
+decrement_expr    =  { "decrement" ~ s ~ identifier }
+increment_expr    =  { "increment" ~ s ~ identifier }
+echo_expr         =  { "echo" ~ s ~ filtered_expr }
+for_expr          =  { "for" ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments)? }
+for_tag_arguments =  { for_tag_argument ~ (s ~ for_tag_argument)* }
+for_tag_argument  =  {
     ("limit" ~ S ~ ":" ~ S ~ primitive)
   | ("offset" ~ S ~ ":" ~ S ~ (primitive | "continue"))
   | "reversed"
@@ -217,7 +219,7 @@ capture_line_expr      = { "capture" ~ ls ~ identifier }
 case_line_expr         = { "case" ~ ls ~ primitive }
 when_line_expr         = { "when" ~ ls ~ primitive ~ ((LS ~ "," ~ LS) | (ls ~ "or" ~ ls) ~ primitive)* }
 else_line_expr         = { "else" }
-cycle_line_expr        = { "cycle" ~ ls ~ primitive ~ (LS ~ "," ~ LS ~ primitive)* }
+cycle_line_expr        = { "cycle" ~ ls ~ (cycle_group ~ LS ~ ":" ~ LS)? ~ primitive ~ (LS ~ "," ~ LS ~ primitive)* }
 decrement_line_expr    = { "decrement" ~ ls ~ identifier }
 increment_line_expr    = { "increment" ~ ls ~ identifier }
 echo_line_expr         = { "echo" ~ ls ~ filtered_line_expr }

@@ -1,4 +1,6 @@
+pub mod ast;
 pub mod parser;
+pub mod query;
 
 use pyo3::prelude::*;
 
