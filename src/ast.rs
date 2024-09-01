@@ -1,6 +1,8 @@
 //! Liquid template syntax tree
 //!
 
+use crate::query::Query;
+
 #[derive(Debug)]
 pub struct Template {
     pub liquid: Vec<Node>,
@@ -102,29 +104,35 @@ pub enum Node {
         whitespace_control: WhiteSpaceControl,
         block: Vec<Node>,
     },
+    TagExtension {
+        whitespace_control: WhiteSpaceControl,
+        name: String,
+        args: Vec<CommonArgument>,
+        block: Option<Vec<Node>>,
+    },
 }
 
 #[derive(Debug)]
 pub struct FilteredExpression {
-    left: Primitive,
-    filters: Vec<Filter>,
-    condition: BooleanExpression,
-    alternative: Option<Primitive>,
-    alternative_filters: Vec<Filter>,
-    tail_filters: Vec<Filter>,
+    pub left: Primitive,
+    pub filters: Vec<Filter>,
+    pub condition: BooleanExpression,
+    pub alternative: Option<Primitive>,
+    pub alternative_filters: Vec<Filter>,
+    pub tail_filters: Vec<Filter>,
 }
 
 #[derive(Debug)]
 pub struct InfixExpression {
-    left: Box<BooleanExpression>,
-    operator: String, // TODO: or enum
-    right: Box<BooleanExpression>,
+    pub left: Box<BooleanExpression>,
+    pub operator: String, // TODO: or enum
+    pub right: Box<BooleanExpression>,
 }
 
 #[derive(Debug)]
 pub struct PrefixExpression {
-    operator: String, // TODO: or enum
-    right: Box<BooleanExpression>,
+    pub operator: String, // TODO: or enum
+    pub right: Box<BooleanExpression>,
 }
 
 #[derive(Debug)]
@@ -136,8 +144,8 @@ pub enum BooleanExpression {
 
 #[derive(Debug)]
 pub struct Filter {
-    name: String,
-    args: Vec<CommonArgument>,
+    pub name: String,
+    pub args: Vec<CommonArgument>,
 }
 
 #[derive(Debug)]
@@ -149,19 +157,19 @@ pub enum Primitive {
     Float { value: f64 },
     StringLiteral { value: String },
     Range { start: i64, stop: i64 },
-    Query { path: JSONPathQuery },
+    Query { path: Query },
 }
 
 #[derive(Debug)]
 pub struct ConditionalBlock {
-    condition: BooleanExpression,
-    block: Vec<Node>,
+    pub condition: BooleanExpression,
+    pub block: Vec<Node>,
 }
 
 #[derive(Debug)]
 pub struct CommonArgument {
-    value: Primitive,
-    name: Option<String>,
+    pub value: Option<Primitive>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug)]

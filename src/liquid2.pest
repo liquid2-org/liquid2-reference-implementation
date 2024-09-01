@@ -82,9 +82,10 @@ tail_filter      =  { "||" ~ S ~ filter_expr ~ (S ~ filter)* }
 filter_name      =  { function_name_first ~ function_name_char* }
 
 common_arguments    = { common_argument ~ (S ~ "," ~ S ~ common_argument)* }
-common_argument     = { positional_argument | keyword_argument }
+common_argument     = { keyword_argument | positional_argument }
 positional_argument = { primitive }
-keyword_argument    = { filter_name ~ S ~ ":" ~ S ~ primitive }
+keyword_argument    = { keyword ~ S ~ ":" ~ S ~ primitive }
+keyword             = { function_name_first ~ function_name_char* }
 
 boolean_expr       = { boolean_or_expr }
 boolean_or_expr    = { boolean_and_expr ~ (s ~ "or" ~ s ~ boolean_and_expr)* }
@@ -114,8 +115,6 @@ membership_op = {
 /* Tags */
 // NOTE: borrowing function_name from JSONPath
 tag_name     = { function_name_first ~ function_name_char* }
-tag_argument = { positional_argument | keyword_argument }
-
 end_tag      = { tag_start ~ "end" ~ tag_name ~ tag_end }
 standard_tag = { tag_start ~ standard_tag_expr ~ tag_end }
 
@@ -179,10 +178,15 @@ liquid_expr = { "liquid" ~ (s ~ line_exprs)? }
 line_exprs  = { line_expr ~ (LS ~ "\x0A"+ ~ LS ~ line_expr)* }
 line_expr   = { standard_tag_line_expr | common_line_tag_expr }
 
+// For non-standard tags aka tag extensions
+common_tag          = { tag_start ~ common_tag_expr ~ tag_end }
+common_tag_expr     = { tag_name ~ s ~ (common_tag_argument ~ (S ~ "," ~ S ~ common_tag_argument)*)? }
+common_tag_argument = { keyword_line_argument | keyword | positional_argument }
+
 /* Newline sensitive expressions for the "liquid" tag. */
 filtered_line_expr    =  { primitive ~ (LS ~ line_filter)* ~ (ls ~ line_inline_condition)? }
 line_inline_condition =  { "if" ~ ls ~ boolean_line_expr ~ (ls ~ "else" ~ ls ~ boolean_line_expr)? ~ (LS ~ line_filter)* ~ (LS ~ line_tail_filter)? }
-filter_line_expr      = _{ filter_name ~ LS ~ (":" ~ LS ~ common_line_arguments)? }
+filter_line_expr      = _{ keyword ~ LS ~ (":" ~ LS ~ common_line_arguments)? }
 line_filter           =  { "|" ~ LS ~ filter_line_expr }
 line_tail_filter      =  { "||" ~ LS ~ filter_line_expr ~ (LS ~ line_filter)* }
 
@@ -243,15 +247,11 @@ include_tag_line_arguments = { ("with" | "for") ~ ls ~ primitive ~ (ls ~ "as" ~ 
 render_line_expr           = { "render" ~ ls ~ primitive ~ (ls ~ include_tag_line_arguments)? }
 
 common_line_arguments = { common_line_argument ~ (LS ~ "," ~ LS ~ common_line_argument)* }
-common_line_argument  = { positional_argument | keyword_line_argument }
-keyword_line_argument = { filter_name ~ LS ~ ":" ~ LS ~ primitive }
-line_tag_argument     = { positional_argument | keyword_line_argument }
+common_line_argument  = { keyword_line_argument | positional_argument }
+keyword_line_argument = { keyword ~ LS ~ ":" ~ LS ~ primitive }
 
-// TODO: common reserved words?
-// TODO: boolean flags, like "reversed"?
-common_tag           = { tag_start ~ common_tag_expr ~ tag_end }
-common_tag_expr      = { tag_name ~ s ~ (tag_argument ~ (S ~ "," ~ S ~ tag_argument)*)? }
-common_line_tag_expr = { tag_name ~ ls ~ (line_tag_argument ~ (LS ~ "," ~ LS ~ line_tag_argument)*)? }
+common_line_tag_expr     = { tag_name ~ ls ~ (common_line_tag_argument ~ (LS ~ "," ~ LS ~ common_line_tag_argument)*)? }
+common_line_tag_argument = { keyword_line_argument | keyword | positional_argument }
 
 /* Modified JSONPath */
 query = {
