@@ -1,4 +1,4 @@
-liquid =  { SOI ~ (markup | content)* ~ EOI }
+liquid = _{ SOI ~ (markup | content)* ~ EOI }
 markup = _{ tag | output_statement | comment }
 
 tag              = _{ raw_tag | end_tag | standard_tag | common_tag }

@@ -1,15 +1,20 @@
 //! Liquid template syntax tree
 //!
+use pyo3::prelude::*;
 
 use crate::query::Query;
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct Template {
+    #[pyo3(get)]
     pub liquid: Vec<Node>,
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub enum Node {
+    EOI {},
     Content {
         text: String,
     },
@@ -18,7 +23,7 @@ pub enum Node {
         expression: FilteredExpression,
     },
     Raw {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
         text: String,
     },
     Comment {
@@ -31,12 +36,12 @@ pub enum Node {
         expression: FilteredExpression,
     },
     CaptureTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
         identifier: String,
         block: Vec<Node>,
     },
     CaseTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
         whens: Vec<ConditionalBlock>,
         default: Option<Vec<Node>>,
     },
@@ -58,7 +63,7 @@ pub enum Node {
         expression: FilteredExpression,
     },
     ForTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
         name: String,
         iterable: Primitive,
         limit: Primitive,
@@ -73,13 +78,13 @@ pub enum Node {
         whitespace_control: WhiteSpaceControl,
     },
     IfTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
         condition: Box<ConditionalBlock>,
         alternatives: Vec<ConditionalBlock>,
         default: Option<Vec<Node>>,
     },
     UnlessTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
         condition: Box<ConditionalBlock>,
         alternatives: Vec<ConditionalBlock>,
         default: Option<Vec<Node>>,
@@ -105,54 +110,73 @@ pub enum Node {
         block: Vec<Node>,
     },
     TagExtension {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: (WhiteSpaceControl, Option<WhiteSpaceControl>),
         name: String,
         args: Vec<CommonArgument>,
         block: Option<Vec<Node>>,
     },
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct FilteredExpression {
+    #[pyo3(get)]
     pub left: Primitive,
+    #[pyo3(get)]
     pub filters: Vec<Filter>,
+    #[pyo3(get)]
     pub condition: BooleanExpression,
+    #[pyo3(get)]
     pub alternative: Option<Primitive>,
+    #[pyo3(get)]
     pub alternative_filters: Vec<Filter>,
+    #[pyo3(get)]
     pub tail_filters: Vec<Filter>,
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct InfixExpression {
+    #[pyo3(get)]
     pub left: Box<BooleanExpression>,
+    #[pyo3(get)]
     pub operator: String, // TODO: or enum
+    #[pyo3(get)]
     pub right: Box<BooleanExpression>,
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct PrefixExpression {
+    #[pyo3(get)]
     pub operator: String, // TODO: or enum
+    #[pyo3(get)]
     pub right: Box<BooleanExpression>,
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub enum BooleanExpression {
     Primitive { expr: Primitive },
     Prefix { expr: PrefixExpression },
     Infix { expr: InfixExpression },
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct Filter {
+    #[pyo3(get)]
     pub name: String,
+    #[pyo3(get)]
     pub args: Vec<CommonArgument>,
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub enum Primitive {
-    True_ {},
-    False_ {},
-    Null_ {},
+    TrueLiteral {},
+    FalseLiteral {},
+    NullLiteral {},
     Int { value: i64 },
     Float { value: f64 },
     StringLiteral { value: String },
@@ -160,28 +184,74 @@ pub enum Primitive {
     Query { path: Query },
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct ConditionalBlock {
+    #[pyo3(get)]
     pub condition: BooleanExpression,
+    #[pyo3(get)]
     pub block: Vec<Node>,
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct CommonArgument {
+    #[pyo3(get)]
     pub value: Option<Primitive>,
+    #[pyo3(get)]
     pub name: Option<String>,
 }
 
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct WhiteSpaceControl {
+    #[pyo3(get)]
     pub left: WhiteSpace,
+    #[pyo3(get)]
     pub right: WhiteSpace,
 }
 
-#[derive(Debug)]
+#[pyclass(eq, eq_int)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WhiteSpace {
     Plus,
     Minus,
     Smart,
     Default,
+}
+
+impl WhiteSpace {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "+" => Self::Plus,
+            "-" => Self::Minus,
+            "~" => Self::Smart,
+            "" => Self::Default,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl<'py> pyo3::FromPyObject<'py> for Box<ConditionalBlock> {
+    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
+        ob.extract::<ConditionalBlock>().map(Box::new)
+    }
+}
+
+impl pyo3::IntoPy<pyo3::PyObject> for Box<ConditionalBlock> {
+    fn into_py(self, py: pyo3::Python<'_>) -> pyo3::PyObject {
+        (*self).into_py(py)
+    }
+}
+
+impl<'py> pyo3::FromPyObject<'py> for Box<BooleanExpression> {
+    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
+        ob.extract::<BooleanExpression>().map(Box::new)
+    }
+}
+
+impl pyo3::IntoPy<pyo3::PyObject> for Box<BooleanExpression> {
+    fn into_py(self, py: pyo3::Python<'_>) -> pyo3::PyObject {
+        (*self).into_py(py)
+    }
 }
