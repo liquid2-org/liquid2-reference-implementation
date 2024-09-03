@@ -254,6 +254,7 @@ common_line_tag_expr     = { tag_name ~ ls ~ (common_line_tag_argument ~ (LS ~ "
 common_line_tag_argument = { keyword_line_argument | keyword | positional_argument }
 
 /* Modified JSONPath */
+// TODO: move implicit_root_segment so we just have segments*
 query = {
     (root_identifier ~ segments)
   | (implicit_root_segment ~ segments)

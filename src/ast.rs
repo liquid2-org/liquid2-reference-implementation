@@ -19,51 +19,51 @@ pub enum Node {
         text: String,
     },
     Output {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         expression: FilteredExpression,
     },
     Raw {
-        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
+        whitespace_control: (WhitespaceControl, WhitespaceControl),
         text: String,
     },
     Comment {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         text: String,
     },
     AssignTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         identifier: String,
         expression: FilteredExpression,
     },
     CaptureTag {
-        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
+        whitespace_control: (WhitespaceControl, WhitespaceControl),
         identifier: String,
         block: Vec<Node>,
     },
     CaseTag {
-        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
+        whitespace_control: (WhitespaceControl, WhitespaceControl),
         whens: Vec<ConditionalBlock>,
         default: Option<Vec<Node>>,
     },
     CycleTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         name: Option<String>,
         args: Vec<Primitive>,
     },
     DecrementTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         name: String,
     },
     IncrementTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         name: String,
     },
     EchoTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         expression: FilteredExpression,
     },
     ForTag {
-        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
+        whitespace_control: (WhitespaceControl, WhitespaceControl),
         name: String,
         iterable: Primitive,
         limit: Primitive,
@@ -72,25 +72,25 @@ pub enum Node {
         block: Vec<Node>,
     },
     BreakTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
     },
     ContinueTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
     },
     IfTag {
-        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
+        whitespace_control: (WhitespaceControl, WhitespaceControl),
         condition: Box<ConditionalBlock>,
         alternatives: Vec<ConditionalBlock>,
         default: Option<Vec<Node>>,
     },
     UnlessTag {
-        whitespace_control: (WhiteSpaceControl, WhiteSpaceControl),
+        whitespace_control: (WhitespaceControl, WhitespaceControl),
         condition: Box<ConditionalBlock>,
         alternatives: Vec<ConditionalBlock>,
         default: Option<Vec<Node>>,
     },
     IncludeTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         target: Primitive,
         repeat: bool,
         variable: Primitive,
@@ -98,7 +98,7 @@ pub enum Node {
         args: Vec<CommonArgument>,
     },
     RenderTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         target: Primitive,
         repeat: bool,
         variable: Primitive,
@@ -106,11 +106,11 @@ pub enum Node {
         args: Vec<CommonArgument>,
     },
     LiquidTag {
-        whitespace_control: WhiteSpaceControl,
+        whitespace_control: WhitespaceControl,
         block: Vec<Node>,
     },
     TagExtension {
-        whitespace_control: (WhiteSpaceControl, Option<WhiteSpaceControl>),
+        whitespace_control: (WhitespaceControl, Option<WhitespaceControl>),
         name: String,
         args: Vec<CommonArgument>,
         block: Option<Vec<Node>>,
@@ -125,7 +125,7 @@ pub struct FilteredExpression {
     #[pyo3(get)]
     pub filters: Vec<Filter>,
     #[pyo3(get)]
-    pub condition: BooleanExpression,
+    pub condition: Option<BooleanExpression>,
     #[pyo3(get)]
     pub alternative: Option<Primitive>,
     #[pyo3(get)]
@@ -177,7 +177,7 @@ pub enum Primitive {
     TrueLiteral {},
     FalseLiteral {},
     NullLiteral {},
-    Int { value: i64 },
+    Integer { value: i64 },
     Float { value: f64 },
     StringLiteral { value: String },
     Range { start: i64, stop: i64 },
@@ -204,23 +204,23 @@ pub struct CommonArgument {
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct WhiteSpaceControl {
+pub struct WhitespaceControl {
     #[pyo3(get)]
-    pub left: WhiteSpace,
+    pub left: Whitespace,
     #[pyo3(get)]
-    pub right: WhiteSpace,
+    pub right: Whitespace,
 }
 
 #[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, PartialEq)]
-pub enum WhiteSpace {
+pub enum Whitespace {
     Plus,
     Minus,
     Smart,
     Default,
 }
 
-impl WhiteSpace {
+impl Whitespace {
     pub fn from_str(s: &str) -> Self {
         match s {
             "+" => Self::Plus,

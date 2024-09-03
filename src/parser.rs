@@ -4,7 +4,10 @@ use pest::{iterators::Pair, iterators::Pairs, Parser};
 use pest_derive::Parser;
 
 use crate::{
-    ast::{Node, Template, WhiteSpace, WhiteSpaceControl},
+    ast::{
+        BooleanExpression, FilteredExpression, Node, Primitive, Template, Whitespace,
+        WhitespaceControl,
+    },
     errors::LiquidError,
     query::{ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector},
 };
@@ -32,13 +35,25 @@ impl LiquidParser {
     }
 
     pub fn parse(&self, template: &str) -> Result<Template, LiquidError> {
-        let liquid: Result<Vec<_>, _> = Liquid::parse(Rule::liquid, template)
-            .map_err(|err| LiquidError::syntax(err.to_string()))?
-            .map(|markup| self.parse_markup(markup))
-            .collect();
+        let it = Liquid::parse(Rule::liquid, template)
+            .map_err(|err| LiquidError::syntax(err.to_string()))?;
 
-        Ok(Template { liquid: liquid? })
+        // TODO: check for EOI
+
+        Ok(Template {
+            liquid: self.parse_block(it, Rule::EOI)?,
+        })
     }
+
+    fn parse_block(&self, mut it: Pairs<Rule>, end: Rule) -> Result<Vec<Node>, LiquidError> {
+        let mut block = Vec::new();
+        while it.peek().is_some_and(|r| r.as_rule() != end) {
+            block.push(self.parse_markup(it.next().unwrap())?);
+        }
+        Ok(block)
+    }
+
+    // TODO: parse named block
 
     fn parse_markup(&self, markup: Pair<Rule>) -> Result<Node, LiquidError> {
         Ok(match markup.as_rule() {
@@ -46,31 +61,133 @@ impl LiquidParser {
                 text: markup.as_str().to_owned(),
             },
             Rule::raw_tag => self.parse_raw(markup),
-            Rule::EOI => Node::EOI {},
+            Rule::output_statement => self.parse_output_statement(markup)?,
             _ => todo!("Rule: {:#?}", markup),
         })
     }
 
     fn parse_raw(&self, tag: Pair<Rule>) -> Node {
         let mut it = tag.into_inner();
-        let start_wc_left = WhiteSpace::from_str(it.next().unwrap().as_str());
-        let start_wc_right = WhiteSpace::from_str(it.next().unwrap().as_str());
+        let start_wc_left = Whitespace::from_str(it.next().unwrap().as_str());
+        let start_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
         let raw_content = it.next().unwrap().as_str().to_owned();
-        let end_wc_left = WhiteSpace::from_str(it.next().unwrap().as_str());
-        let end_wc_right = WhiteSpace::from_str(it.next().unwrap().as_str());
+        let end_wc_left = Whitespace::from_str(it.next().unwrap().as_str());
+        let end_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
 
         Node::Raw {
             whitespace_control: (
-                WhiteSpaceControl {
+                WhitespaceControl {
                     left: start_wc_left,
                     right: start_wc_right,
                 },
-                WhiteSpaceControl {
+                WhitespaceControl {
                     left: end_wc_left,
                     right: end_wc_right,
                 },
             ),
             text: raw_content,
+        }
+    }
+
+    fn parse_output_statement(&self, statement: Pair<Rule>) -> Result<Node, LiquidError> {
+        let mut it = statement.into_inner();
+        let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
+        let expression = self.parse_filtered_expression(it.next().unwrap())?;
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+
+        Ok(Node::Output {
+            whitespace_control: WhitespaceControl {
+                left: wc_left,
+                right: wc_right,
+            },
+            expression,
+        })
+    }
+
+    fn parse_filtered_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<FilteredExpression, LiquidError> {
+        let mut it = expression.into_inner();
+        let left = self.parse_primitive(it.next().unwrap())?;
+        todo!()
+    }
+
+    fn parse_boolean_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        todo!()
+    }
+
+    fn parse_primitive(&self, expression: Pair<Rule>) -> Result<Primitive, LiquidError> {
+        match expression.as_rule() {
+            Rule::number => self.parse_number(expression),
+            Rule::multiline_double_quoted => Ok(Primitive::StringLiteral {
+                value: unescape_string(expression.as_str()),
+            }),
+            Rule::multiline_single_quoted => Ok(Primitive::StringLiteral {
+                value: unescape_string(&expression.as_str().replace("\\'", "'")),
+            }),
+            Rule::true_literal => Ok(Primitive::TrueLiteral {}),
+            Rule::false_literal => Ok(Primitive::FalseLiteral {}),
+            Rule::null => Ok(Primitive::NullLiteral {}),
+            Rule::range => todo!(),
+            Rule::query => Ok(Primitive::Query {
+                path: self.query_parser.parse(expression.into_inner())?,
+            }),
+            _ => unreachable!(),
+        }
+    }
+
+    fn parse_number(&self, expr: Pair<Rule>) -> Result<Primitive, LiquidError> {
+        if expr.as_str() == "-0" {
+            return Ok(Primitive::Integer { value: 0 });
+        }
+
+        // TODO: change pest grammar to indicate positive or negative exponent?
+        let mut it = expr.into_inner();
+        let mut is_float = false;
+        let mut n = it.next().unwrap().as_str().to_string(); // int
+
+        if let Some(pair) = it.next() {
+            match pair.as_rule() {
+                Rule::frac => {
+                    is_float = true;
+                    n.push_str(pair.as_str());
+                }
+                Rule::exp => {
+                    let exp_str = pair.as_str();
+                    if exp_str.contains('-') {
+                        is_float = true;
+                    }
+                    n.push_str(exp_str);
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        if let Some(pair) = it.next() {
+            let exp_str = pair.as_str();
+            if exp_str.contains('-') {
+                is_float = true;
+            }
+            n.push_str(exp_str);
+        }
+
+        if is_float {
+            Ok(Primitive::Float {
+                value: n
+                    .parse::<f64>()
+                    .map_err(|_| LiquidError::syntax(String::from("invalid float literal")))?,
+            })
+        } else {
+            Ok(Primitive::Integer {
+                value: n
+                    .parse::<f64>()
+                    .map_err(|_| LiquidError::syntax(String::from("invalid integer literal")))?
+                    as i64,
+            })
         }
     }
 }
