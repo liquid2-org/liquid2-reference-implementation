@@ -74,11 +74,14 @@ multiline_unescaped = _{
 // NOTE: borrowing name_char from JSONPath
 identifier = { name_first ~ name_char* }
 
-filtered_expr    =  { primitive ~ (S ~ filter)* ~ (s ~ inline_condition)? }
+// TODO: update line filtered_expr to match
+// TODO: update tail filters to match filters
+filtered_expr    =  { primitive ~ filters ~ (s ~ inline_condition)? }
+filters          =  { (S ~ filter)* }
 inline_condition =  { "if" ~ s ~ boolean_expr ~ (s ~ "else" ~ s ~ boolean_expr)? ~ (S ~ filter)* ~ (S ~ tail_filter)? }
-filter_expr      = _{ filter_name ~ S ~ (":" ~ S ~ common_arguments)? }
 filter           =  { "|" ~ S ~ filter_expr }
 tail_filter      =  { "||" ~ S ~ filter_expr ~ (S ~ filter)* }
+filter_expr      = _{ filter_name ~ S ~ (":" ~ S ~ common_arguments)? }
 filter_name      =  { function_name_first ~ function_name_char* }
 
 common_arguments    = { common_argument ~ (S ~ "," ~ S ~ common_argument)* }
@@ -400,7 +403,7 @@ name_segment = {
 }
 
 // TODO: whitespace?
-implicit_root_name_segment = {
+implicit_root_name_segment = _{
     ("[" ~ name_selector ~ "]")
   | member_name_shorthand
 }

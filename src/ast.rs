@@ -123,9 +123,16 @@ pub struct FilteredExpression {
     #[pyo3(get)]
     pub left: Primitive,
     #[pyo3(get)]
-    pub filters: Vec<Filter>,
+    pub filters: Option<Vec<Filter>>,
     #[pyo3(get)]
-    pub condition: Option<BooleanExpression>,
+    pub condition: Option<InlineCondition>,
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct InlineCondition {
+    #[pyo3(get)]
+    pub expr: Option<BooleanExpression>,
     #[pyo3(get)]
     pub alternative: Option<Primitive>,
     #[pyo3(get)]

@@ -5,8 +5,8 @@ use pest_derive::Parser;
 
 use crate::{
     ast::{
-        BooleanExpression, FilteredExpression, Node, Primitive, Template, Whitespace,
-        WhitespaceControl,
+        BooleanExpression, Filter, FilteredExpression, InlineCondition, Node, Primitive, Template,
+        Whitespace, WhitespaceControl,
     },
     errors::LiquidError,
     query::{ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector},
@@ -110,6 +110,40 @@ impl LiquidParser {
     ) -> Result<FilteredExpression, LiquidError> {
         let mut it = expression.into_inner();
         let left = self.parse_primitive(it.next().unwrap())?;
+
+        let filters = it
+            .next()
+            .and_then(|expr| Some(self.parse_filters(expr)))
+            .transpose()?;
+
+        let condition = it
+            .next()
+            .and_then(|expr| Some(self.parse_inline_condition(expr)))
+            .transpose()?;
+
+        Ok(FilteredExpression {
+            left,
+            filters,
+            condition,
+        })
+    }
+
+    fn parse_filters(&self, expression: Pair<Rule>) -> Result<Vec<Filter>, LiquidError> {
+        let filters: Result<Vec<_>, _> = expression
+            .into_inner()
+            .map(|filter| self.parse_filter(filter))
+            .collect();
+        filters
+    }
+
+    fn parse_filter(&self, expression: Pair<Rule>) -> Result<Filter, LiquidError> {
+        todo!()
+    }
+
+    fn parse_inline_condition(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<InlineCondition, LiquidError> {
         todo!()
     }
 
