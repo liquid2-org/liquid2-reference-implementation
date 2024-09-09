@@ -132,13 +132,13 @@ pub struct FilteredExpression {
 #[derive(Debug, Clone)]
 pub struct InlineCondition {
     #[pyo3(get)]
-    pub expr: Option<BooleanExpression>,
+    pub expr: BooleanExpression,
     #[pyo3(get)]
     pub alternative: Option<Primitive>,
     #[pyo3(get)]
-    pub alternative_filters: Vec<Filter>,
+    pub alternative_filters: Option<Vec<Filter>>,
     #[pyo3(get)]
-    pub tail_filters: Vec<Filter>,
+    pub tail_filters: Option<Vec<Filter>>,
 }
 
 #[pyclass]
@@ -175,7 +175,7 @@ pub struct Filter {
     #[pyo3(get)]
     pub name: String,
     #[pyo3(get)]
-    pub args: Vec<CommonArgument>,
+    pub args: Option<Vec<CommonArgument>>,
 }
 
 #[pyclass]

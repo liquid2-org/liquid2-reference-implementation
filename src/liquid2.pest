@@ -75,20 +75,22 @@ multiline_unescaped = _{
 identifier = { name_first ~ name_char* }
 
 // TODO: update line filtered_expr to match
-// TODO: update tail filters to match filters
 filtered_expr    =  { primitive ~ filters ~ (s ~ inline_condition)? }
 filters          =  { (S ~ filter)* }
-inline_condition =  { "if" ~ s ~ boolean_expr ~ (s ~ "else" ~ s ~ boolean_expr)? ~ (S ~ filter)* ~ (S ~ tail_filter)? }
-filter           =  { "|" ~ S ~ filter_expr }
-tail_filter      =  { "||" ~ S ~ filter_expr ~ (S ~ filter)* }
+inline_condition =  { "if" ~ s ~ boolean_expr ~ (s ~ "else" ~ s ~ alternative)? ~ S ~ tail_filters }
+alternative      =  { primitive ~ filters }
+filter           = _{ "|" ~ S ~ filter_expr }
+tail_filters     =  { S ~ "||" ~ S ~ filter_expr ~ (S ~ filter)* }
 filter_expr      = _{ filter_name ~ S ~ (":" ~ S ~ common_arguments)? }
 filter_name      =  { function_name_first ~ function_name_char* }
 
-common_arguments    = { common_argument ~ (S ~ "," ~ S ~ common_argument)* }
-common_argument     = { keyword_argument | positional_argument }
-positional_argument = { primitive }
-keyword_argument    = { keyword ~ S ~ ":" ~ S ~ primitive }
-keyword             = { function_name_first ~ function_name_char* }
+common_arguments    =  { common_argument ~ (S ~ "," ~ S ~ common_argument)* }
+common_argument     = _{ keyword_argument | positional_argument }
+positional_argument =  { primitive }
+
+// TODO: allow `=` as well as `:`?
+keyword_argument = { keyword ~ S ~ ":" ~ S ~ primitive }
+keyword          = { function_name_first ~ function_name_char* }
 
 boolean_expr       = { boolean_or_expr }
 boolean_or_expr    = { boolean_and_expr ~ (s ~ "or" ~ s ~ boolean_and_expr)* }

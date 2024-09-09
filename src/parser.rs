@@ -5,8 +5,8 @@ use pest_derive::Parser;
 
 use crate::{
     ast::{
-        BooleanExpression, Filter, FilteredExpression, InlineCondition, Node, Primitive, Template,
-        Whitespace, WhitespaceControl,
+        BooleanExpression, CommonArgument, Filter, FilteredExpression, InlineCondition, Node,
+        Primitive, Template, Whitespace, WhitespaceControl,
     },
     errors::LiquidError,
     query::{ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector},
@@ -137,14 +137,83 @@ impl LiquidParser {
     }
 
     fn parse_filter(&self, expression: Pair<Rule>) -> Result<Filter, LiquidError> {
-        todo!()
+        let mut it = expression.into_inner();
+        let name = it.next().unwrap().as_str().to_owned();
+
+        let args = it
+            .next()
+            .and_then(|expr| Some(self.parse_common_arguments(expr)))
+            .transpose()?;
+
+        Ok(Filter { name, args })
+    }
+
+    fn parse_common_arguments(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<Vec<CommonArgument>, LiquidError> {
+        expression
+            .into_inner()
+            .map(|expr| self.parse_common_argument(expr))
+            .collect()
+    }
+
+    fn parse_common_argument(&self, expression: Pair<Rule>) -> Result<CommonArgument, LiquidError> {
+        match expression.as_rule() {
+            Rule::positional_argument => Ok(CommonArgument {
+                value: Some(self.parse_primitive(expression.into_inner().next().unwrap())?),
+                name: None,
+            }),
+            Rule::keyword_argument => {
+                let mut it = expression.into_inner();
+                let name = it.next().unwrap().as_str().to_owned();
+                let value = self.parse_primitive(it.next().unwrap())?;
+                Ok(CommonArgument {
+                    value: Some(value),
+                    name: Some(name),
+                })
+            }
+            _ => unreachable!(),
+        }
     }
 
     fn parse_inline_condition(
         &self,
         expression: Pair<Rule>,
     ) -> Result<InlineCondition, LiquidError> {
-        todo!()
+        let mut it = expression.into_inner();
+
+        let condition = self.parse_boolean_expression(it.next().unwrap())?;
+        let mut alternative: Option<Primitive> = None;
+        let mut alternative_filters: Option<Vec<Filter>> = None;
+        let tail_filters: Option<Vec<Filter>>;
+
+        let pair = it.next().unwrap();
+
+        if pair.as_rule() == Rule::alternative {
+            let mut inner_it = pair.into_inner();
+            alternative = Some(self.parse_primitive(inner_it.next().unwrap())?);
+
+            alternative_filters = inner_it
+                .next()
+                .and_then(|expr| Some(self.parse_filters(expr)))
+                .transpose()?;
+
+            tail_filters = it
+                .next()
+                .and_then(|expr| Some(self.parse_filters(expr)))
+                .transpose()?;
+        } else {
+            assert!(pair.as_rule() == Rule::tail_filters);
+            tail_filters = Some(self.parse_filters(pair)?)
+        }
+
+        Ok(InlineCondition {
+            expr: condition,
+            alternative,
+            alternative_filters,
+            tail_filters,
+        })
     }
 
     fn parse_boolean_expression(
