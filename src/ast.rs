@@ -143,30 +143,55 @@ pub struct InlineCondition {
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct InfixExpression {
-    #[pyo3(get)]
-    pub left: Box<BooleanExpression>,
-    #[pyo3(get)]
-    pub operator: String, // TODO: or enum
-    #[pyo3(get)]
-    pub right: Box<BooleanExpression>,
-}
-
-#[pyclass]
-#[derive(Debug, Clone)]
-pub struct PrefixExpression {
-    #[pyo3(get)]
-    pub operator: String, // TODO: or enum
-    #[pyo3(get)]
-    pub right: Box<BooleanExpression>,
-}
-
-#[pyclass]
-#[derive(Debug, Clone)]
 pub enum BooleanExpression {
-    Primitive { expr: Primitive },
-    Prefix { expr: PrefixExpression },
-    Infix { expr: InfixExpression },
+    Primitive {
+        expr: Primitive,
+    },
+    LogicalNot {
+        expr: Box<BooleanExpression>,
+    },
+    Logical {
+        left: Box<BooleanExpression>,
+        operator: BooleanOperator,
+        right: Box<BooleanExpression>,
+    },
+    Comparison {
+        left: Primitive,
+        operator: CompareOperator,
+        right: Primitive,
+    },
+    Membership {
+        left: Primitive,
+        operator: MembershipOperator,
+        right: Primitive,
+    },
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub enum BooleanOperator {
+    And {},
+    Or {},
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub enum CompareOperator {
+    Eq {},
+    Ne {},
+    Ge {},
+    Gt {},
+    Le {},
+    Lt {},
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub enum MembershipOperator {
+    In {},
+    NotIn {},
+    Contains {},
+    NotContains {},
 }
 
 #[pyclass]

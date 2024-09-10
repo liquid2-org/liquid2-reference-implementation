@@ -5,8 +5,9 @@ use pest_derive::Parser;
 
 use crate::{
     ast::{
-        BooleanExpression, CommonArgument, Filter, FilteredExpression, InlineCondition, Node,
-        Primitive, Template, Whitespace, WhitespaceControl,
+        BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, Filter,
+        FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive, Template,
+        Whitespace, WhitespaceControl,
     },
     errors::LiquidError,
     query::{ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector},
@@ -220,7 +221,128 @@ impl LiquidParser {
         &self,
         expression: Pair<Rule>,
     ) -> Result<BooleanExpression, LiquidError> {
-        todo!()
+        self.parse_logical_or_expression(expression)
+    }
+
+    fn parse_logical_or_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        let mut it = expression.into_inner();
+        let mut or_expr = self.parse_logical_and_expression(it.next().unwrap())?;
+
+        for expr in it {
+            let right = self.parse_logical_and_expression(expr)?;
+            or_expr = BooleanExpression::Logical {
+                left: Box::new(or_expr),
+                operator: BooleanOperator::Or {},
+                right: Box::new(right),
+            };
+        }
+
+        Ok(or_expr)
+    }
+
+    fn parse_logical_and_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        let mut it = expression.into_inner();
+        let mut and_expr = self.parse_basic_expression(it.next().unwrap())?;
+
+        for expr in it {
+            let right = self.parse_basic_expression(expr)?;
+            and_expr = BooleanExpression::Logical {
+                left: Box::new(and_expr),
+                operator: BooleanOperator::And {},
+                right: Box::new(right),
+            };
+        }
+
+        Ok(and_expr)
+    }
+
+    fn parse_basic_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        match expression.as_rule() {
+            Rule::logical_not => self.parse_logical_not_expression(expression),
+            Rule::primitive => Ok(BooleanExpression::Primitive {
+                expr: self.parse_primitive(expression)?,
+            }),
+            Rule::grouped_expr => self.parse_paren_expression(expression),
+            Rule::compare_expr => self.parse_compare_expression(expression),
+            Rule::membership_expr => self.parse_membership_expression(expression),
+            _ => unreachable!(),
+        }
+    }
+
+    fn parse_logical_not_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        Ok(BooleanExpression::LogicalNot {
+            expr: Box::new(self.parse_basic_expression(expression.into_inner().next().unwrap())?),
+        })
+    }
+
+    fn parse_paren_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        self.parse_logical_or_expression(expression.into_inner().next().unwrap())
+    }
+
+    fn parse_compare_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        let mut it = expression.into_inner();
+        let left = self.parse_primitive(it.next().unwrap())?;
+
+        let operator = match it.next().unwrap().as_str() {
+            "==" => CompareOperator::Eq {},
+            "!=" => CompareOperator::Ne {},
+            "<>" => CompareOperator::Ne {},
+            "<=" => CompareOperator::Le {},
+            ">=" => CompareOperator::Ge {},
+            "<" => CompareOperator::Lt {},
+            ">" => CompareOperator::Gt {},
+            _ => unreachable!(),
+        };
+
+        let right = self.parse_primitive(it.next().unwrap())?;
+
+        Ok(BooleanExpression::Comparison {
+            left,
+            operator,
+            right,
+        })
+    }
+
+    fn parse_membership_expression(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<BooleanExpression, LiquidError> {
+        let mut it = expression.into_inner();
+        let left = self.parse_primitive(it.next().unwrap())?;
+
+        let operator = match it.next().unwrap().as_str() {
+            "in" => MembershipOperator::In {},
+            "not in" => MembershipOperator::NotIn {},
+            "contains" => MembershipOperator::Contains {},
+            "not contains" => MembershipOperator::NotContains {},
+            _ => unreachable!(),
+        };
+
+        let right = self.parse_primitive(it.next().unwrap())?;
+
+        Ok(BooleanExpression::Membership {
+            left,
+            operator,
+            right,
+        })
     }
 
     fn parse_primitive(&self, expression: Pair<Rule>) -> Result<Primitive, LiquidError> {
@@ -239,7 +361,7 @@ impl LiquidParser {
             Rule::query => Ok(Primitive::Query {
                 path: self.query_parser.parse(expression.into_inner())?,
             }),
-            _ => unreachable!(),
+            _ => unreachable!("Rule: {:#?}", expression),
         }
     }
 
@@ -320,17 +442,19 @@ impl QueryParser {
 
     fn parse_segment(&self, segment: Pair<Rule>) -> Result<Segment, LiquidError> {
         Ok(match segment.as_rule() {
-            Rule::child_segment => Segment::Child {
+            Rule::child_segment | Rule::implicit_root_segment => Segment::Child {
                 selectors: self.parse_segment_inner(segment.into_inner().next().unwrap())?,
             },
             Rule::descendant_segment => Segment::Recursive {
                 selectors: self.parse_segment_inner(segment.into_inner().next().unwrap())?,
             },
-            Rule::name_segment | Rule::index_segment => Segment::Child {
-                selectors: vec![self.parse_selector(segment.into_inner().next().unwrap())?],
-            },
+            Rule::name_segment | Rule::implicit_root_name_segment | Rule::index_segment => {
+                Segment::Child {
+                    selectors: vec![self.parse_selector(segment.into_inner().next().unwrap())?],
+                }
+            }
             Rule::EOI => Segment::Eoi {},
-            _ => unreachable!(),
+            _ => unreachable!("Rule: {:#?}", segment),
         })
     }
 
