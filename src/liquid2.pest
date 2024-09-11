@@ -119,18 +119,18 @@ membership_op = {
 }
 
 /* Tags */
+raw_tag          =  { tag_start ~ "raw" ~ tag_end ~ raw_content ~ tag_start ~ "endraw" ~ tag_end }
+raw_content      =  { raw_content_char* }
+raw_content_char = _{ !(tag_start ~ "endraw" ~ tag_end) ~ ANY }
+
 // NOTE: borrowing function_name from JSONPath
 tag_name     = { function_name_first ~ function_name_char* }
 end_tag      = { tag_start ~ "end" ~ tag_name ~ tag_end }
 standard_tag = { tag_start ~ standard_tag_expr ~ tag_end }
 
-raw_tag          =  { tag_start ~ "raw" ~ tag_end ~ raw_content ~ tag_start ~ "endraw" ~ tag_end }
-raw_content      =  { raw_content_char* }
-raw_content_char = _{ !(tag_start ~ "endraw" ~ tag_end) ~ ANY }
-
 // NOTE: ifchanged is excluded
 // NOTE: tablerow is excluded
-standard_tag_expr = {
+standard_tag_expr = _{
     assign_expr
   | capture_expr
   | case_expr
@@ -151,38 +151,67 @@ standard_tag_expr = {
   | liquid_expr
 }
 
-assign_expr       =  { "assign" ~ s ~ identifier ~ S ~ "=" ~ S ~ filtered_expr }
-capture_expr      =  { "capture" ~ s ~ identifier }
-case_expr         =  { "case" ~ s ~ primitive }
-when_expr         =  { "when" ~ s ~ primitive ~ ((S ~ "," ~ S) | (s ~ "or" ~ s) ~ primitive)* }
-else_expr         =  { "else" }
-cycle_expr        =  { "cycle" ~ s ~ (cycle_group ~ S ~ ":" ~ S)? ~ primitive ~ (S ~ "," ~ S ~ primitive)* }
-cycle_group       = @{ primitive }
-decrement_expr    =  { "decrement" ~ s ~ identifier }
-increment_expr    =  { "increment" ~ s ~ identifier }
-echo_expr         =  { "echo" ~ s ~ filtered_expr }
-for_expr          =  { "for" ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments)? }
+assign_expr = _{ assign ~ s ~ identifier ~ S ~ "=" ~ S ~ filtered_expr }
+assign      =  { "assign" }
+
+capture_expr = _{ capture ~ s ~ identifier }
+capture      =  { "capture" }
+
+case_expr = _{ case ~ s ~ primitive }
+case      =  { "case" }
+
+when_expr = _{ when ~ s ~ primitive ~ ((S ~ "," ~ S) | (s ~ "or" ~ s) ~ primitive)* }
+when      =  { "when" }
+
+else_expr = _{ else }
+else      =  { "else" }
+
+cycle_expr  = _{ cycle ~ s ~ (cycle_group ~ S ~ ":" ~ S)? ~ primitive ~ (S ~ "," ~ S ~ primitive)* }
+cycle_group = @{ primitive }
+cycle       =  { "cycle" }
+
+decrement_expr = _{ decrement ~ s ~ identifier }
+decrement      =  { "decrement" }
+
+increment_expr = _{ increment ~ s ~ identifier }
+increment      =  { "increment" }
+
+echo_expr = _{ echo ~ s ~ filtered_expr }
+echo      =  { "echo" }
+
+for_expr          = _{ for ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments)? }
 for_tag_arguments =  { for_tag_argument ~ (s ~ for_tag_argument)* }
 for_tag_argument  =  {
     ("limit" ~ S ~ ":" ~ S ~ primitive)
   | ("offset" ~ S ~ ":" ~ S ~ (primitive | "continue"))
   | "reversed"
 }
+for               =  { "for" }
 
 break_expr    = { "break" }
 continue_expr = { "continue" }
-if_expr       = { "if" ~ s ~ boolean_expr }
-elsif_expr    = { ("elsif" | "elif") ~ s ~ boolean_expr }
-unless_expr   = { "unless" ~ s ~ boolean_expr }
+
+if_expr = _{ if ~ s ~ boolean_expr }
+if      =  { "if" }
+
+elsif_expr = _{ elsif ~ s ~ boolean_expr }
+elsif      =  { "elsif" | "elif" }
+
+unless_expr = _{ unless ~ s ~ boolean_expr }
+unless      =  { "unless" }
 
 // NOTE: no leading comma allowed in arguments
-include_expr          = { "include" ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
-include_tag_arguments = { ("with" | "for") ~ s ~ primitive ~ (s ~ "as" ~ s ~ primitive)? ~ common_arguments? }
-render_expr           = { "render" ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
+include_expr          = _{ include ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
+include               =  { " include " }
+include_tag_arguments =  { ("with" | "for") ~ s ~ primitive ~ (s ~ "as" ~ s ~ primitive)? ~ common_arguments? }
 
-liquid_expr = { "liquid" ~ (s ~ line_exprs)? }
-line_exprs  = { line_expr ~ (LS ~ "\x0A"+ ~ LS ~ line_expr)* }
-line_expr   = { standard_tag_line_expr | common_line_tag_expr }
+render_expr = _{ render ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
+render      =  { "render" }
+
+liquid_expr = _{ liquid_tag ~ (s ~ line_exprs)? }
+liquid_tag  =  { "liquid" }
+line_exprs  =  { line_expr ~ (LS ~ "\x0A"+ ~ LS ~ line_expr)* }
+line_expr   =  { standard_tag_line_expr | common_line_tag_expr }
 
 // For non-standard tags aka tag extensions
 common_tag          = { tag_start ~ common_tag_expr ~ tag_end }

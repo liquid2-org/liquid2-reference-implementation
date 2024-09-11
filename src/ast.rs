@@ -42,7 +42,8 @@ pub enum Node {
     },
     CaseTag {
         whitespace_control: (WhitespaceControl, WhitespaceControl),
-        whens: Vec<ConditionalBlock>,
+        arg: Primitive,
+        whens: Vec<ConditionalBlock>, // TODO: make `when` its onw node?
         default: Option<Vec<Node>>,
     },
     CycleTag {

@@ -1,12 +1,15 @@
-use std::{collections::HashMap, ops::RangeInclusive};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::RangeInclusive,
+};
 
 use pest::{iterators::Pair, iterators::Pairs, Parser};
 use pest_derive::Parser;
 
 use crate::{
     ast::{
-        BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, Filter,
-        FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive, Template,
+        BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, ConditionalBlock,
+        Filter, FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive, Template,
         Whitespace, WhitespaceControl,
     },
     errors::LiquidError,
@@ -36,33 +39,94 @@ impl LiquidParser {
     }
 
     pub fn parse(&self, template: &str) -> Result<Template, LiquidError> {
-        let it = Liquid::parse(Rule::liquid, template)
+        let mut stream = Liquid::parse(Rule::liquid, template)
             .map_err(|err| LiquidError::syntax(err.to_string()))?;
 
         // TODO: check for EOI
-
-        Ok(Template {
-            liquid: self.parse_block(it, Rule::EOI)?,
-        })
+        let block = self.parse_block(&mut stream, Rule::EOI)?;
+        Ok(Template { liquid: block })
     }
 
-    fn parse_block(&self, mut it: Pairs<Rule>, end: Rule) -> Result<Vec<Node>, LiquidError> {
+    fn parse_block(&self, stream: &mut Pairs<Rule>, end: Rule) -> Result<Vec<Node>, LiquidError> {
         let mut block = Vec::new();
-        while it.peek().is_some_and(|r| r.as_rule() != end) {
-            block.push(self.parse_markup(it.next().unwrap())?);
+        while stream.peek().is_some_and(|r| r.as_rule() != end) {
+            let markup = stream.next().unwrap();
+            block.push(self.parse_markup(markup, stream)?);
         }
         Ok(block)
     }
 
-    // TODO: parse named block
+    fn parse_named_block(
+        &self,
+        stream: &mut Pairs<Rule>,
+        end: &str,
+    ) -> Result<Vec<Node>, LiquidError> {
+        let mut block = Vec::new();
+        loop {
+            if stream.peek().is_some_and(|r| {
+                r.as_rule() == Rule::end_tag && r.into_inner().nth(1).unwrap().as_str() == end
+            }) {
+                break;
+            }
 
-    fn parse_markup(&self, markup: Pair<Rule>) -> Result<Node, LiquidError> {
+            // TODO: handle unclosed block tag
+            let markup = stream.next().unwrap();
+            block.push(self.parse_markup(markup, stream)?);
+        }
+        Ok(block)
+    }
+
+    fn parse_block_until(
+        &self,
+        stream: &mut Pairs<Rule>,
+        end: HashSet<String>,
+    ) -> Result<Vec<Node>, LiquidError> {
+        let mut block = Vec::new();
+        loop {
+            if stream.peek().is_some_and(|r| {
+                r.as_rule() == Rule::end_tag
+                    && end.contains(r.into_inner().nth(1).unwrap().as_str())
+            }) {
+                break;
+            }
+
+            // TODO: handle unclosed block tag
+            let markup = stream.next().unwrap();
+            block.push(self.parse_markup(markup, stream)?);
+        }
+        Ok(block)
+    }
+
+    fn is_tag(&self, pair: Pair<Rule>, name: &str) -> bool {
+        match pair.as_rule() {
+            Rule::standard_tag => {
+                pair.into_inner()
+                    .nth(1)
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str()
+                    == name
+            }
+            Rule::end_tag => pair.into_inner().nth(1).unwrap().as_str() == name,
+            // TODO: common tag
+            _ => false,
+        }
+    }
+
+    fn parse_markup(
+        &self,
+        markup: Pair<Rule>,
+        stream: &mut Pairs<Rule>,
+    ) -> Result<Node, LiquidError> {
         Ok(match markup.as_rule() {
             Rule::content => Node::Content {
                 text: markup.as_str().to_owned(),
             },
             Rule::raw_tag => self.parse_raw(markup),
             Rule::output_statement => self.parse_output_statement(markup)?,
+            Rule::standard_tag => self.parse_standard_tag(markup, stream)?,
             _ => todo!("Rule: {:#?}", markup),
         })
     }
@@ -414,6 +478,91 @@ impl LiquidParser {
                     as i64,
             })
         }
+    }
+
+    fn parse_standard_tag(
+        &self,
+        tag: Pair<Rule>,
+        stream: &mut Pairs<Rule>,
+    ) -> Result<Node, LiquidError> {
+        let mut it = tag.into_inner();
+        let wc = Whitespace::from_str(it.next().unwrap().as_str());
+
+        match it.next().unwrap().as_rule() {
+            Rule::assign => self.parse_assign_tag(wc, it),
+            Rule::capture => self.parse_capture_tag(stream, wc, it),
+            _ => todo!(),
+        }
+    }
+
+    fn parse_assign_tag(&self, wc: Whitespace, mut it: Pairs<Rule>) -> Result<Node, LiquidError> {
+        let identifier = it.next().unwrap().as_str().to_owned();
+        let expression = self.parse_filtered_expression(it.next().unwrap())?;
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+        Ok(Node::AssignTag {
+            whitespace_control: WhitespaceControl {
+                left: wc,
+                right: wc_right,
+            },
+            identifier,
+            expression,
+        })
+    }
+
+    fn parse_capture_tag(
+        &self,
+        stream: &mut Pairs<Rule>,
+        wc: Whitespace,
+        mut it: Pairs<Rule>,
+    ) -> Result<Node, LiquidError> {
+        let identifier = it.next().unwrap().as_str().to_owned();
+        let start_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+        let block = self.parse_named_block(stream, "capture")?;
+        let end_tag = stream.next().unwrap();
+        assert!(end_tag.as_rule() == Rule::end_tag);
+        let mut end_it = end_tag.into_inner();
+        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
+        assert!(end_it.next().unwrap().as_str() == "capture");
+        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+        Ok(Node::CaptureTag {
+            whitespace_control: (
+                WhitespaceControl {
+                    left: wc,
+                    right: start_wc_right,
+                },
+                WhitespaceControl {
+                    left: end_wc_left,
+                    right: end_wc_right,
+                },
+            ),
+            identifier,
+            block,
+        })
+    }
+
+    fn parse_case_tag(
+        &self,
+        stream: &mut Pairs<Rule>,
+        wc: Whitespace,
+        mut it: Pairs<Rule>,
+    ) -> Result<Node, LiquidError> {
+        let arg = self.parse_primitive(it.next().unwrap())?;
+        let start_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+
+        let whens: Vec<ConditionalBlock> = Vec::new();
+        let default: Option<Vec<Node>> = None;
+
+        while stream.peek().is_some_and(|p| self.is_tag(p, "when")) {
+            let condition = self.parse_when_tag(stream.next().unwrap())?;
+            // let block = self.parse_block_until(stream, end_when)?;
+            todo!()
+        }
+
+        todo!()
+    }
+
+    fn parse_when_tag(&self, tag: Pair<Rule>) -> Result<Node, LiquidError> {
+        todo!()
     }
 }
 
@@ -1133,6 +1282,7 @@ pub fn standard_functions() -> HashMap<String, FunctionSignature> {
 }
 
 pub fn standard_tags() -> HashMap<String, bool> {
+    // TODO: need to know set of end tag names for each block tag
     let mut tags = HashMap::new();
 
     tags.insert("assign".to_owned(), false);
