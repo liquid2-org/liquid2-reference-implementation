@@ -9,6 +9,7 @@ name = "liquid2"
 crate-type = ["cdylib"]
 
 [dependencies]
+lazy_static = "1.5.0"
 pest = "2.7.11"
 pest_derive = "2.7.11"
 pyo3 = "0.22.0"

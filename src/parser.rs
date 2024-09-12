@@ -9,8 +9,8 @@ use pest_derive::Parser;
 use crate::{
     ast::{
         BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, ConditionalBlock,
-        Filter, FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive, Template,
-        Whitespace, WhitespaceControl,
+        ElseTag, Filter, FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive,
+        Template, WhenTag, Whitespace, WhitespaceControl,
     },
     errors::LiquidError,
     query::{ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector},
@@ -21,7 +21,7 @@ use crate::{
 struct Liquid;
 
 pub struct LiquidParser {
-    pub tags: HashMap<String, bool>,
+    pub tags: HashMap<String, TagMeta>,
     pub query_parser: QueryParser,
 }
 
@@ -79,13 +79,15 @@ impl LiquidParser {
     fn parse_block_until(
         &self,
         stream: &mut Pairs<Rule>,
-        end: HashSet<String>,
+        end: &HashSet<String>,
     ) -> Result<Vec<Node>, LiquidError> {
         let mut block = Vec::new();
         loop {
-            if stream.peek().is_some_and(|r| {
-                r.as_rule() == Rule::end_tag
-                    && end.contains(r.into_inner().nth(1).unwrap().as_str())
+            if stream.peek().is_some_and(|p| match p.as_rule() {
+                Rule::end_tag => end.contains(p.into_inner().nth(1).unwrap().as_str()),
+                Rule::standard_tag => end.contains(p.into_inner().nth(1).unwrap().as_str()),
+                // TODO: common tag
+                _ => false,
             }) {
                 break;
             }
@@ -99,16 +101,7 @@ impl LiquidParser {
 
     fn is_tag(&self, pair: Pair<Rule>, name: &str) -> bool {
         match pair.as_rule() {
-            Rule::standard_tag => {
-                pair.into_inner()
-                    .nth(1)
-                    .unwrap()
-                    .into_inner()
-                    .next()
-                    .unwrap()
-                    .as_str()
-                    == name
-            }
+            Rule::standard_tag => pair.into_inner().nth(1).unwrap().as_str() == name,
             Rule::end_tag => pair.into_inner().nth(1).unwrap().as_str() == name,
             // TODO: common tag
             _ => false,
@@ -487,11 +480,13 @@ impl LiquidParser {
     ) -> Result<Node, LiquidError> {
         let mut it = tag.into_inner();
         let wc = Whitespace::from_str(it.next().unwrap().as_str());
+        let expr = it.next().unwrap();
 
-        match it.next().unwrap().as_rule() {
+        match expr.as_rule() {
             Rule::assign => self.parse_assign_tag(wc, it),
             Rule::capture => self.parse_capture_tag(stream, wc, it),
-            _ => todo!(),
+            Rule::case => self.parse_case_tag(stream, wc, it),
+            _ => todo!("{:#?}", expr),
         }
     }
 
@@ -549,20 +544,85 @@ impl LiquidParser {
         let arg = self.parse_primitive(it.next().unwrap())?;
         let start_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
 
-        let whens: Vec<ConditionalBlock> = Vec::new();
-        let default: Option<Vec<Node>> = None;
-
-        while stream.peek().is_some_and(|p| self.is_tag(p, "when")) {
-            let condition = self.parse_when_tag(stream.next().unwrap())?;
-            // let block = self.parse_block_until(stream, end_when)?;
-            todo!()
+        if stream.peek().is_some_and(|p| p.as_rule() == Rule::content) {
+            stream.next();
         }
 
-        todo!()
+        let mut whens: Vec<WhenTag> = Vec::new();
+
+        while stream.peek().is_some_and(|p| self.is_tag(p, "when")) {
+            let tag = stream.next().unwrap();
+            whens.push(self.parse_when_tag(stream, tag)?)
+        }
+
+        let default: Option<ElseTag>;
+        if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
+            let mut else_it = stream.next().unwrap().into_inner();
+            let else_wc_left = Whitespace::from_str(else_it.next().unwrap().as_str());
+            assert!(else_it.next().unwrap().as_str() == "else");
+            let else_wc_right = Whitespace::from_str(else_it.next().unwrap().as_str());
+            default = Some(ElseTag {
+                whitespace_control: WhitespaceControl {
+                    left: else_wc_left,
+                    right: else_wc_right,
+                },
+                block: self.parse_named_block(stream, "case")?,
+            });
+        } else {
+            default = None;
+        }
+
+        let end_tag = stream.next().unwrap();
+        // TODO: syntax error if not end tag
+        assert!(end_tag.as_rule() == Rule::end_tag);
+        let mut end_it = end_tag.into_inner();
+        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
+        assert!(end_it.next().unwrap().as_str() == "case");
+        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+
+        Ok(Node::CaseTag {
+            whitespace_control: (
+                WhitespaceControl {
+                    left: wc,
+                    right: start_wc_right,
+                },
+                WhitespaceControl {
+                    left: end_wc_left,
+                    right: end_wc_right,
+                },
+            ),
+            arg,
+            whens,
+            default,
+        })
     }
 
-    fn parse_when_tag(&self, tag: Pair<Rule>) -> Result<Node, LiquidError> {
-        todo!()
+    fn parse_when_tag(
+        &self,
+        stream: &mut Pairs<Rule>,
+        tag: Pair<Rule>,
+    ) -> Result<WhenTag, LiquidError> {
+        let mut it = tag.into_inner();
+        let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
+        assert!(it.next().unwrap().as_rule() == Rule::when);
+        let mut args: Vec<Primitive> = Vec::new();
+
+        while it.peek().is_some_and(|p| p.as_rule() != Rule::WC) {
+            args.push(self.parse_primitive(it.next().unwrap())?);
+        }
+
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+        let block_end = &self.tags.get("case").unwrap().end;
+        let block = self.parse_block_until(stream, block_end)?;
+
+        Ok(WhenTag {
+            whitespace_control: WhitespaceControl {
+                left: wc_left,
+                right: wc_right,
+            },
+            args,
+            block,
+        })
     }
 }
 
@@ -1281,28 +1341,153 @@ pub fn standard_functions() -> HashMap<String, FunctionSignature> {
     functions
 }
 
-pub fn standard_tags() -> HashMap<String, bool> {
+pub struct TagMeta {
+    pub block: bool,
+    pub end: HashSet<String>,
+}
+
+pub fn standard_tags() -> HashMap<String, TagMeta> {
     // TODO: need to know set of end tag names for each block tag
     let mut tags = HashMap::new();
 
-    tags.insert("assign".to_owned(), false);
-    tags.insert("capture".to_owned(), true);
-    tags.insert("case".to_owned(), true);
-    tags.insert("when".to_owned(), true);
-    tags.insert("else".to_owned(), true);
-    tags.insert("cycle".to_owned(), false);
-    tags.insert("decrement".to_owned(), false);
-    tags.insert("increment".to_owned(), false);
-    tags.insert("echo".to_owned(), false);
-    tags.insert("for".to_owned(), true);
-    tags.insert("break".to_owned(), false);
-    tags.insert("continue".to_owned(), false);
-    tags.insert("if".to_owned(), true);
-    tags.insert("elsif".to_owned(), true);
-    tags.insert("unless".to_owned(), true);
-    tags.insert("include".to_owned(), false);
-    tags.insert("render".to_owned(), false);
-    tags.insert("liquid".to_owned(), false);
+    tags.insert(
+        "assign".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    let mut end_capture = HashSet::new();
+    end_capture.insert("capture".to_owned());
+    tags.insert(
+        "capture".to_owned(),
+        TagMeta {
+            block: true,
+            end: end_capture,
+        },
+    );
+
+    let mut end_case = HashSet::new();
+    end_case.insert("case".to_owned());
+    end_case.insert("when".to_owned());
+    end_case.insert("else".to_owned());
+    tags.insert(
+        "case".to_owned(),
+        TagMeta {
+            block: true,
+            end: end_case,
+        },
+    );
+
+    tags.insert(
+        "cycle".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    tags.insert(
+        "decrement".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    tags.insert(
+        "increment".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    tags.insert(
+        "echo".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    let mut end_for = HashSet::new();
+    end_for.insert("for".to_owned());
+    end_for.insert("else".to_owned());
+    tags.insert(
+        "for".to_owned(),
+        TagMeta {
+            block: true,
+            end: end_for,
+        },
+    );
+
+    tags.insert(
+        "break".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    tags.insert(
+        "continue".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    let mut end_if = HashSet::new();
+    end_if.insert("if".to_owned());
+    end_if.insert("elsif".to_owned());
+    end_if.insert("elif".to_owned());
+    end_if.insert("else".to_owned());
+    tags.insert(
+        "if".to_owned(),
+        TagMeta {
+            block: true,
+            end: end_if,
+        },
+    );
+
+    let mut end_unless = HashSet::new();
+    end_unless.insert("unless".to_owned());
+    end_unless.insert("elsif".to_owned());
+    end_unless.insert("elif".to_owned());
+    end_unless.insert("else".to_owned());
+    tags.insert(
+        "unless".to_owned(),
+        TagMeta {
+            block: true,
+            end: end_unless,
+        },
+    );
+
+    tags.insert(
+        "include".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    tags.insert(
+        "render".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
+
+    tags.insert(
+        "liquid".to_owned(),
+        TagMeta {
+            block: false,
+            end: HashSet::new(),
+        },
+    );
 
     tags
 }

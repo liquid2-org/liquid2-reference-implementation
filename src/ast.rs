@@ -43,8 +43,8 @@ pub enum Node {
     CaseTag {
         whitespace_control: (WhitespaceControl, WhitespaceControl),
         arg: Primitive,
-        whens: Vec<ConditionalBlock>, // TODO: make `when` its onw node?
-        default: Option<Vec<Node>>,
+        whens: Vec<WhenTag>,
+        default: Option<ElseTag>,
     },
     CycleTag {
         whitespace_control: WhitespaceControl,
@@ -228,6 +228,26 @@ pub struct ConditionalBlock {
 
 #[pyclass]
 #[derive(Debug, Clone)]
+pub struct WhenTag {
+    #[pyo3(get)]
+    pub whitespace_control: WhitespaceControl,
+    #[pyo3(get)]
+    pub args: Vec<Primitive>,
+    #[pyo3(get)]
+    pub block: Vec<Node>,
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ElseTag {
+    #[pyo3(get)]
+    pub whitespace_control: WhitespaceControl,
+    #[pyo3(get)]
+    pub block: Vec<Node>,
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct CommonArgument {
     #[pyo3(get)]
     pub value: Option<Primitive>,
@@ -260,7 +280,7 @@ impl Whitespace {
             "-" => Self::Minus,
             "~" => Self::Smart,
             "" => Self::Default,
-            _ => unreachable!(),
+            _ => unreachable!("{:#?}", s),
         }
     }
 }
