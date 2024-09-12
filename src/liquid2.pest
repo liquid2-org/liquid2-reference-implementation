@@ -179,7 +179,8 @@ increment      =  { "increment" }
 echo_expr = _{ echo ~ s ~ filtered_expr }
 echo      =  { "echo" }
 
-for_expr          = _{ for ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments)? }
+// TODO: optional comma separated args
+for_expr          = _{ for ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments) }
 for_tag_arguments =  { for_tag_argument ~ (s ~ for_tag_argument)* }
 for_tag_argument  =  {
     ("limit" ~ S ~ ":" ~ S ~ primitive)
