@@ -179,15 +179,13 @@ increment      =  { "increment" }
 echo_expr = _{ echo ~ s ~ filtered_expr }
 echo      =  { "echo" }
 
-// TODO: optional comma separated args
-for_expr          = _{ for ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments) }
-for_tag_arguments =  { for_tag_argument ~ (s ~ for_tag_argument)* }
-for_tag_argument  =  {
-    ("limit" ~ S ~ ":" ~ S ~ primitive)
-  | ("offset" ~ S ~ ":" ~ S ~ (primitive | "continue"))
-  | "reversed"
-}
-for               =  { "for" }
+// NOTE: comma or space separated args
+// NOTE: args can appear in any order (unlike Shopify/Liquid in strict mode)
+// NOTE: if duplicated, the latest argument is used
+for_expr          = _{ for_ ~ s ~ identifier ~ s ~ "in" ~ s ~ primitive ~ (s ~ for_tag_arguments) }
+for_tag_arguments =  { for_tag_argument ~ ((s | (S ~ "," ~ S)) ~ for_tag_argument)* }
+for_tag_argument  = _{ keyword_argument | positional_argument }
+for_              =  { "for" }
 
 break_expr    = { "break" }
 continue_expr = { "continue" }

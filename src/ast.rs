@@ -67,10 +67,11 @@ pub enum Node {
         whitespace_control: (WhitespaceControl, WhitespaceControl),
         name: String,
         iterable: Primitive,
-        limit: Primitive,
-        offset: Primitive,
+        limit: Option<Primitive>,
+        offset: Option<Primitive>,
         reversed: bool,
         block: Vec<Node>,
+        default: Option<ElseTag>,
     },
     BreakTag {
         whitespace_control: WhitespaceControl,
@@ -115,6 +116,7 @@ pub enum Node {
         name: String,
         args: Vec<CommonArgument>,
         block: Option<Vec<Node>>,
+        tags: Option<Vec<Node>>, // Nested tags, like `else` in a `for` loop, or `when` in a `case` block
     },
 }
 

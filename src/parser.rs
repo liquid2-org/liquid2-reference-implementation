@@ -8,9 +8,9 @@ use pest_derive::Parser;
 
 use crate::{
     ast::{
-        BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, ConditionalBlock,
-        ElseTag, Filter, FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive,
-        Template, WhenTag, Whitespace, WhitespaceControl,
+        BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, ElseTag, Filter,
+        FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive, Template,
+        WhenTag, Whitespace, WhitespaceControl,
     },
     errors::LiquidError,
     query::{ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector},
@@ -221,6 +221,38 @@ impl LiquidParser {
             Rule::positional_argument => Ok(CommonArgument {
                 value: Some(self.parse_primitive(expression.into_inner().next().unwrap())?),
                 name: None,
+            }),
+            Rule::keyword_argument => {
+                let mut it = expression.into_inner();
+                let name = it.next().unwrap().as_str().to_owned();
+                let value = self.parse_primitive(it.next().unwrap())?;
+                Ok(CommonArgument {
+                    value: Some(value),
+                    name: Some(name),
+                })
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn parse_keywords_and_symbols(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<Vec<CommonArgument>, LiquidError> {
+        expression
+            .into_inner()
+            .map(|expr| self.parse_keyword_or_symbol(expr))
+            .collect()
+    }
+
+    fn parse_keyword_or_symbol(
+        &self,
+        expression: Pair<Rule>,
+    ) -> Result<CommonArgument, LiquidError> {
+        match expression.as_rule() {
+            Rule::positional_argument => Ok(CommonArgument {
+                value: None,
+                name: Some(expression.into_inner().next().unwrap().as_str().to_owned()),
             }),
             Rule::keyword_argument => {
                 let mut it = expression.into_inner();
@@ -490,6 +522,7 @@ impl LiquidParser {
             Rule::decrement => self.parse_decrement_tag(wc, it),
             Rule::increment => self.parse_increment_tag(wc, it),
             Rule::echo => self.parse_echo_tag(wc, it),
+            Rule::for_ => self.parse_for_tag(wc, it, stream),
             _ => todo!("{:#?}", expr),
         }
     }
@@ -559,7 +592,7 @@ impl LiquidParser {
             whens.push(self.parse_when_tag(tag, stream)?)
         }
 
-        let default: Option<ElseTag>;
+        let mut default: Option<ElseTag> = None;
         if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
             let mut else_it = stream.next().unwrap().into_inner();
             let else_wc_left = Whitespace::from_str(else_it.next().unwrap().as_str());
@@ -572,8 +605,6 @@ impl LiquidParser {
                 },
                 block: self.parse_named_block(stream, "case")?,
             });
-        } else {
-            default = None;
         }
 
         let end_tag = stream.next().unwrap();
@@ -708,8 +739,85 @@ impl LiquidParser {
         let name = it.next().unwrap().as_str().to_owned();
         let iterable = self.parse_primitive(it.next().unwrap())?;
 
+        let mut limit: Option<Primitive> = None;
+        let mut offset: Option<Primitive> = None;
+        let mut reversed = false;
+
+        let args = self.parse_keywords_and_symbols(it.next().unwrap())?;
+        for arg in args {
+            match arg {
+                CommonArgument { name: Some(s), .. } => match s.as_str() {
+                    "limit" => limit = Some(arg.value.unwrap()),
+                    "offset" => offset = Some(arg.value.unwrap()),
+                    "reversed" => {
+                        if arg.value.is_some() {
+                            return Err(LiquidError::syntax(
+                                "unexpected value for symbol 'reversed'".to_string(),
+                            ));
+                        }
+                        reversed = true
+                    }
+                    _ => {
+                        return Err(LiquidError::syntax(format!(
+                            "expected 'limit', 'offset' or 'reversed', found '{}'",
+                            s
+                        )))
+                    }
+                },
+                _ => {
+                    return Err(LiquidError::syntax(format!(
+                        "expected 'limit', 'offset' or 'reversed', found {:#?}",
+                        arg
+                    )))
+                }
+            }
+        }
+
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
-        todo!()
+        let block_end = &self.tags.get("for").unwrap().end;
+        let block = self.parse_block_until(stream, block_end)?;
+
+        let mut default: Option<ElseTag> = None;
+        if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
+            let mut else_it = stream.next().unwrap().into_inner();
+            let else_wc_left = Whitespace::from_str(else_it.next().unwrap().as_str());
+            assert!(else_it.next().unwrap().as_str() == "else");
+            let else_wc_right = Whitespace::from_str(else_it.next().unwrap().as_str());
+            default = Some(ElseTag {
+                whitespace_control: WhitespaceControl {
+                    left: else_wc_left,
+                    right: else_wc_right,
+                },
+                block: self.parse_named_block(stream, "for")?,
+            });
+        }
+
+        let end_tag = stream.next().unwrap();
+        assert!(end_tag.as_rule() == Rule::end_tag);
+        let mut end_it = end_tag.into_inner();
+        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
+        assert!(end_it.next().unwrap().as_str() == "for");
+        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+
+        Ok(Node::ForTag {
+            whitespace_control: (
+                WhitespaceControl {
+                    left: wc,
+                    right: wc_right,
+                },
+                WhitespaceControl {
+                    left: end_wc_left,
+                    right: end_wc_right,
+                },
+            ),
+            name,
+            iterable,
+            limit,
+            offset,
+            reversed,
+            block,
+            default,
+        })
     }
 }
 
