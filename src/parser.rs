@@ -8,8 +8,8 @@ use pest_derive::Parser;
 
 use crate::{
     ast::{
-        BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, ElseTag, Filter,
-        FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive, Template,
+        BooleanExpression, BooleanOperator, CommonArgument, CompareOperator, ElseTag, ElsifTag,
+        Filter, FilteredExpression, InlineCondition, MembershipOperator, Node, Primitive, Template,
         WhenTag, Whitespace, WhitespaceControl,
     },
     errors::LiquidError,
@@ -310,7 +310,7 @@ impl LiquidParser {
         &self,
         expression: Pair<Rule>,
     ) -> Result<BooleanExpression, LiquidError> {
-        self.parse_logical_or_expression(expression)
+        self.parse_logical_or_expression(expression.into_inner().next().unwrap())
     }
 
     fn parse_logical_or_expression(
@@ -357,13 +357,12 @@ impl LiquidParser {
     ) -> Result<BooleanExpression, LiquidError> {
         match expression.as_rule() {
             Rule::logical_not => self.parse_logical_not_expression(expression),
-            Rule::primitive => Ok(BooleanExpression::Primitive {
-                expr: self.parse_primitive(expression)?,
-            }),
             Rule::grouped_expr => self.parse_paren_expression(expression),
             Rule::compare_expr => self.parse_compare_expression(expression),
             Rule::membership_expr => self.parse_membership_expression(expression),
-            _ => unreachable!(),
+            _ => Ok(BooleanExpression::Primitive {
+                expr: self.parse_primitive(expression)?,
+            }),
         }
     }
 
@@ -523,6 +522,19 @@ impl LiquidParser {
             Rule::increment => self.parse_increment_tag(wc, it),
             Rule::echo => self.parse_echo_tag(wc, it),
             Rule::for_ => self.parse_for_tag(wc, it, stream),
+            Rule::break_ => Ok(Node::BreakTag {
+                whitespace_control: WhitespaceControl {
+                    left: wc,
+                    right: Whitespace::from_str(it.next().unwrap().as_str()),
+                },
+            }),
+            Rule::continue_ => Ok(Node::BreakTag {
+                whitespace_control: WhitespaceControl {
+                    left: wc,
+                    right: Whitespace::from_str(it.next().unwrap().as_str()),
+                },
+            }),
+            Rule::if_ => self.parse_if_tag(wc, it, stream),
             _ => todo!("{:#?}", expr),
         }
     }
@@ -581,12 +593,12 @@ impl LiquidParser {
         let arg = self.parse_primitive(it.next().unwrap())?;
         let start_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
 
+        // Discard any content between `case` and `when`/`else`.
         if stream.peek().is_some_and(|p| p.as_rule() == Rule::content) {
             stream.next();
         }
 
         let mut whens: Vec<WhenTag> = Vec::new();
-
         while stream.peek().is_some_and(|p| self.is_tag(p, "when")) {
             let tag = stream.next().unwrap();
             whens.push(self.parse_when_tag(tag, stream)?)
@@ -817,6 +829,87 @@ impl LiquidParser {
             reversed,
             block,
             default,
+        })
+    }
+
+    fn parse_if_tag(
+        &self,
+        wc: Whitespace,
+        mut it: Pairs<Rule>,
+        stream: &mut Pairs<Rule>,
+    ) -> Result<Node, LiquidError> {
+        let condition = self.parse_boolean_expression(it.next().unwrap())?;
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+        let block_end = &self.tags.get("if").unwrap().end;
+        let block = self.parse_block_until(stream, block_end)?;
+
+        let mut alternatives: Vec<ElsifTag> = Vec::new();
+        while stream.peek().is_some_and(|p| self.is_tag(p, "elsif")) {
+            let tag = stream.next().unwrap();
+            alternatives.push(self.parse_elsif_tag(tag, stream, block_end)?)
+        }
+
+        let mut default: Option<ElseTag> = None;
+        if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
+            let mut else_it = stream.next().unwrap().into_inner();
+            let else_wc_left = Whitespace::from_str(else_it.next().unwrap().as_str());
+            assert!(else_it.next().unwrap().as_str() == "else");
+            let else_wc_right = Whitespace::from_str(else_it.next().unwrap().as_str());
+            default = Some(ElseTag {
+                whitespace_control: WhitespaceControl {
+                    left: else_wc_left,
+                    right: else_wc_right,
+                },
+                block: self.parse_named_block(stream, "if")?,
+            });
+        }
+
+        let end_tag = stream.next().unwrap();
+        // TODO: syntax error if not end tag
+        assert!(end_tag.as_rule() == Rule::end_tag);
+        let mut end_it = end_tag.into_inner();
+        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
+        assert!(end_it.next().unwrap().as_str() == "if");
+        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+
+        Ok(Node::IfTag {
+            whitespace_control: (
+                WhitespaceControl {
+                    left: wc,
+                    right: wc_right,
+                },
+                WhitespaceControl {
+                    left: end_wc_left,
+                    right: end_wc_right,
+                },
+            ),
+            condition,
+            block,
+            alternatives,
+            default,
+        })
+    }
+
+    fn parse_elsif_tag(
+        &self,
+        tag: Pair<Rule>,
+        stream: &mut Pairs<Rule>,
+        block_end: &HashSet<String>,
+    ) -> Result<ElsifTag, LiquidError> {
+        let mut it = tag.into_inner();
+        let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
+        assert!(it.next().unwrap().as_rule() == Rule::elsif);
+        let condition = self.parse_boolean_expression(it.next().unwrap())?;
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+        let block = self.parse_block_until(stream, block_end)?;
+
+        Ok(ElsifTag {
+            whitespace_control: WhitespaceControl {
+                left: wc_left,
+                right: wc_right,
+            },
+            condition,
+            block,
         })
     }
 }
@@ -1637,7 +1730,6 @@ pub fn standard_tags() -> HashMap<String, TagMeta> {
     let mut end_if = HashSet::new();
     end_if.insert("if".to_owned());
     end_if.insert("elsif".to_owned());
-    end_if.insert("elif".to_owned());
     end_if.insert("else".to_owned());
     tags.insert(
         "if".to_owned(),
@@ -1650,7 +1742,6 @@ pub fn standard_tags() -> HashMap<String, TagMeta> {
     let mut end_unless = HashSet::new();
     end_unless.insert("unless".to_owned());
     end_unless.insert("elsif".to_owned());
-    end_unless.insert("elif".to_owned());
     end_unless.insert("else".to_owned());
     tags.insert(
         "unless".to_owned(),

@@ -81,15 +81,17 @@ pub enum Node {
     },
     IfTag {
         whitespace_control: (WhitespaceControl, WhitespaceControl),
-        condition: Box<ConditionalBlock>,
-        alternatives: Vec<ConditionalBlock>,
-        default: Option<Vec<Node>>,
+        condition: BooleanExpression,
+        block: Vec<Node>,
+        alternatives: Vec<ElsifTag>,
+        default: Option<ElseTag>,
     },
     UnlessTag {
         whitespace_control: (WhitespaceControl, WhitespaceControl),
-        condition: Box<ConditionalBlock>,
-        alternatives: Vec<ConditionalBlock>,
-        default: Option<Vec<Node>>,
+        condition: BooleanExpression,
+        block: Vec<Node>,
+        alternatives: Vec<ElsifTag>,
+        default: Option<ElseTag>,
     },
     IncludeTag {
         whitespace_control: WhitespaceControl,
@@ -221,15 +223,6 @@ pub enum Primitive {
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct ConditionalBlock {
-    #[pyo3(get)]
-    pub condition: BooleanExpression,
-    #[pyo3(get)]
-    pub block: Vec<Node>,
-}
-
-#[pyclass]
-#[derive(Debug, Clone)]
 pub struct WhenTag {
     #[pyo3(get)]
     pub whitespace_control: WhitespaceControl,
@@ -244,6 +237,17 @@ pub struct WhenTag {
 pub struct ElseTag {
     #[pyo3(get)]
     pub whitespace_control: WhitespaceControl,
+    #[pyo3(get)]
+    pub block: Vec<Node>,
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ElsifTag {
+    #[pyo3(get)]
+    pub whitespace_control: WhitespaceControl,
+    #[pyo3(get)]
+    pub condition: BooleanExpression,
     #[pyo3(get)]
     pub block: Vec<Node>,
 }
@@ -284,18 +288,6 @@ impl Whitespace {
             "" => Self::Default,
             _ => unreachable!("{:#?}", s),
         }
-    }
-}
-
-impl<'py> pyo3::FromPyObject<'py> for Box<ConditionalBlock> {
-    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
-        ob.extract::<ConditionalBlock>().map(Box::new)
-    }
-}
-
-impl pyo3::IntoPy<pyo3::PyObject> for Box<ConditionalBlock> {
-    fn into_py(self, py: pyo3::Python<'_>) -> pyo3::PyObject {
-        (*self).into_py(py)
     }
 }
 

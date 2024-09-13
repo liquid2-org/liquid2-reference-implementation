@@ -1,5 +1,5 @@
 liquid = _{ SOI ~ (markup | content)* ~ EOI }
-markup = _{ tag | output_statement | comment }
+markup = _{ comment | tag | output_statement }
 
 tag              = _{ raw_tag | end_tag | standard_tag | common_tag }
 output_statement =  { statement_start ~ filtered_expr ~ statement_end }
@@ -77,7 +77,7 @@ identifier = { name_first ~ name_char* }
 // TODO: update line filtered_expr to match
 filtered_expr    =  { primitive ~ filters ~ (s ~ inline_condition)? }
 filters          =  { (S ~ filter)* }
-inline_condition =  { "if" ~ s ~ boolean_expr ~ (s ~ "else" ~ s ~ alternative)? ~ S ~ tail_filters }
+inline_condition =  { "if" ~ s ~ boolean_expr ~ (s ~ "else" ~ s ~ alternative)? ~ S ~ tail_filters? }
 alternative      =  { primitive ~ filters }
 filter           = _{ "|" ~ S ~ filter_expr }
 tail_filters     =  { S ~ "||" ~ S ~ filter_expr ~ (S ~ filter)* }
@@ -92,14 +92,14 @@ positional_argument =  { primitive }
 keyword_argument = { keyword ~ S ~ ":" ~ S ~ primitive }
 keyword          = { function_name_first ~ function_name_char* }
 
-boolean_expr       = { boolean_or_expr }
-boolean_or_expr    = { boolean_and_expr ~ (s ~ "or" ~ s ~ boolean_and_expr)* }
-boolean_and_expr   = { boolean_basic_expr ~ (s ~ "and" ~ s ~ boolean_basic_expr)* }
-boolean_basic_expr = { logical_not | primitive | grouped_expr | compare_expr | membership_expr }
-logical_not        = { "not" ~ s ~ (primitive | grouped_expr) }
-grouped_expr       = { "(" ~ S ~ boolean_expr ~ S ~ ")" }
-compare_expr       = { primitive ~ S ~ compare_op ~ S ~ primitive }
-membership_expr    = { primitive ~ S ~ membership_op ~ S ~ primitive }
+boolean_expr       =  { boolean_or_expr }
+boolean_or_expr    =  { boolean_and_expr ~ (s ~ "or" ~ s ~ boolean_and_expr)* }
+boolean_and_expr   =  { boolean_basic_expr ~ (s ~ "and" ~ s ~ boolean_basic_expr)* }
+boolean_basic_expr = _{ logical_not | primitive | grouped_expr | compare_expr | membership_expr }
+logical_not        =  { "not" ~ s ~ (primitive | grouped_expr) }
+grouped_expr       =  { "(" ~ S ~ boolean_expr ~ S ~ ")" }
+compare_expr       =  { primitive ~ S ~ compare_op ~ S ~ primitive }
+membership_expr    =  { primitive ~ S ~ membership_op ~ S ~ primitive }
 
 compare_op = {
     "=="
@@ -187,14 +187,17 @@ for_tag_arguments =  { for_tag_argument ~ ((s | (S ~ "," ~ S)) ~ for_tag_argumen
 for_tag_argument  = _{ keyword_argument | positional_argument }
 for_              =  { "for" }
 
-break_expr    = { "break" }
-continue_expr = { "continue" }
+break_expr = { break_ }
+break_     = { "break" }
 
-if_expr = _{ if ~ s ~ boolean_expr }
-if      =  { "if" }
+continue_expr = { continue_ }
+continue_     = { "continue" }
+
+if_expr = _{ if_ ~ s ~ boolean_expr }
+if_     =  { "if" }
 
 elsif_expr = _{ elsif ~ s ~ boolean_expr }
-elsif      =  { "elsif" | "elif" }
+elsif      =  { "elsif" }
 
 unless_expr = _{ unless ~ s ~ boolean_expr }
 unless      =  { "unless" }
