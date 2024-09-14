@@ -205,7 +205,9 @@ unless      =  { "unless" }
 // NOTE: no leading comma allowed in arguments
 include_expr          = _{ include ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
 include               =  { " include " }
-include_tag_arguments =  { ("with" | "for") ~ s ~ primitive ~ (s ~ "as" ~ s ~ primitive)? ~ common_arguments? }
+include_tag_arguments =  { (include_with | include_for)? ~ common_arguments? }
+include_with          =  { "with" ~ s ~ primitive ~ (s ~ "as" ~ s ~ identifier)? }
+include_for           =  { "for" ~ s ~ primitive ~ (s ~ "as" ~ s ~ identifier)? }
 
 render_expr = _{ render ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
 render      =  { "render" }

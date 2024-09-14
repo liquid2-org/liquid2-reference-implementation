@@ -99,6 +99,17 @@ impl LiquidParser {
         Ok(block)
     }
 
+    fn parse_end_block_tag(&self, stream: &mut Pairs<Rule>, name: &str) -> WhitespaceControl {
+        let tag = stream.next().unwrap();
+        // TODO: syntax error if not end tag
+        assert!(tag.as_rule() == Rule::end_tag);
+        let mut it = tag.into_inner();
+        let left = Whitespace::from_str(it.next().unwrap().as_str());
+        assert!(it.next().unwrap().as_str() == name);
+        let right = Whitespace::from_str(it.next().unwrap().as_str());
+        WhitespaceControl { left, right }
+    }
+
     fn is_tag(&self, pair: Pair<Rule>, name: &str) -> bool {
         match pair.as_rule() {
             Rule::standard_tag => pair.into_inner().nth(1).unwrap().as_str() == name,
@@ -120,7 +131,8 @@ impl LiquidParser {
             Rule::raw_tag => self.parse_raw(markup),
             Rule::output_statement => self.parse_output_statement(markup)?,
             Rule::standard_tag => self.parse_standard_tag(markup, stream)?,
-            _ => todo!("Rule: {:#?}", markup),
+            Rule::common_tag => todo!(),
+            _ => unreachable!("Rule: {:#?}", markup),
         })
     }
 
@@ -528,14 +540,18 @@ impl LiquidParser {
                     right: Whitespace::from_str(it.next().unwrap().as_str()),
                 },
             }),
-            Rule::continue_ => Ok(Node::BreakTag {
+            Rule::continue_ => Ok(Node::ContinueTag {
                 whitespace_control: WhitespaceControl {
                     left: wc,
                     right: Whitespace::from_str(it.next().unwrap().as_str()),
                 },
             }),
             Rule::if_ => self.parse_if_tag(wc, it, stream),
-            _ => todo!("{:#?}", expr),
+            Rule::unless => self.parse_unless_tag(wc, it, stream),
+            Rule::include => self.parse_include_tag(wc, it),
+            Rule::render => self.parse_render_tag(wc, it),
+            Rule::liquid => todo!(),
+            _ => unreachable!("{:#?}", expr),
         }
     }
 
@@ -562,22 +578,15 @@ impl LiquidParser {
         let identifier = it.next().unwrap().as_str().to_owned();
         let start_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
         let block = self.parse_named_block(stream, "capture")?;
-        let end_tag = stream.next().unwrap();
-        assert!(end_tag.as_rule() == Rule::end_tag);
-        let mut end_it = end_tag.into_inner();
-        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
-        assert!(end_it.next().unwrap().as_str() == "capture");
-        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+        let end_wc = self.parse_end_block_tag(stream, "capture");
+
         Ok(Node::CaptureTag {
             whitespace_control: (
                 WhitespaceControl {
                     left: wc,
                     right: start_wc_right,
                 },
-                WhitespaceControl {
-                    left: end_wc_left,
-                    right: end_wc_right,
-                },
+                end_wc,
             ),
             identifier,
             block,
@@ -604,28 +613,8 @@ impl LiquidParser {
             whens.push(self.parse_when_tag(tag, stream)?)
         }
 
-        let mut default: Option<ElseTag> = None;
-        if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
-            let mut else_it = stream.next().unwrap().into_inner();
-            let else_wc_left = Whitespace::from_str(else_it.next().unwrap().as_str());
-            assert!(else_it.next().unwrap().as_str() == "else");
-            let else_wc_right = Whitespace::from_str(else_it.next().unwrap().as_str());
-            default = Some(ElseTag {
-                whitespace_control: WhitespaceControl {
-                    left: else_wc_left,
-                    right: else_wc_right,
-                },
-                block: self.parse_named_block(stream, "case")?,
-            });
-        }
-
-        let end_tag = stream.next().unwrap();
-        // TODO: syntax error if not end tag
-        assert!(end_tag.as_rule() == Rule::end_tag);
-        let mut end_it = end_tag.into_inner();
-        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
-        assert!(end_it.next().unwrap().as_str() == "case");
-        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+        let default = self.parse_else_tag(stream, "case")?;
+        let end_wc = self.parse_end_block_tag(stream, "case");
 
         Ok(Node::CaseTag {
             whitespace_control: (
@@ -633,10 +622,7 @@ impl LiquidParser {
                     left: wc,
                     right: start_wc_right,
                 },
-                WhitespaceControl {
-                    left: end_wc_left,
-                    right: end_wc_right,
-                },
+                end_wc,
             ),
             arg,
             whens,
@@ -788,28 +774,8 @@ impl LiquidParser {
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
         let block_end = &self.tags.get("for").unwrap().end;
         let block = self.parse_block_until(stream, block_end)?;
-
-        let mut default: Option<ElseTag> = None;
-        if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
-            let mut else_it = stream.next().unwrap().into_inner();
-            let else_wc_left = Whitespace::from_str(else_it.next().unwrap().as_str());
-            assert!(else_it.next().unwrap().as_str() == "else");
-            let else_wc_right = Whitespace::from_str(else_it.next().unwrap().as_str());
-            default = Some(ElseTag {
-                whitespace_control: WhitespaceControl {
-                    left: else_wc_left,
-                    right: else_wc_right,
-                },
-                block: self.parse_named_block(stream, "for")?,
-            });
-        }
-
-        let end_tag = stream.next().unwrap();
-        assert!(end_tag.as_rule() == Rule::end_tag);
-        let mut end_it = end_tag.into_inner();
-        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
-        assert!(end_it.next().unwrap().as_str() == "for");
-        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+        let default = self.parse_else_tag(stream, "for")?;
+        let end_wc = self.parse_end_block_tag(stream, "for");
 
         Ok(Node::ForTag {
             whitespace_control: (
@@ -817,10 +783,7 @@ impl LiquidParser {
                     left: wc,
                     right: wc_right,
                 },
-                WhitespaceControl {
-                    left: end_wc_left,
-                    right: end_wc_right,
-                },
+                end_wc,
             ),
             name,
             iterable,
@@ -849,28 +812,8 @@ impl LiquidParser {
             alternatives.push(self.parse_elsif_tag(tag, stream, block_end)?)
         }
 
-        let mut default: Option<ElseTag> = None;
-        if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
-            let mut else_it = stream.next().unwrap().into_inner();
-            let else_wc_left = Whitespace::from_str(else_it.next().unwrap().as_str());
-            assert!(else_it.next().unwrap().as_str() == "else");
-            let else_wc_right = Whitespace::from_str(else_it.next().unwrap().as_str());
-            default = Some(ElseTag {
-                whitespace_control: WhitespaceControl {
-                    left: else_wc_left,
-                    right: else_wc_right,
-                },
-                block: self.parse_named_block(stream, "if")?,
-            });
-        }
-
-        let end_tag = stream.next().unwrap();
-        // TODO: syntax error if not end tag
-        assert!(end_tag.as_rule() == Rule::end_tag);
-        let mut end_it = end_tag.into_inner();
-        let end_wc_left = Whitespace::from_str(end_it.next().unwrap().as_str());
-        assert!(end_it.next().unwrap().as_str() == "if");
-        let end_wc_right = Whitespace::from_str(end_it.next().unwrap().as_str());
+        let default = self.parse_else_tag(stream, "if")?;
+        let end_wc = self.parse_end_block_tag(stream, "if");
 
         Ok(Node::IfTag {
             whitespace_control: (
@@ -878,16 +821,36 @@ impl LiquidParser {
                     left: wc,
                     right: wc_right,
                 },
-                WhitespaceControl {
-                    left: end_wc_left,
-                    right: end_wc_right,
-                },
+                end_wc,
             ),
             condition,
             block,
             alternatives,
             default,
         })
+    }
+
+    fn parse_else_tag(
+        &self,
+        stream: &mut Pairs<Rule>,
+        name: &str,
+    ) -> Result<Option<ElseTag>, LiquidError> {
+        if stream.peek().is_some_and(|p| self.is_tag(p, "else")) {
+            let mut it = stream.next().unwrap().into_inner();
+            let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
+            assert!(it.next().unwrap().as_str() == "else");
+            let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+
+            Ok(Some(ElseTag {
+                whitespace_control: WhitespaceControl {
+                    left: wc_left,
+                    right: wc_right,
+                },
+                block: self.parse_named_block(stream, name)?,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn parse_elsif_tag(
@@ -910,6 +873,158 @@ impl LiquidParser {
             },
             condition,
             block,
+        })
+    }
+
+    fn parse_unless_tag(
+        &self,
+        wc: Whitespace,
+        mut it: Pairs<Rule>,
+        stream: &mut Pairs<Rule>,
+    ) -> Result<Node, LiquidError> {
+        let condition = self.parse_boolean_expression(it.next().unwrap())?;
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+        let block_end = &self.tags.get("unless").unwrap().end;
+        let block = self.parse_block_until(stream, block_end)?;
+
+        let mut alternatives: Vec<ElsifTag> = Vec::new();
+        while stream.peek().is_some_and(|p| self.is_tag(p, "elsif")) {
+            let tag = stream.next().unwrap();
+            alternatives.push(self.parse_elsif_tag(tag, stream, block_end)?)
+        }
+
+        let default = self.parse_else_tag(stream, "unless")?;
+        let end_wc = self.parse_end_block_tag(stream, "unless");
+
+        Ok(Node::UnlessTag {
+            whitespace_control: (
+                WhitespaceControl {
+                    left: wc,
+                    right: wc_right,
+                },
+                end_wc,
+            ),
+            condition,
+            block,
+            alternatives,
+            default,
+        })
+    }
+
+    fn parse_include_tag(&self, wc: Whitespace, mut it: Pairs<Rule>) -> Result<Node, LiquidError> {
+        let target = self.parse_primitive(it.next().unwrap())?;
+        let mut repeat = false;
+        let mut variable: Option<Primitive> = None;
+        let mut alias: Option<String> = None;
+        let mut args: Option<Vec<CommonArgument>> = None;
+
+        if it
+            .peek()
+            .is_some_and(|p| p.as_rule() == Rule::include_tag_arguments)
+        {
+            let expr = it.next().unwrap();
+            match expr.as_rule() {
+                Rule::include_with => {
+                    let mut with_it = expr.into_inner();
+                    variable = Some(self.parse_primitive(with_it.next().unwrap())?);
+                    if with_it.peek().is_some() {
+                        alias = Some(with_it.next().unwrap().as_str().to_owned());
+                    }
+                }
+                Rule::include_for => {
+                    repeat = true;
+                    let mut for_it = expr.into_inner();
+                    variable = Some(self.parse_primitive(for_it.next().unwrap())?);
+                    if for_it.peek().is_some() {
+                        alias = Some(for_it.next().unwrap().as_str().to_owned());
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        if it
+            .peek()
+            .is_some_and(|p| p.as_rule() == Rule::common_arguments)
+        {
+            args = it
+                .next()
+                .map_or(None, |p| Some(self.parse_common_arguments(p)))
+                .transpose()?;
+        }
+
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+
+        Ok(Node::IncludeTag {
+            whitespace_control: WhitespaceControl {
+                left: wc,
+                right: wc_right,
+            },
+            target,
+            repeat,
+            variable,
+            alias,
+            args,
+        })
+    }
+
+    fn parse_render_tag(&self, wc: Whitespace, mut it: Pairs<Rule>) -> Result<Node, LiquidError> {
+        let target = Primitive::StringLiteral {
+            value: unescape_string(it.next().unwrap().as_str()),
+        };
+
+        let mut repeat = false;
+        let mut variable: Option<Primitive> = None;
+        let mut alias: Option<String> = None;
+        let mut args: Option<Vec<CommonArgument>> = None;
+
+        if it
+            .peek()
+            .is_some_and(|p| p.as_rule() == Rule::include_tag_arguments)
+        {
+            let expr = it.next().unwrap();
+            match expr.as_rule() {
+                Rule::include_with => {
+                    let mut with_it = expr.into_inner();
+                    variable = Some(self.parse_primitive(with_it.next().unwrap())?);
+                    if with_it.peek().is_some() {
+                        alias = Some(with_it.next().unwrap().as_str().to_owned());
+                    }
+                }
+                Rule::include_for => {
+                    repeat = true;
+                    let mut for_it = expr.into_inner();
+                    variable = Some(self.parse_primitive(for_it.next().unwrap())?);
+                    if for_it.peek().is_some() {
+                        alias = Some(for_it.next().unwrap().as_str().to_owned());
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        if it
+            .peek()
+            .is_some_and(|p| p.as_rule() == Rule::common_arguments)
+        {
+            args = it
+                .next()
+                .map_or(None, |p| Some(self.parse_common_arguments(p)))
+                .transpose()?;
+        }
+
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+
+        Ok(Node::RenderTag {
+            whitespace_control: WhitespaceControl {
+                left: wc,
+                right: wc_right,
+            },
+            target,
+            repeat,
+            variable,
+            alias,
+            args,
         })
     }
 }
