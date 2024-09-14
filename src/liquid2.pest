@@ -204,12 +204,12 @@ unless      =  { "unless" }
 
 // NOTE: no leading comma allowed in arguments
 include_expr          = _{ include ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
-include               =  { " include " }
+include               =  { "include" }
 include_tag_arguments =  { (include_with | include_for)? ~ common_arguments? }
 include_with          =  { "with" ~ s ~ primitive ~ (s ~ "as" ~ s ~ identifier)? }
 include_for           =  { "for" ~ s ~ primitive ~ (s ~ "as" ~ s ~ identifier)? }
 
-render_expr = _{ render ~ s ~ primitive ~ (s ~ include_tag_arguments)? }
+render_expr = _{ render ~ s ~ multiline_string_literal ~ (s ~ include_tag_arguments)? }
 render      =  { "render" }
 
 liquid_expr = _{ liquid_tag ~ (s ~ line_exprs)? }

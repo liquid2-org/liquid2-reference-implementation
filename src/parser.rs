@@ -922,35 +922,8 @@ impl LiquidParser {
             .peek()
             .is_some_and(|p| p.as_rule() == Rule::include_tag_arguments)
         {
-            let expr = it.next().unwrap();
-            match expr.as_rule() {
-                Rule::include_with => {
-                    let mut with_it = expr.into_inner();
-                    variable = Some(self.parse_primitive(with_it.next().unwrap())?);
-                    if with_it.peek().is_some() {
-                        alias = Some(with_it.next().unwrap().as_str().to_owned());
-                    }
-                }
-                Rule::include_for => {
-                    repeat = true;
-                    let mut for_it = expr.into_inner();
-                    variable = Some(self.parse_primitive(for_it.next().unwrap())?);
-                    if for_it.peek().is_some() {
-                        alias = Some(for_it.next().unwrap().as_str().to_owned());
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
-
-        if it
-            .peek()
-            .is_some_and(|p| p.as_rule() == Rule::common_arguments)
-        {
-            args = it
-                .next()
-                .map_or(None, |p| Some(self.parse_common_arguments(p)))
-                .transpose()?;
+            (repeat, variable, alias, args) =
+                self.parse_include_tag_arguments(it.next().unwrap())?;
         }
 
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
@@ -968,6 +941,59 @@ impl LiquidParser {
         })
     }
 
+    fn parse_include_tag_arguments(
+        &self,
+        arguments: Pair<Rule>,
+    ) -> Result<
+        (
+            bool,
+            Option<Primitive>,
+            Option<String>,
+            Option<Vec<CommonArgument>>,
+        ),
+        LiquidError,
+    > {
+        let mut repeat = false;
+        let mut variable: Option<Primitive> = None;
+        let mut alias: Option<String> = None;
+        let mut args: Option<Vec<CommonArgument>> = None;
+
+        let mut it = arguments.into_inner();
+
+        if it.peek().is_some() {
+            let expr = it.next().unwrap();
+            match expr.as_rule() {
+                Rule::include_with => {
+                    let mut with_it = expr.into_inner();
+                    variable = Some(self.parse_primitive(with_it.next().unwrap())?);
+                    alias = with_it.next().and_then(|p| Some(p.as_str().to_owned()));
+                }
+                Rule::include_for => {
+                    repeat = true;
+                    let mut for_it = expr.into_inner();
+                    variable = Some(self.parse_primitive(for_it.next().unwrap())?);
+                    alias = for_it.next().and_then(|p| Some(p.as_str().to_owned()));
+                }
+                Rule::common_arguments => {
+                    args = Some(self.parse_common_arguments(expr)?);
+                }
+                _ => unreachable!(),
+            }
+
+            if it
+                .peek()
+                .is_some_and(|p| p.as_rule() == Rule::common_arguments)
+            {
+                args = it
+                    .next()
+                    .map_or(None, |p| Some(self.parse_common_arguments(p)))
+                    .transpose()?;
+            }
+        }
+
+        Ok((repeat, variable, alias, args))
+    }
+
     fn parse_render_tag(&self, wc: Whitespace, mut it: Pairs<Rule>) -> Result<Node, LiquidError> {
         let target = Primitive::StringLiteral {
             value: unescape_string(it.next().unwrap().as_str()),
@@ -982,35 +1008,8 @@ impl LiquidParser {
             .peek()
             .is_some_and(|p| p.as_rule() == Rule::include_tag_arguments)
         {
-            let expr = it.next().unwrap();
-            match expr.as_rule() {
-                Rule::include_with => {
-                    let mut with_it = expr.into_inner();
-                    variable = Some(self.parse_primitive(with_it.next().unwrap())?);
-                    if with_it.peek().is_some() {
-                        alias = Some(with_it.next().unwrap().as_str().to_owned());
-                    }
-                }
-                Rule::include_for => {
-                    repeat = true;
-                    let mut for_it = expr.into_inner();
-                    variable = Some(self.parse_primitive(for_it.next().unwrap())?);
-                    if for_it.peek().is_some() {
-                        alias = Some(for_it.next().unwrap().as_str().to_owned());
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
-
-        if it
-            .peek()
-            .is_some_and(|p| p.as_rule() == Rule::common_arguments)
-        {
-            args = it
-                .next()
-                .map_or(None, |p| Some(self.parse_common_arguments(p)))
-                .transpose()?;
+            (repeat, variable, alias, args) =
+                self.parse_include_tag_arguments(it.next().unwrap())?;
         }
 
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
