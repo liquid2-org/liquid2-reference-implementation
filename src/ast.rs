@@ -1,6 +1,7 @@
 //! Liquid template syntax tree
 //!
 use pyo3::prelude::*;
+use std::fmt::{self};
 
 use crate::query::Query;
 
@@ -146,6 +147,49 @@ pub struct InlineCondition {
     pub tail_filters: Option<Vec<Filter>>,
 }
 
+impl fmt::Display for InlineCondition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "if {}", self.expr)?;
+
+        self.alternative
+            .as_ref()
+            .and_then(|alt| Some(write!(f, " else {alt}")));
+
+        self.alternative_filters.as_ref().and_then(|filters| {
+            Some(write!(
+                f,
+                " | {}",
+                filters
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" | ")
+            ))
+        });
+
+        self.tail_filters.as_ref().and_then(|filters| {
+            Some(write!(
+                f,
+                " || {}",
+                filters
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" | ")
+            ))
+        });
+
+        Ok(())
+    }
+}
+
+#[pymethods]
+impl InlineCondition {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum BooleanExpression {
@@ -172,11 +216,58 @@ pub enum BooleanExpression {
     },
 }
 
+impl fmt::Display for BooleanExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BooleanExpression::Primitive { expr } => write!(f, "{expr}"),
+            BooleanExpression::LogicalNot { expr } => write!(f, "not ({expr})"),
+            BooleanExpression::Logical {
+                left,
+                operator,
+                right,
+            } => write!(f, "{left} {operator}, {right}"),
+            BooleanExpression::Comparison {
+                left,
+                operator,
+                right,
+            } => write!(f, "{left} {operator}, {right}"),
+            BooleanExpression::Membership {
+                left,
+                operator,
+                right,
+            } => write!(f, "{left} {operator}, {right}"),
+        }
+    }
+}
+
+#[pymethods]
+impl BooleanExpression {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum BooleanOperator {
     And {},
     Or {},
+}
+
+impl fmt::Display for BooleanOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BooleanOperator::And {} => f.write_str("and"),
+            BooleanOperator::Or {} => f.write_str("or"),
+        }
+    }
+}
+
+#[pymethods]
+impl BooleanOperator {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
 }
 
 #[pyclass]
@@ -190,6 +281,26 @@ pub enum CompareOperator {
     Lt {},
 }
 
+impl fmt::Display for CompareOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CompareOperator::Eq {} => f.write_str("=="),
+            CompareOperator::Ne {} => f.write_str("!="),
+            CompareOperator::Ge {} => f.write_str(">="),
+            CompareOperator::Gt {} => f.write_str(">"),
+            CompareOperator::Le {} => f.write_str("<="),
+            &CompareOperator::Lt {} => f.write_str("<"),
+        }
+    }
+}
+
+#[pymethods]
+impl CompareOperator {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum MembershipOperator {
@@ -199,6 +310,24 @@ pub enum MembershipOperator {
     NotContains {},
 }
 
+impl fmt::Display for MembershipOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MembershipOperator::In {} => f.write_str("in"),
+            MembershipOperator::NotIn {} => f.write_str("not in"),
+            MembershipOperator::Contains {} => f.write_str("contains"),
+            &MembershipOperator::NotContains {} => f.write_str("not contains"),
+        }
+    }
+}
+
+#[pymethods]
+impl MembershipOperator {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct Filter {
@@ -206,6 +335,36 @@ pub struct Filter {
     pub name: String,
     #[pyo3(get)]
     pub args: Option<Vec<CommonArgument>>,
+}
+
+impl fmt::Display for Filter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Filter {
+                name,
+                args: Some(arguments),
+            } => {
+                write!(
+                    f,
+                    "{}: {}",
+                    name,
+                    arguments
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                )
+            }
+            Filter { name, args: None } => write!(f, "{name}"),
+        }
+    }
+}
+
+#[pymethods]
+impl Filter {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
 }
 
 #[pyclass]
@@ -221,6 +380,28 @@ pub enum Primitive {
     Query { path: Query },
 }
 
+impl fmt::Display for Primitive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Primitive::TrueLiteral {} => f.write_str("true"),
+            Primitive::FalseLiteral {} => f.write_str("false"),
+            Primitive::NullLiteral {} => f.write_str("null"),
+            Primitive::Integer { value } => write!(f, "{value}"),
+            Primitive::Float { value } => write!(f, "{value}"),
+            Primitive::StringLiteral { value } => write!(f, "\"{value}\""),
+            Primitive::Range { start, stop } => write!(f, "({start}..{stop})"),
+            Primitive::Query { path } => write!(f, "{path}"),
+        }
+    }
+}
+
+#[pymethods]
+impl Primitive {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct WhenTag {
@@ -232,6 +413,30 @@ pub struct WhenTag {
     pub block: Vec<Node>,
 }
 
+impl fmt::Display for WhenTag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{{%{} when {} {}%}}{}",
+            self.whitespace_control.left,
+            self.args
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>()
+                .join(", "),
+            self.whitespace_control.right,
+            display_block(&self.block)
+        )
+    }
+}
+
+#[pymethods]
+impl WhenTag {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct ElseTag {
@@ -239,6 +444,25 @@ pub struct ElseTag {
     pub whitespace_control: WhitespaceControl,
     #[pyo3(get)]
     pub block: Vec<Node>,
+}
+
+impl fmt::Display for ElseTag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{{%{} else {}%}}{}",
+            self.whitespace_control.left,
+            self.whitespace_control.right,
+            display_block(&self.block)
+        )
+    }
+}
+
+#[pymethods]
+impl ElseTag {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
 }
 
 #[pyclass]
@@ -252,6 +476,26 @@ pub struct ElsifTag {
     pub block: Vec<Node>,
 }
 
+impl fmt::Display for ElsifTag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{{%{} elsif {} {}%}}{}",
+            self.whitespace_control.left,
+            self.condition,
+            self.whitespace_control.right,
+            display_block(&self.block)
+        )
+    }
+}
+
+#[pymethods]
+impl ElsifTag {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct CommonArgument {
@@ -259,6 +503,33 @@ pub struct CommonArgument {
     pub value: Option<Primitive>,
     #[pyo3(get)]
     pub name: Option<String>,
+}
+
+impl fmt::Display for CommonArgument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CommonArgument {
+                value: Some(v),
+                name: Some(k),
+            } => write!(f, "{}:{}", k, v),
+            CommonArgument {
+                value: Some(v),
+                name: None,
+            } => write!(f, "{}", v),
+            CommonArgument {
+                value: None,
+                name: Some(k),
+            } => write!(f, "{}", k),
+            _ => Ok(()),
+        }
+    }
+}
+
+#[pymethods]
+impl CommonArgument {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
 }
 
 #[pyclass]
@@ -289,6 +560,28 @@ impl Whitespace {
             _ => unreachable!("{:#?}", s),
         }
     }
+}
+
+impl fmt::Display for Whitespace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Whitespace::Plus => write!(f, "+"),
+            Whitespace::Minus => write!(f, "-"),
+            Whitespace::Smart => write!(f, "~"),
+            Whitespace::Default => Ok(()),
+        }
+    }
+}
+
+#[pymethods]
+impl Whitespace {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
+fn display_block(block: &[Node]) -> String {
+    todo!()
 }
 
 impl<'py> pyo3::FromPyObject<'py> for Box<BooleanExpression> {
