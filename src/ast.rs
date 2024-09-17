@@ -20,52 +20,53 @@ pub enum Node {
         text: String,
     },
     Output {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         expression: FilteredExpression,
     },
     Raw {
-        whitespace_control: (WhitespaceControl, WhitespaceControl),
+        wc: (WhitespaceControl, WhitespaceControl),
         text: String,
     },
     Comment {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         text: String,
+        hashes: String,
     },
     AssignTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         identifier: String,
         expression: FilteredExpression,
     },
     CaptureTag {
-        whitespace_control: (WhitespaceControl, WhitespaceControl),
+        wc: (WhitespaceControl, WhitespaceControl),
         identifier: String,
         block: Vec<Node>,
     },
     CaseTag {
-        whitespace_control: (WhitespaceControl, WhitespaceControl),
+        wc: (WhitespaceControl, WhitespaceControl),
         arg: Primitive,
         whens: Vec<WhenTag>,
         default: Option<ElseTag>,
     },
     CycleTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         name: Option<String>,
         args: Vec<Primitive>,
     },
     DecrementTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         name: String,
     },
     IncrementTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         name: String,
     },
     EchoTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         expression: FilteredExpression,
     },
     ForTag {
-        whitespace_control: (WhitespaceControl, WhitespaceControl),
+        wc: (WhitespaceControl, WhitespaceControl),
         name: String,
         iterable: Primitive,
         limit: Option<Primitive>,
@@ -75,27 +76,27 @@ pub enum Node {
         default: Option<ElseTag>,
     },
     BreakTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
     },
     ContinueTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
     },
     IfTag {
-        whitespace_control: (WhitespaceControl, WhitespaceControl),
+        wc: (WhitespaceControl, WhitespaceControl),
         condition: BooleanExpression,
         block: Vec<Node>,
         alternatives: Vec<ElsifTag>,
         default: Option<ElseTag>,
     },
     UnlessTag {
-        whitespace_control: (WhitespaceControl, WhitespaceControl),
+        wc: (WhitespaceControl, WhitespaceControl),
         condition: BooleanExpression,
         block: Vec<Node>,
         alternatives: Vec<ElsifTag>,
         default: Option<ElseTag>,
     },
     IncludeTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         target: Primitive,
         repeat: bool,
         variable: Option<Primitive>,
@@ -103,7 +104,7 @@ pub enum Node {
         args: Option<Vec<CommonArgument>>,
     },
     RenderTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         target: Primitive,
         repeat: bool,
         variable: Option<Primitive>,
@@ -111,16 +112,80 @@ pub enum Node {
         args: Option<Vec<CommonArgument>>,
     },
     LiquidTag {
-        whitespace_control: WhitespaceControl,
+        wc: WhitespaceControl,
         block: Vec<Node>,
     },
     TagExtension {
-        whitespace_control: (WhitespaceControl, Option<WhitespaceControl>),
+        wc: (WhitespaceControl, Option<WhitespaceControl>),
         name: String,
         args: Vec<CommonArgument>,
         block: Option<Vec<Node>>,
         tags: Option<Vec<Node>>, // Nested tags, like `else` in a `for` loop, or `when` in a `case` block
     },
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Node::EOI {} => Ok(()),
+            Node::Content { text } => f.write_str(text),
+            Node::Output { wc, expression } => {
+                write!(f, "{{%{} {} {}%}}", wc.left, expression, wc.right)
+            }
+            Node::Raw { wc, text } => {
+                write!(
+                    f,
+                    "{{%{} raw {}%}}{}{{%{} endraw {}%}}",
+                    wc.0.left, wc.0.right, text, wc.1.left, wc.1.right
+                )
+            }
+            Node::Comment { wc, text, hashes } => {
+                write!(
+                    f,
+                    "{{{}{} {} {}{}}}",
+                    hashes, wc.left, text, wc.right, hashes
+                )
+            }
+            Node::AssignTag {
+                wc,
+                identifier,
+                expression,
+            } => {
+                write!(
+                    f,
+                    "{{%{} {} {} {}%}}",
+                    wc.left, identifier, expression, wc.right
+                )
+            }
+            Node::CaptureTag {
+                wc,
+                identifier,
+                block,
+            } => {
+                write!(
+                    f,
+                    "{{%{} capture {} {}%}}{}{{%{} endcapture {}%}}",
+                    wc.0.left,
+                    identifier,
+                    wc.0.right,
+                    display_block(block),
+                    wc.1.left,
+                    wc.1.right
+                )
+            }
+            Node::CaseTag {
+                wc,
+                arg,
+                whens,
+                default,
+            } => {
+                write!(f, "{{%{} case {} {}%}}\n", wc.0.left, arg, wc.0.right)?;
+
+                todo!()
+            }
+            _ => todo!(),
+        }
+    }
 }
 
 #[pyclass]
@@ -132,6 +197,30 @@ pub struct FilteredExpression {
     pub filters: Option<Vec<Filter>>,
     #[pyo3(get)]
     pub condition: Option<InlineCondition>,
+}
+
+impl fmt::Display for FilteredExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.left)?;
+
+        self.filters.as_ref().and_then(|filters| {
+            Some(write!(
+                f,
+                " | {}",
+                filters
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" | ")
+            ))
+        });
+
+        self.condition
+            .as_ref()
+            .and_then(|condition| Some(write!(f, " {}", condition)));
+
+        Ok(())
+    }
 }
 
 #[pyclass]
@@ -406,7 +495,7 @@ impl Primitive {
 #[derive(Debug, Clone)]
 pub struct WhenTag {
     #[pyo3(get)]
-    pub whitespace_control: WhitespaceControl,
+    pub wc: WhitespaceControl,
     #[pyo3(get)]
     pub args: Vec<Primitive>,
     #[pyo3(get)]
@@ -418,13 +507,13 @@ impl fmt::Display for WhenTag {
         write!(
             f,
             "{{%{} when {} {}%}}{}",
-            self.whitespace_control.left,
+            self.wc.left,
             self.args
                 .iter()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>()
                 .join(", "),
-            self.whitespace_control.right,
+            self.wc.right,
             display_block(&self.block)
         )
     }
@@ -441,7 +530,7 @@ impl WhenTag {
 #[derive(Debug, Clone)]
 pub struct ElseTag {
     #[pyo3(get)]
-    pub whitespace_control: WhitespaceControl,
+    pub wc: WhitespaceControl,
     #[pyo3(get)]
     pub block: Vec<Node>,
 }
@@ -451,8 +540,8 @@ impl fmt::Display for ElseTag {
         write!(
             f,
             "{{%{} else {}%}}{}",
-            self.whitespace_control.left,
-            self.whitespace_control.right,
+            self.wc.left,
+            self.wc.right,
             display_block(&self.block)
         )
     }
@@ -469,7 +558,7 @@ impl ElseTag {
 #[derive(Debug, Clone)]
 pub struct ElsifTag {
     #[pyo3(get)]
-    pub whitespace_control: WhitespaceControl,
+    pub wc: WhitespaceControl,
     #[pyo3(get)]
     pub condition: BooleanExpression,
     #[pyo3(get)]
@@ -481,9 +570,9 @@ impl fmt::Display for ElsifTag {
         write!(
             f,
             "{{%{} elsif {} {}%}}{}",
-            self.whitespace_control.left,
+            self.wc.left,
             self.condition,
-            self.whitespace_control.right,
+            self.wc.right,
             display_block(&self.block)
         )
     }

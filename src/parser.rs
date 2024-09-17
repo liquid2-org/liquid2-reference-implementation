@@ -155,12 +155,11 @@ impl LiquidParser {
             Rule::output_statement => self.parse_output_statement(markup)?,
             Rule::standard_tag => self.parse_standard_tag(markup, stream)?,
             Rule::line_standard_tag_expr => self.parse_line_expression(markup, stream)?,
+            Rule::comment => self.parse_comment(markup)?, // TODO: line comments
             Rule::common_tag => todo!(),
             _ => unreachable!("Rule: {:#?}", markup),
         })
     }
-
-    // TODO: parse_line_markup?
 
     fn parse_raw(&self, tag: Pair<Rule>) -> Node {
         let mut it = tag.into_inner();
@@ -171,7 +170,7 @@ impl LiquidParser {
         let end_wc_right = Whitespace::from_str(it.next().unwrap().as_str());
 
         Node::Raw {
-            whitespace_control: (
+            wc: (
                 WhitespaceControl {
                     left: start_wc_left,
                     right: start_wc_right,
@@ -185,6 +184,23 @@ impl LiquidParser {
         }
     }
 
+    fn parse_comment(&self, comment: Pair<Rule>) -> Result<Node, LiquidError> {
+        let mut it = comment.into_inner();
+        let hashes = it.next().unwrap().as_str().to_owned();
+        let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
+        let text = it.next().unwrap().as_str().to_owned();
+        let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
+
+        Ok(Node::Comment {
+            wc: WhitespaceControl {
+                left: wc_left,
+                right: wc_right,
+            },
+            text,
+            hashes,
+        })
+    }
+
     fn parse_output_statement(&self, statement: Pair<Rule>) -> Result<Node, LiquidError> {
         let mut it = statement.into_inner();
         let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
@@ -192,7 +208,7 @@ impl LiquidParser {
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
 
         Ok(Node::Output {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc_left,
                 right: wc_right,
             },
@@ -583,13 +599,13 @@ impl LiquidParser {
             Rule::echo => self.parse_echo_tag(wc, it, false),
             Rule::for_ => self.parse_for_tag(wc, it, stream, false),
             Rule::break_ => Ok(Node::BreakTag {
-                whitespace_control: WhitespaceControl {
+                wc: WhitespaceControl {
                     left: wc,
                     right: Whitespace::from_str(it.next().unwrap().as_str()),
                 },
             }),
             Rule::continue_ => Ok(Node::ContinueTag {
-                whitespace_control: WhitespaceControl {
+                wc: WhitespaceControl {
                     left: wc,
                     right: Whitespace::from_str(it.next().unwrap().as_str()),
                 },
@@ -619,7 +635,7 @@ impl LiquidParser {
         };
 
         Ok(Node::AssignTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: wc_right,
             },
@@ -647,7 +663,7 @@ impl LiquidParser {
         let end_wc = self.parse_end_block_tag(stream, "capture", line);
 
         Ok(Node::CaptureTag {
-            whitespace_control: (
+            wc: (
                 WhitespaceControl {
                     left: wc,
                     right: start_wc_right,
@@ -688,7 +704,7 @@ impl LiquidParser {
         let end_wc = self.parse_end_block_tag(stream, "case", line);
 
         Ok(Node::CaseTag {
-            whitespace_control: (
+            wc: (
                 WhitespaceControl {
                     left: wc,
                     right: start_wc_right,
@@ -731,7 +747,7 @@ impl LiquidParser {
         let block = self.parse_block_until(stream, block_end)?;
 
         Ok(WhenTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc_left,
                 right: wc_right,
             },
@@ -766,7 +782,7 @@ impl LiquidParser {
         };
 
         Ok(Node::CycleTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: wc_right,
             },
@@ -789,7 +805,7 @@ impl LiquidParser {
         };
 
         Ok(Node::DecrementTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: wc_right,
             },
@@ -811,7 +827,7 @@ impl LiquidParser {
         };
 
         Ok(Node::IncrementTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: wc_right,
             },
@@ -833,7 +849,7 @@ impl LiquidParser {
         };
 
         Ok(Node::EchoTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: wc_right,
             },
@@ -904,7 +920,7 @@ impl LiquidParser {
         let end_wc = self.parse_end_block_tag(stream, "for", line);
 
         Ok(Node::ForTag {
-            whitespace_control: (
+            wc: (
                 WhitespaceControl {
                     left: wc,
                     right: wc_right,
@@ -948,7 +964,7 @@ impl LiquidParser {
         let end_wc = self.parse_end_block_tag(stream, "if", line);
 
         Ok(Node::IfTag {
-            whitespace_control: (
+            wc: (
                 WhitespaceControl {
                     left: wc,
                     right: wc_right,
@@ -985,7 +1001,7 @@ impl LiquidParser {
             };
 
             Ok(Some(ElseTag {
-                whitespace_control: WhitespaceControl {
+                wc: WhitespaceControl {
                     left: wc_left,
                     right: wc_right,
                 },
@@ -1023,7 +1039,7 @@ impl LiquidParser {
         let block = self.parse_block_until(stream, block_end)?;
 
         Ok(ElsifTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc_left,
                 right: wc_right,
             },
@@ -1059,7 +1075,7 @@ impl LiquidParser {
         let end_wc = self.parse_end_block_tag(stream, "unless", line);
 
         Ok(Node::UnlessTag {
-            whitespace_control: (
+            wc: (
                 WhitespaceControl {
                     left: wc,
                     right: wc_right,
@@ -1102,7 +1118,7 @@ impl LiquidParser {
         };
 
         Ok(Node::IncludeTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: wc_right,
             },
@@ -1201,7 +1217,7 @@ impl LiquidParser {
         };
 
         Ok(Node::RenderTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: wc_right,
             },
@@ -1235,7 +1251,7 @@ impl LiquidParser {
         }
 
         Ok(Node::LiquidTag {
-            whitespace_control: WhitespaceControl {
+            wc: WhitespaceControl {
                 left: wc,
                 right: Whitespace::from_str(next.as_str()),
             },
@@ -1262,13 +1278,13 @@ impl LiquidParser {
             Rule::echo => self.parse_echo_tag(wc, it, true),
             Rule::for_ => self.parse_for_tag(wc, it, stream, true),
             Rule::break_ => Ok(Node::BreakTag {
-                whitespace_control: WhitespaceControl {
+                wc: WhitespaceControl {
                     left: wc,
                     right: Whitespace::Minus,
                 },
             }),
             Rule::continue_ => Ok(Node::ContinueTag {
-                whitespace_control: WhitespaceControl {
+                wc: WhitespaceControl {
                     left: wc,
                     right: Whitespace::Minus,
                 },

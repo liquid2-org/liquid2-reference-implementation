@@ -3,7 +3,8 @@ markup = _{ comment | tag | output_statement }
 
 tag              = _{ raw_tag | end_tag | standard_tag | common_tag }
 output_statement =  { statement_start ~ filtered_expr ~ statement_end }
-comment          =  { "{" ~ PUSH("#"+) ~ WC ~ comment_text ~ WC ~ POP ~ "}" }
+comment          =  { "{" ~ comment_hashes ~ WC ~ comment_text ~ WC ~ POP ~ "}" }
+comment_hashes   =  { PUSH("#"+) }
 comment_text     =  { (!(WC ~ PEEK ~ "}") ~ ANY)* }
 content          =  { (!("{{" | "{%" | "{#") ~ ANY)+ }
 
