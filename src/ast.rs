@@ -12,6 +12,19 @@ pub struct Template {
     pub liquid: Vec<Node>,
 }
 
+impl fmt::Display for Template {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", display_block(&self.liquid))
+    }
+}
+
+#[pymethods]
+impl Template {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum Node {
@@ -130,7 +143,7 @@ impl fmt::Display for Node {
             Node::EOI {} => Ok(()),
             Node::Content { text } => f.write_str(text),
             Node::Output { wc, expression } => {
-                write!(f, "{{%{} {} {}%}}", wc.left, expression, wc.right)
+                write!(f, "{{{{{} {} {}}}}}", wc.left, expression, wc.right)
             }
             Node::Raw { wc, text } => {
                 write!(
@@ -153,7 +166,7 @@ impl fmt::Display for Node {
             } => {
                 write!(
                     f,
-                    "{{%{} {} {} {}%}}",
+                    "{{%{} assign {} = {} {}%}}",
                     wc.left, identifier, expression, wc.right
                 )
             }
@@ -179,12 +192,233 @@ impl fmt::Display for Node {
                 whens,
                 default,
             } => {
+                // TODO: we don't retain content between `case` and the first `when`
                 write!(f, "{{%{} case {} {}%}}\n", wc.0.left, arg, wc.0.right)?;
 
-                todo!()
+                whens.iter().try_for_each(|when| write!(f, "{when}"))?;
+
+                default
+                    .as_ref()
+                    .and_then(|t| Some(write!(f, "{t}")))
+                    .transpose()?;
+
+                write!(f, "{{%{} endcase {}%}}", wc.1.left, wc.1.right)
             }
-            _ => todo!(),
+            Node::CycleTag { wc, name, args } => {
+                write!(f, "{{%{} cycle ", wc.left)?;
+
+                name.as_ref()
+                    .and_then(|s| Some(write!(f, "{s}: ")))
+                    .transpose()?;
+
+                write!(
+                    f,
+                    "{}",
+                    args.iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )?;
+
+                write!(f, " {}%}}", wc.right)
+            }
+            Node::DecrementTag { wc, name } => {
+                write!(f, "{{%{} decrement {} {}%}}", wc.left, name, wc.right)
+            }
+            Node::IncrementTag { wc, name } => {
+                write!(f, "{{%{} increment {} {}%}}", wc.left, name, wc.right)
+            }
+            Node::EchoTag { wc, expression } => {
+                write!(f, "{{%{} echo {} {}%}}", wc.left, expression, wc.right)
+            }
+            Node::ForTag {
+                wc,
+                name,
+                iterable,
+                limit,
+                offset,
+                reversed,
+                block,
+                default,
+            } => {
+                write!(f, "{{%{} for {} in {} ", wc.0.left, name, iterable)?;
+
+                limit
+                    .as_ref()
+                    .and_then(|p| Some(write!(f, "limit: {p}, ")))
+                    .transpose()?;
+
+                offset
+                    .as_ref()
+                    .and_then(|p| Some(write!(f, "offset: {p}, ")))
+                    .transpose()?;
+
+                if *reversed == true {
+                    write!(f, "reversed ")?;
+                }
+
+                write!(f, "{}%}}{}", wc.0.right, display_block(block))?;
+
+                default
+                    .as_ref()
+                    .and_then(|t| Some(write!(f, "{t}")))
+                    .transpose()?;
+
+                write!(f, "{{%{} endfor {}%}}", wc.1.left, wc.1.right)
+            }
+            Node::BreakTag { wc } => {
+                write!(f, "{{%{} break {}%}}", wc.left, wc.right)
+            }
+            Node::ContinueTag { wc } => {
+                write!(f, "{{%{} continue {}%}}", wc.left, wc.right)
+            }
+            Node::IfTag {
+                wc,
+                condition,
+                block,
+                alternatives,
+                default,
+            } => {
+                write!(
+                    f,
+                    "{{%{} if {} {}%}}{}",
+                    wc.0.left,
+                    condition,
+                    wc.0.right,
+                    display_block(block)
+                )?;
+
+                alternatives.iter().try_for_each(|t| write!(f, "{t}"))?;
+
+                default
+                    .as_ref()
+                    .and_then(|t| Some(write!(f, "{t}")))
+                    .transpose()?;
+
+                write!(f, "{{%{} endif {}%}}", wc.1.left, wc.1.right)
+            }
+            Node::UnlessTag {
+                wc,
+                condition,
+                block,
+                alternatives,
+                default,
+            } => {
+                write!(
+                    f,
+                    "{{%{} unless {} {}%}}{}",
+                    wc.0.left,
+                    condition,
+                    wc.0.right,
+                    display_block(block)
+                )?;
+
+                alternatives.iter().try_for_each(|t| write!(f, "{t}"))?;
+
+                default
+                    .as_ref()
+                    .and_then(|t| Some(write!(f, "{t}")))
+                    .transpose()?;
+
+                write!(f, "{{%{} unless {}%}}", wc.1.left, wc.1.right)
+            }
+            Node::IncludeTag {
+                wc,
+                target,
+                repeat,
+                variable,
+                alias,
+                args,
+            } => {
+                write!(f, "{{%{} include {} ", wc.left, target)?;
+
+                if variable.is_some() {
+                    if *repeat == true {
+                        write!(f, "for {} ", variable.as_ref().unwrap())?;
+                    } else {
+                        write!(f, "with {} ", variable.as_ref().unwrap())?;
+                    }
+                };
+
+                alias
+                    .as_ref()
+                    .and_then(|s| Some(write!(f, "as {s} ")))
+                    .transpose()?;
+
+                args.as_ref().and_then(|a| {
+                    Some(write!(
+                        f,
+                        "{} ",
+                        a.iter()
+                            .map(|b| b.to_string())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    ))
+                });
+
+                write!(f, "{}%}}", wc.right)
+            }
+            Node::RenderTag {
+                wc,
+                target,
+                repeat,
+                variable,
+                alias,
+                args,
+            } => {
+                write!(f, "{{%{} render {} ", wc.left, target)?;
+
+                if variable.is_some() {
+                    if *repeat == true {
+                        write!(f, "for {} ", variable.as_ref().unwrap())?;
+                    } else {
+                        write!(f, "with {} ", variable.as_ref().unwrap())?;
+                    }
+                };
+
+                alias
+                    .as_ref()
+                    .and_then(|s| Some(write!(f, "as {s} ")))
+                    .transpose()?;
+
+                args.as_ref().and_then(|a| {
+                    Some(write!(
+                        f,
+                        "{} ",
+                        a.iter()
+                            .map(|b| b.to_string())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    ))
+                });
+
+                write!(f, "{}%}}", wc.right)
+            }
+            Node::LiquidTag { wc, block } => {
+                // TODO: indent line statements
+                write!(
+                    f,
+                    "{{%{} liquid\n{}\n{}%}}",
+                    wc.left,
+                    display_line_block(block),
+                    wc.right
+                )
+            }
+            Node::TagExtension {
+                wc,
+                name,
+                args,
+                block,
+                tags,
+            } => todo!(),
         }
+    }
+}
+
+#[pymethods]
+impl Node {
+    fn __str__(&self) -> String {
+        self.to_string()
     }
 }
 
@@ -204,15 +438,20 @@ impl fmt::Display for FilteredExpression {
         write!(f, "{}", self.left)?;
 
         self.filters.as_ref().and_then(|filters| {
-            Some(write!(
-                f,
-                " | {}",
-                filters
-                    .iter()
-                    .map(|f| f.to_string())
-                    .collect::<Vec<String>>()
-                    .join(" | ")
-            ))
+            // XXX: bit of a hack, because filters can be an empty vec
+            if filters.len() > 0 {
+                Some(write!(
+                    f,
+                    " | {}",
+                    filters
+                        .iter()
+                        .map(|f| f.to_string())
+                        .collect::<Vec<String>>()
+                        .join(" | ")
+                ))
+            } else {
+                None
+            }
         });
 
         self.condition
@@ -220,6 +459,13 @@ impl fmt::Display for FilteredExpression {
             .and_then(|condition| Some(write!(f, " {}", condition)));
 
         Ok(())
+    }
+}
+
+#[pymethods]
+impl FilteredExpression {
+    fn __str__(&self) -> String {
+        self.to_string()
     }
 }
 
@@ -479,6 +725,7 @@ impl fmt::Display for Primitive {
             Primitive::Float { value } => write!(f, "{value}"),
             Primitive::StringLiteral { value } => write!(f, "\"{value}\""),
             Primitive::Range { start, stop } => write!(f, "({start}..{stop})"),
+            // XXX: JSONPath queries are displayed in their canonical format
             Primitive::Query { path } => write!(f, "{path}"),
         }
     }
@@ -670,7 +917,123 @@ impl Whitespace {
 }
 
 fn display_block(block: &[Node]) -> String {
-    todo!()
+    block
+        .iter()
+        .map(|n| n.to_string())
+        .collect::<Vec<String>>()
+        .join("")
+}
+
+fn display_line_block(block: &[Node]) -> String {
+    block
+        .iter()
+        .map(|n| display_line_node(n))
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+fn display_line_node(node: &Node) -> String {
+    match node {
+        Node::EOI {} => "".to_owned(),
+        Node::Content { text } => text.to_owned(),
+        Node::Output { expression, .. } => expression.to_string(),
+        Node::AssignTag {
+            identifier,
+            expression,
+            ..
+        } => {
+            format!("assign {} = {}", identifier, expression)
+        }
+        Node::CaptureTag {
+            identifier, block, ..
+        } => {
+            format!(
+                "capture {}\n{}\nendcapture",
+                identifier,
+                display_line_block(block),
+            )
+        }
+        Node::CaseTag {
+            arg,
+            whens,
+            default,
+            ..
+        } => {
+            todo!()
+        }
+        Node::CycleTag { name, args, .. } => {
+            todo!()
+        }
+        Node::DecrementTag { name, .. } => {
+            todo!()
+        }
+        Node::IncrementTag { name, .. } => {
+            todo!()
+        }
+        Node::EchoTag { expression, .. } => {
+            todo!()
+        }
+        Node::ForTag {
+            name,
+            iterable,
+            limit,
+            offset,
+            reversed,
+            block,
+            default,
+            ..
+        } => {
+            todo!()
+        }
+        Node::BreakTag { .. } => "break".to_owned(),
+        Node::ContinueTag { .. } => "continue".to_owned(),
+        Node::IfTag {
+            condition,
+            block,
+            alternatives,
+            default,
+            ..
+        } => {
+            todo!()
+        }
+        Node::UnlessTag {
+            condition,
+            block,
+            alternatives,
+            default,
+            ..
+        } => {
+            todo!()
+        }
+        Node::IncludeTag {
+            target,
+            repeat,
+            variable,
+            alias,
+            args,
+            ..
+        } => {
+            todo!()
+        }
+        Node::RenderTag {
+            target,
+            repeat,
+            variable,
+            alias,
+            args,
+            ..
+        } => {
+            todo!()
+        }
+        Node::TagExtension {
+            name,
+            args,
+            block,
+            tags,
+            ..
+        } => todo!(),
+        _ => unreachable!(),
+    }
 }
 
 impl<'py> pyo3::FromPyObject<'py> for Box<BooleanExpression> {
