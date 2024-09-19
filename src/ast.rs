@@ -25,6 +25,7 @@ impl Template {
     }
 }
 
+#[allow(non_upper_case_globals)]
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum Node {
@@ -133,7 +134,7 @@ pub enum Node {
         name: String,
         args: Vec<CommonArgument>,
         block: Option<Vec<Node>>,
-        tags: Option<Vec<Node>>, // Nested tags, like `else` in a `for` loop, or `when` in a `case` block
+        tags: Option<Vec<Node>>, // XXX: Nested tags, like `else` in a `for` loop, or `when` in a `case` block
     },
 }
 
@@ -927,113 +928,9 @@ fn display_block(block: &[Node]) -> String {
 fn display_line_block(block: &[Node]) -> String {
     block
         .iter()
-        .map(|n| display_line_node(n))
+        .map(|n| n.to_string())
         .collect::<Vec<String>>()
         .join("\n")
-}
-
-fn display_line_node(node: &Node) -> String {
-    match node {
-        Node::EOI {} => "".to_owned(),
-        Node::Content { text } => text.to_owned(),
-        Node::Output { expression, .. } => expression.to_string(),
-        Node::AssignTag {
-            identifier,
-            expression,
-            ..
-        } => {
-            format!("assign {} = {}", identifier, expression)
-        }
-        Node::CaptureTag {
-            identifier, block, ..
-        } => {
-            format!(
-                "capture {}\n{}\nendcapture",
-                identifier,
-                display_line_block(block),
-            )
-        }
-        Node::CaseTag {
-            arg,
-            whens,
-            default,
-            ..
-        } => {
-            todo!()
-        }
-        Node::CycleTag { name, args, .. } => {
-            todo!()
-        }
-        Node::DecrementTag { name, .. } => {
-            todo!()
-        }
-        Node::IncrementTag { name, .. } => {
-            todo!()
-        }
-        Node::EchoTag { expression, .. } => {
-            todo!()
-        }
-        Node::ForTag {
-            name,
-            iterable,
-            limit,
-            offset,
-            reversed,
-            block,
-            default,
-            ..
-        } => {
-            todo!()
-        }
-        Node::BreakTag { .. } => "break".to_owned(),
-        Node::ContinueTag { .. } => "continue".to_owned(),
-        Node::IfTag {
-            condition,
-            block,
-            alternatives,
-            default,
-            ..
-        } => {
-            todo!()
-        }
-        Node::UnlessTag {
-            condition,
-            block,
-            alternatives,
-            default,
-            ..
-        } => {
-            todo!()
-        }
-        Node::IncludeTag {
-            target,
-            repeat,
-            variable,
-            alias,
-            args,
-            ..
-        } => {
-            todo!()
-        }
-        Node::RenderTag {
-            target,
-            repeat,
-            variable,
-            alias,
-            args,
-            ..
-        } => {
-            todo!()
-        }
-        Node::TagExtension {
-            name,
-            args,
-            block,
-            tags,
-            ..
-        } => todo!(),
-        _ => unreachable!(),
-    }
 }
 
 impl<'py> pyo3::FromPyObject<'py> for Box<BooleanExpression> {
