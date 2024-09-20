@@ -154,11 +154,7 @@ impl fmt::Display for Node {
                 )
             }
             Node::Comment { wc, text, hashes } => {
-                write!(
-                    f,
-                    "{{{}{} {} {}{}}}",
-                    hashes, wc.left, text, wc.right, hashes
-                )
+                write!(f, "{{{}{}{}{}{}}}", hashes, wc.left, text, wc.right, hashes)
             }
             Node::AssignTag {
                 wc,
@@ -492,15 +488,20 @@ impl fmt::Display for InlineCondition {
             .and_then(|alt| Some(write!(f, " else {alt}")));
 
         self.alternative_filters.as_ref().and_then(|filters| {
-            Some(write!(
-                f,
-                " | {}",
-                filters
-                    .iter()
-                    .map(|f| f.to_string())
-                    .collect::<Vec<String>>()
-                    .join(" | ")
-            ))
+            // XXX: bit of a hack, because filters can be an empty vec
+            if filters.len() > 0 {
+                Some(write!(
+                    f,
+                    " | {}",
+                    filters
+                        .iter()
+                        .map(|f| f.to_string())
+                        .collect::<Vec<String>>()
+                        .join(" | ")
+                ))
+            } else {
+                None
+            }
         });
 
         self.tail_filters.as_ref().and_then(|filters| {
@@ -724,7 +725,7 @@ impl fmt::Display for Primitive {
             Primitive::NullLiteral {} => f.write_str("null"),
             Primitive::Integer { value } => write!(f, "{value}"),
             Primitive::Float { value } => write!(f, "{value}"),
-            Primitive::StringLiteral { value } => write!(f, "\"{value}\""),
+            Primitive::StringLiteral { value } => write!(f, "'{value}'"),
             Primitive::Range { start, stop } => write!(f, "({start}..{stop})"),
             // XXX: JSONPath queries are displayed in their canonical format
             Primitive::Query { path } => write!(f, "{path}"),

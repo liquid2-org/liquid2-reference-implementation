@@ -90,8 +90,9 @@ filtered_expr    =  { primitive ~ filters ~ (s ~ inline_condition)? }
 filters          =  { (S ~ filter)* }
 inline_condition =  { "if" ~ s ~ boolean_expr ~ (s ~ "else" ~ s ~ alternative)? ~ S ~ tail_filters? }
 alternative      =  { primitive ~ filters }
-filter           = _{ "|" ~ S ~ filter_expr }
-tail_filters     =  { S ~ "||" ~ S ~ filter_expr ~ (S ~ filter)* }
+filter           =  { "|" ~ S ~ filter_expr }
+tail_filters     =  { S ~ "||" ~ S ~ tail_filter ~ (S ~ "|" ~ S ~ tail_filter)* }
+tail_filter      =  { filter_expr }
 filter_expr      = _{ filter_name ~ S ~ (":" ~ S ~ common_arguments)? }
 filter_name      =  { function_name_first ~ function_name_char* }
 
@@ -241,8 +242,9 @@ line_filtered_expr    =  { line_primitive ~ line_filters ~ (ls ~ line_inline_con
 line_filters          =  { (LS ~ line_filter)* }
 line_inline_condition =  { "if" ~ ls ~ line_boolean_expr ~ (ls ~ "else" ~ ls ~ line_alternative)? ~ LS ~ line_tail_filters? }
 line_alternative      =  { line_primitive ~ filters }
-line_filter           = _{ "|" ~ LS ~ line_filter_expr }
-line_tail_filters     =  { LS ~ "||" ~ LS ~ line_filter_expr ~ (LS ~ line_filter)* }
+line_filter           =  { "|" ~ LS ~ line_filter_expr }
+line_tail_filters     =  { LS ~ "||" ~ LS ~ line_tail_filter ~ (LS ~ "|" ~ LS ~ line_tail_filter)* }
+line_tail_filter      =  { line_filter_expr }
 line_filter_expr      = _{ filter_name ~ LS ~ (":" ~ LS ~ line_common_arguments)? }
 
 line_common_arguments    =  { line_common_argument ~ (LS ~ "," ~ LS ~ line_common_argument)* }

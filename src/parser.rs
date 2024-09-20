@@ -330,29 +330,31 @@ impl LiquidParser {
         let condition = self.parse_boolean_expression(it.next().unwrap())?;
         let mut alternative: Option<Primitive> = None;
         let mut alternative_filters: Option<Vec<Filter>> = None;
-        let tail_filters: Option<Vec<Filter>>;
+        let mut tail_filters: Option<Vec<Filter>> = None;
 
-        let pair = it.next().unwrap();
+        if it.peek().is_some() {
+            let pair = it.next().unwrap();
 
-        match pair.as_rule() {
-            Rule::alternative | Rule::line_alternative => {
-                let mut inner_it = pair.into_inner();
-                alternative = Some(self.parse_primitive(inner_it.next().unwrap())?);
+            match pair.as_rule() {
+                Rule::alternative | Rule::line_alternative => {
+                    let mut inner_it = pair.into_inner();
+                    alternative = Some(self.parse_primitive(inner_it.next().unwrap())?);
 
-                alternative_filters = inner_it
-                    .next()
-                    .and_then(|expr| Some(self.parse_filters(expr)))
-                    .transpose()?;
+                    alternative_filters = inner_it
+                        .next()
+                        .and_then(|expr| Some(self.parse_filters(expr)))
+                        .transpose()?;
 
-                tail_filters = it
-                    .next()
-                    .and_then(|expr| Some(self.parse_filters(expr)))
-                    .transpose()?;
+                    tail_filters = it
+                        .next()
+                        .and_then(|expr| Some(self.parse_filters(expr)))
+                        .transpose()?;
+                }
+                Rule::tail_filters | Rule::line_tail_filters => {
+                    tail_filters = Some(self.parse_filters(pair)?)
+                }
+                _ => unreachable!(),
             }
-            Rule::tail_filters | Rule::line_tail_filters => {
-                tail_filters = Some(self.parse_filters(pair)?)
-            }
-            _ => unreachable!(),
         }
 
         Ok(InlineCondition {
