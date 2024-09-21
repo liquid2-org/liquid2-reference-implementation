@@ -5,7 +5,7 @@ use std::fmt::{self};
 
 use crate::query::Query;
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct Template {
     #[pyo3(get)]
@@ -26,7 +26,7 @@ impl Template {
 }
 
 #[allow(non_upper_case_globals)]
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum Node {
     EOI {},
@@ -419,7 +419,7 @@ impl Node {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct FilteredExpression {
     #[pyo3(get)]
@@ -466,7 +466,7 @@ impl FilteredExpression {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct InlineCondition {
     #[pyo3(get)]
@@ -527,7 +527,7 @@ impl InlineCondition {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum BooleanExpression {
     Primitive {
@@ -584,7 +584,7 @@ impl BooleanExpression {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum BooleanOperator {
     And {},
@@ -607,7 +607,7 @@ impl BooleanOperator {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum CompareOperator {
     Eq {},
@@ -638,7 +638,7 @@ impl CompareOperator {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum MembershipOperator {
     In {},
@@ -665,7 +665,7 @@ impl MembershipOperator {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct Filter {
     #[pyo3(get)]
@@ -704,7 +704,7 @@ impl Filter {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum Primitive {
     TrueLiteral {},
@@ -740,7 +740,7 @@ impl Primitive {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct WhenTag {
     #[pyo3(get)]
@@ -775,7 +775,7 @@ impl WhenTag {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct ElseTag {
     #[pyo3(get)]
@@ -803,7 +803,7 @@ impl ElseTag {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct ElsifTag {
     #[pyo3(get)]
@@ -834,7 +834,7 @@ impl ElsifTag {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct CommonArgument {
     #[pyo3(get)]
@@ -870,7 +870,7 @@ impl CommonArgument {
     }
 }
 
-#[pyclass]
+#[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub struct WhitespaceControl {
     #[pyo3(get)]

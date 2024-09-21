@@ -45,5 +45,6 @@ fn liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add_function(wrap_pyfunction!(dump, m)?)?;
     m.add_function(wrap_pyfunction!(parse, m)?)?;
+    m.add_class::<ast::Node>()?;
     Ok(())
 }

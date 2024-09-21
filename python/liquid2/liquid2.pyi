@@ -16,6 +16,7 @@ class WhitespaceControl:
 
 class Node:
     class Content:
+        __match_args__ = ("text",)
         @property
         def text(self) -> str: ...
 
@@ -352,23 +353,23 @@ class FilterExpression:
 
     class Not:
         @property
-        def expression(self) -> FilterExpression_: ...
+        def expression(self) -> FilterExpression: ...
 
     class Logical:
         @property
-        def left(self) -> FilterExpression_: ...
+        def left(self) -> FilterExpression: ...
         @property
         def operator(self) -> LogicalOp: ...
         @property
-        def right(self) -> FilterExpression_: ...
+        def right(self) -> FilterExpression: ...
 
     class Comparison:
         @property
-        def left(self) -> FilterExpression_: ...
+        def left(self) -> FilterExpression: ...
         @property
         def operator(self) -> ComparisonOp: ...
         @property
-        def right(self) -> FilterExpression_: ...
+        def right(self) -> FilterExpression: ...
 
     class RelativeQuery:
         @property
@@ -382,33 +383,21 @@ class FilterExpression:
         @property
         def name(self) -> str: ...
         @property
-        def args(self) -> list[FilterExpression_]: ...
-
-FilterExpression_ = (
-    FilterExpression.True_
-    | FilterExpression.False_
-    | FilterExpression.Null
-    | FilterExpression.String
-    | FilterExpression.Int
-    | FilterExpression.Float
-    | FilterExpression.Not
-    | FilterExpression.Logical
-    | FilterExpression.Comparison
-    | FilterExpression.RelativeQuery
-    | FilterExpression.RootQuery
-    | FilterExpression.Function
-)
+        def args(self) -> list[FilterExpression]: ...
 
 class Selector:
     class Name:
+        __match_args__ = ("name",)
         @property
         def name(self) -> str: ...
 
     class Index:
+        __match_args__ = ("index",)
         @property
         def index(self) -> int: ...
 
     class Slice:
+        __match_args__ = ("start", "stop", "step")
         @property
         def start(self) -> int | None: ...
         @property
@@ -419,14 +408,11 @@ class Selector:
     class Wild: ...
 
     class Filter:
+        __match_args__ = ("expression",)
         @property
-        def expression(self) -> FilterExpression_: ...
+        def expression(self) -> FilterExpression: ...
 
-Selector_ = (
-    Selector.Name | Selector.Index | Selector.Slice | Selector.Wild | Selector.Filter
-)
-
-SelectorList = list[Selector_]
+SelectorList = list[Selector]
 
 class Segment:
     class Child:
@@ -441,6 +427,6 @@ class Segment:
 
 class Query:
     @property
-    def segments(self) -> list[Segment.Child | Segment.Recursive]: ...
+    def segments(self) -> list[Segment]: ...
 
 def parse(source: str) -> Template: ...
