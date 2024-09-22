@@ -9,7 +9,7 @@ from typing import Type
 
 from liquid2 import parse
 
-from ._ast import _AST
+from ._ast import AST
 from .template import Template
 from .undefined import Undefined
 
@@ -23,10 +23,11 @@ class Environment:
     def __init__(self) -> None:
         self.undefined: Type[Undefined] = Undefined
         self.auto_escape = False
+        self.context_depth_limit = 30
         self.filters: dict[str, Callable[..., object]] = {}
 
-    def _parse(self, source: str) -> _AST:
-        return _AST(self, parse(source))
+    def _parse(self, source: str) -> AST:
+        return AST(self, parse(source))
 
     def from_string(
         self,

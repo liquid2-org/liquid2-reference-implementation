@@ -7,6 +7,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 from typing import Generic
+from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
@@ -253,7 +254,7 @@ class RelativeFilterQuery(FilterQuery):
 
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
-        if not isinstance(context.current, (list, dict)):
+        if not isinstance(context.current, (Sequence, Mapping)):
             if self.query.empty():
                 return context.current
             return JSONPathNodeList()

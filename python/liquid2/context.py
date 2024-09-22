@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from contextlib import contextmanager
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
@@ -11,6 +12,7 @@ from typing import Iterator
 from typing import Mapping
 
 from .chainmap import ReadOnlyChainMap
+from .exceptions import ContextDepthError
 from .exceptions import NoSuchFilterFunc
 from .undefined import UNDEFINED
 
@@ -32,7 +34,7 @@ class RenderContext:
         "local_namespace_carry",
         "locals",
         "counters",
-        "namespace",
+        "scope",
         "auto_escape",
         "env",
     )
@@ -58,7 +60,7 @@ class RenderContext:
 
         self.locals: dict[str, int] = {}
         self.counters: dict[str, int] = {}
-        self.namespace = ReadOnlyChainMap(
+        self.scope = ReadOnlyChainMap(
             self.locals,
             self.globals,
             builtin,
@@ -70,7 +72,7 @@ class RenderContext:
 
     def get(self, path: Query, default: object = UNDEFINED) -> object:
         """Resolve the variable _path_ in the current namespace."""
-        nodes = path.find(self.namespace)
+        nodes = path.find(self.scope)
 
         if not nodes:
             if default == UNDEFINED:
@@ -108,6 +110,29 @@ class RenderContext:
             return partial(filter_func, **kwargs)
 
         return filter_func
+
+    @contextmanager
+    def extend(
+        self, namespace: Mapping[str, object], template: Template | None = None
+    ) -> Iterator[RenderContext]:
+        """Extend this context with the given read-only namespace."""
+        if self.scope.size() > self.env.context_depth_limit:
+            raise ContextDepthError(
+                "maximum context depth reached, possible recursive include"
+            )
+
+        _template = self.template
+        if template:
+            self.template = template
+
+        self.scope.push(namespace)
+
+        try:
+            yield self
+        finally:
+            if template:
+                self.template = _template
+            self.scope.pop()
 
 
 class BuiltIn(Mapping[str, object]):

@@ -46,5 +46,22 @@ fn liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(dump, m)?)?;
     m.add_function(wrap_pyfunction!(parse, m)?)?;
     m.add_class::<ast::Node>()?;
+    m.add_class::<ast::BooleanExpression>()?;
+    m.add_class::<ast::FilteredExpression>()?;
+    m.add_class::<ast::Filter>()?;
+    m.add_class::<ast::InlineCondition>()?;
+    m.add_class::<ast::BooleanOperator>()?;
+    m.add_class::<ast::CompareOperator>()?;
+    m.add_class::<ast::MembershipOperator>()?;
+    m.add_class::<ast::Primitive>()?;
+    m.add_class::<ast::WhenTag>()?;
+    m.add_class::<ast::ElseTag>()?;
+    m.add_class::<ast::ElsifTag>()?;
+    m.add_class::<ast::CommonArgument>()?;
+    m.add_class::<ast::WhitespaceControl>()?;
+    m.add_class::<ast::Whitespace>()?;
+    m.add_class::<query::Segment>()?;
+    m.add_class::<query::Selector>()?;
+    m.add_class::<query::ComparisonOperator>()?;
     Ok(())
 }

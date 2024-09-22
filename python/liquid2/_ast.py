@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from abc import ABC
 from abc import abstractmethod
+from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Generic
@@ -14,11 +15,15 @@ from typing import TypeVar
 from markupsafe import Markup
 
 from liquid2 import BooleanExpression as IRBooleanExpression
+from liquid2 import BooleanOperator
+from liquid2 import CompareOperator
 from liquid2 import Node as ParseTreeNode
 from liquid2 import Primitive as IRPrimitive
 from liquid2.context import RenderContext
 
 from .limits import to_int
+from .query import compile
+from .stringify import to_liquid_string
 
 if TYPE_CHECKING:
     from liquid2 import FilteredExpression as IRFilteredExpression
@@ -30,7 +35,7 @@ if TYPE_CHECKING:
     from .query import Query as _Query
 
 
-class _AST:
+class AST:
     """Template abstract syntax tree."""
 
     def __init__(self, env: Environment, parse_tree: ParseTree) -> None:
@@ -53,20 +58,26 @@ class _AST:
 class _Node(ABC):
     __slots__ = ()
 
-    def render(self, render_context: RenderContext, buffer: TextIO) -> int:
-        return self.render_to_output(render_context, buffer)
+    def render(self, context: RenderContext, buffer: TextIO) -> int:
+        return self.render_to_output(context, buffer)
 
     @abstractmethod
-    def render_to_output(self, render_context: RenderContext, buffer: TextIO) -> int:
+    def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer.
 
         Return:
-            The number of Unicode code points written to the output buffer.
+            The number of "characters" written to the output buffer.
         """
+
+    async def render_to_output_async(
+        self, context: RenderContext, buffer: TextIO
+    ) -> int:
+        """An async version of _render_to_output_."""
+        return self.render_to_output(context, buffer)
 
 
 class _TodoNode(_Node):
-    def render_to_output(self, render_context: RenderContext, buffer: TextIO) -> int:
+    def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         raise NotImplementedError(":(")
 
 
@@ -77,7 +88,7 @@ class _ContentNode(_Node):
         super().__init__()
         self.text = node.text
 
-    def render_to_output(self, _render_context: RenderContext, buffer: TextIO) -> int:
+    def render_to_output(self, _context: RenderContext, buffer: TextIO) -> int:
         buffer.write(self.text)
         return len(self.text)
 
@@ -88,15 +99,25 @@ class _OutputNode(_Node):
     def __init__(self, node: ParseTreeNode.Output) -> None:
         super().__init__()
         self.wc = node.wc
-        self.expression = FilteredExpression(node.expression)
+        self.expression: Expression = FilteredExpression(node.expression)
         if node.expression.condition:
             self.expression = TernaryFilteredExpression(
                 self.expression, node.expression.condition
             )
 
-    def render_to_output(self, render_context: RenderContext, buffer: TextIO) -> int:
-        # TODO
-        raise NotImplementedError(":(")
+    def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
+        return buffer.write(
+            to_liquid_string(self.expression.evaluate(context), context.auto_escape)
+        )
+
+    async def render_to_output_async(
+        self, context: RenderContext, buffer: TextIO
+    ) -> int:
+        return buffer.write(
+            to_liquid_string(
+                await self.expression.evaluate_async(context), context.auto_escape
+            )
+        )
 
 
 class Expression(ABC):
@@ -411,7 +432,7 @@ def _primitive(v: IRPrimitive) -> Primitive:  # noqa: PLR0911
         case IRPrimitive.Range(start, stop):
             return RangeLiteral(IntegerLiteral(start), IntegerLiteral(stop))
         case IRPrimitive.Query(path):
-            return Query(path)
+            return Query(compile(path))
         case _:
             raise NotImplementedError(":(")
 
@@ -457,7 +478,7 @@ class TernaryFilteredExpression(Expression):
         expr: IRInlineCondition,
     ) -> None:
         self.left = left
-        self.condition = BooleanExpression(_boolean_expression(expr.expr))
+        self.condition = BooleanExpression(_expr(expr.expr))
         self.alternative = _primitive(expr.alternative) if expr.alternative else None
         self.filters: list[Filter] = []
         self.tail_filters: list[Filter] = []
@@ -588,28 +609,234 @@ class CommonArgument:
         raise NotImplementedError(":(")
 
 
-def _boolean_expression(expression: IRBooleanExpression) -> Expression:
+def _expr(expression: IRBooleanExpression) -> Expression:  # noqa: PLR0911
     match expression:
         case IRBooleanExpression.Primitive(expr):
             return _primitive(expr)
         case IRBooleanExpression.LogicalNot(expr):
-            return LogicalNotExpression(expr)
-        case IRBooleanExpression.Logical(left, op, right):
-            return LogicalExpression(left, op, right)
-        case IRBooleanExpression.Comparison(left, op, right):
-            return ComparisonExpression(left, op, right)
+            return LogicalNotExpression(_expr(expr))
+        case IRBooleanExpression.Logical(left, BooleanOperator.And, right):
+            return LogicalAndExpression(_expr(left), _expr(right))
+        case IRBooleanExpression.Logical(left, BooleanOperator.Or, right):
+            return LogicalOrExpression(_expr(left), _expr(right))
+        case IRBooleanExpression.Comparison(left, CompareOperator.Eq, right):
+            return EqExpression(_expr(left), _expr(right))
+        case IRBooleanExpression.Comparison(left, CompareOperator.Ne, right):
+            return NeExpression(_expr(left), _expr(right))
+        case IRBooleanExpression.Comparison(left, CompareOperator.Le, right):
+            return LeExpression(_expr(left), _expr(right))
+        case IRBooleanExpression.Comparison(left, CompareOperator.Ge, right):
+            return GeExpression(_expr(left), _expr(right))
+        case IRBooleanExpression.Comparison(left, CompareOperator.Lt, right):
+            return LtExpression(_expr(left), _expr(right))
+        case IRBooleanExpression.Comparison(left, CompareOperator.Gt, right):
+            return GtExpression(_expr(left), _expr(right))
         case IRBooleanExpression.Membership(left, op, right):
-            return MembershipExpression(left, op, right)
+            raise NotImplementedError(":(")
         case _:
             raise NotImplementedError(":(")
 
 
 class BooleanExpression(Expression):
-    def __init__(self) -> None:
-        super().__init__()
+    __slots__ = ("expression",)
+
+    def __init__(self, expression: Expression) -> None:
+        self.expression = expression
 
     def evaluate(self, context: RenderContext) -> object:
-        return super().evaluate(context)
+        return is_truthy(self.expression.evaluate(context))
 
     async def evaluate_async(self, context: RenderContext) -> object:
-        return super().evaluate_async(context)
+        return is_truthy(await self.expression.evaluate_async(context))
+
+
+class LogicalNotExpression(Expression):
+    __slots__ = ("expression",)
+
+    def __init__(self, expression: Expression) -> None:
+        self.expression = expression
+
+    def evaluate(self, context: RenderContext) -> object:
+        return not is_truthy(self.expression.evaluate(context))
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return not is_truthy(await self.expression.evaluate_async(context))
+
+
+class LogicalAndExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        return is_truthy(self.left.evaluate(context)) and is_truthy(
+            self.right.evaluate(context)
+        )
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return is_truthy(await self.left.evaluate_async(context)) and is_truthy(
+            await self.right.evaluate_async(context)
+        )
+
+
+class LogicalOrExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        return is_truthy(self.left.evaluate(context)) or is_truthy(
+            self.right.evaluate(context)
+        )
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return is_truthy(await self.left.evaluate_async(context)) or is_truthy(
+            await self.right.evaluate_async(context)
+        )
+
+
+class EqExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        return _eq(self.left.evaluate(context), is_truthy(self.right.evaluate(context)))
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return _eq(
+            await self.left.evaluate_async(context),
+            is_truthy(await self.right.evaluate_async(context)),
+        )
+
+
+class NeExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        return not _eq(
+            self.left.evaluate(context), is_truthy(self.right.evaluate(context))
+        )
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return not _eq(
+            await self.left.evaluate_async(context),
+            is_truthy(await self.right.evaluate_async(context)),
+        )
+
+
+class LeExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        left = self.left.evaluate(context)
+        right = self.right.evaluate(context)
+        return _eq(left, right) or _lt(left, right)
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        left = await self.left.evaluate_async(context)
+        right = await self.right.evaluate_async(context)
+        return _eq(left, right) or _lt(left, right)
+
+
+class GeExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        left = self.left.evaluate(context)
+        right = self.right.evaluate(context)
+        return _eq(left, right) or _lt(right, left)
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        left = await self.left.evaluate_async(context)
+        right = await self.right.evaluate_async(context)
+        return _eq(left, right) or _lt(right, left)
+
+
+class LtExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        # TODO: type error?
+        return _lt(self.left.evaluate(context), is_truthy(self.right.evaluate(context)))
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return not _eq(
+            await self.left.evaluate_async(context),
+            is_truthy(await self.right.evaluate_async(context)),
+        )
+
+
+class GtExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        # TODO: type error?
+        return _lt(self.right.evaluate(context), is_truthy(self.left.evaluate(context)))
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return _lt(
+            await self.right.evaluate_async(context),
+            is_truthy(await self.left.evaluate_async(context)),
+        )
+
+
+def is_truthy(obj: object) -> bool:
+    if hasattr(obj, "__liquid__"):
+        obj = obj.__liquid__()
+    return not (obj is False or obj is None)
+
+
+def _eq(left: object, right: object) -> bool:
+    if isinstance(right, (Empty, Blank)):
+        left, right = right, left
+
+    # Remember 1 == True and 0 == False in Python
+    if isinstance(right, bool):
+        left, right = right, left
+
+    if isinstance(left, bool):
+        return isinstance(right, bool) and left == right
+
+    return left == right
+
+
+def _lt(left: object, right: object) -> bool:
+    if isinstance(left, str) and isinstance(right, str):
+        return left < right
+
+    if isinstance(left, bool) or isinstance(right, bool):
+        return False
+
+    if isinstance(left, (int, float, Decimal)) and isinstance(
+        right, (int, float, Decimal)
+    ):
+        return left < right
+
+    raise TypeError

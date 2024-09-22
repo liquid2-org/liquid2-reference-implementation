@@ -8,12 +8,13 @@ from typing import Any
 from typing import Mapping
 from typing import TextIO
 
+from .chainmap import ReadOnlyChainMap
 from .context import RenderContext
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from ._ast import _AST
+    from ._ast import AST
     from .environment import Environment
 
 
@@ -32,7 +33,7 @@ class Template:
     def __init__(
         self,
         env: Environment,
-        ast: _AST,
+        ast: AST,
         *,
         name: str = "<string>",
         path: str | Path | None = None,
@@ -43,17 +44,38 @@ class Template:
         self.ast = ast
         self.name = name
         self.path = path
-        self.global_data = global_data
-        self.overlay_data = overlay_data
+        self.global_data = global_data or {}
+        self.overlay_data = overlay_data or {}
 
     def render(self, *args: Any, **kwargs: Any) -> str:
-        """Render this template with _args_ and _kwargs_ included in the render context."""
+        """Render this template with _args_ and _kwargs_."""
         buf = StringIO()  # TODO: limited buffer
-        context = RenderContext(self)
+        context = RenderContext(
+            self,
+            global_data=self.make_globals(dict(*args, **kwargs)),
+        )
         self.render_with_context(context, buf)
         return buf.getvalue()
 
-    def render_with_context(self, context: RenderContext, buf: TextIO) -> None:
+    def render_with_context(
+        self,
+        context: RenderContext,
+        buf: TextIO,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """Render this template using an existing render context and output buffer."""
-        for node in self.ast.nodes:
-            node.render(context, buf)
+        # TODO: partial?
+        namespace = dict(*args, **kwargs)
+
+        with context.extend(namespace):
+            for node in self.ast.nodes:
+                node.render(context, buf)
+
+    def make_globals(self, render_args: Mapping[str, object]) -> Mapping[str, object]:
+        """Return a mapping including render arguments and template globals."""
+        return ReadOnlyChainMap(
+            render_args,
+            self.global_data,
+            self.overlay_data,
+        )
