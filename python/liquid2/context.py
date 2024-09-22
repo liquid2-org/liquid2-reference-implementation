@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import datetime
+from functools import partial
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Callable
 from typing import Iterator
 from typing import Mapping
 
 from .chainmap import ReadOnlyChainMap
+from .exceptions import NoSuchFilterFunc
 from .undefined import UNDEFINED
 
 if TYPE_CHECKING:
@@ -29,6 +33,8 @@ class RenderContext:
         "locals",
         "counters",
         "namespace",
+        "auto_escape",
+        "env",
     )
 
     def __init__(
@@ -59,6 +65,9 @@ class RenderContext:
             self.counters,
         )
 
+        self.env = template.env
+        self.auto_escape = self.env.auto_escape
+
     def get(self, path: Query, default: object = UNDEFINED) -> object:
         """Resolve the variable _path_ in the current namespace."""
         nodes = path.find(self.namespace)
@@ -72,6 +81,33 @@ class RenderContext:
             return nodes[0].value
 
         return nodes
+
+    def filter(self, name: str) -> Callable[..., object]:
+        """Return the filter callable for _name_."""
+        try:
+            filter_func = self.env.filters[name]
+        except KeyError as err:
+            raise NoSuchFilterFunc(f"unknown filter '{name}'") from err
+
+        kwargs: dict[str, Any] = {}
+
+        if getattr(filter_func, "with_context", False):
+            kwargs["context"] = self
+
+        if getattr(filter_func, "with_environment", False):
+            kwargs["environment"] = self.env
+
+        if kwargs:
+            if hasattr(filter_func, "filter_async"):
+                _filter_func = partial(filter_func, **kwargs)
+                _filter_func.filter_async = partial(  # type: ignore
+                    filter_func.filter_async,
+                    **kwargs,
+                )
+                return _filter_func
+            return partial(filter_func, **kwargs)
+
+        return filter_func
 
 
 class BuiltIn(Mapping[str, object]):

@@ -220,14 +220,17 @@ class InlineCondition:
 
 class BooleanExpression:
     class Primitive:
+        __match_args__ = ("expr",)
         @property
         def expr(self) -> Primitive: ...
 
     class LogicalNot:
+        __match_args__ = ("expr",)
         @property
         def expr(self) -> BooleanExpression: ...
 
     class Logical:
+        __match_args__ = ("left", "operator", "right")
         @property
         def left(self) -> BooleanExpression: ...
         @property
@@ -236,6 +239,7 @@ class BooleanExpression:
         def right(self) -> BooleanExpression: ...
 
     class Comparison:
+        __match_args__ = ("left", "operator", "right")
         @property
         def left(self) -> BooleanExpression: ...
         @property
@@ -244,6 +248,7 @@ class BooleanExpression:
         def right(self) -> BooleanExpression: ...
 
     class Membership:
+        __match_args__ = ("left", "operator", "right")
         @property
         def left(self) -> BooleanExpression: ...
         @property
@@ -297,24 +302,29 @@ class Primitive:
     class NullLiteral: ...
 
     class Integer:
+        __match_args__ = "value"
         @property
         def value(self) -> int: ...
 
     class Float:
+        __match_args__ = "value"
         @property
         def value(self) -> float: ...
 
     class StringLiteral:
+        __match_args__ = "value"
         @property
         def value(self) -> str: ...
 
     class Range:
+        __match_args__ = ("start", "stop")
         @property
         def start(self) -> int: ...
         @property
         def stop(self) -> int: ...
 
     class Query:
+        __match_args__ = "path"
         @property
         def path(self) -> Query: ...
 
@@ -340,22 +350,27 @@ class FilterExpression:
     class Null: ...
 
     class String:
+        __match_args__ = ("value",)
         @property
         def value(self) -> str: ...
 
     class Int:
+        __match_args__ = ("value",)
         @property
         def value(self) -> int: ...
 
     class Float:
+        __match_args__ = ("value",)
         @property
         def value(self) -> float: ...
 
     class Not:
+        __match_args__ = ("expression",)
         @property
         def expression(self) -> FilterExpression: ...
 
     class Logical:
+        __match_args__ = ("left", "operator", "right")
         @property
         def left(self) -> FilterExpression: ...
         @property
@@ -364,6 +379,7 @@ class FilterExpression:
         def right(self) -> FilterExpression: ...
 
     class Comparison:
+        __match_args__ = ("left", "operator", "right")
         @property
         def left(self) -> FilterExpression: ...
         @property
@@ -385,7 +401,7 @@ class FilterExpression:
         @property
         def args(self) -> list[FilterExpression]: ...
 
-class Selector:
+class Seleftor:
     class Name:
         __match_args__ = ("name",)
         @property
@@ -412,18 +428,18 @@ class Selector:
         @property
         def expression(self) -> FilterExpression: ...
 
-SelectorList = list[Selector]
+SeleftorList = list[Seleftor]
 
 class Segment:
     class Child:
-        __match_args__ = ("selectors", "span")
+        __match_args__ = ("seleftors", "span")
         @property
-        def selectors(self) -> SelectorList: ...
+        def seleftors(self) -> SeleftorList: ...
 
     class Recursive:
-        __match_args__ = ("selectors", "span")
+        __match_args__ = ("seleftors", "span")
         @property
-        def selectors(self) -> SelectorList: ...
+        def seleftors(self) -> SeleftorList: ...
 
 class Query:
     @property

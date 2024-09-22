@@ -571,6 +571,7 @@ impl LiquidParser {
 
     fn parse_range(&self, expr: Pair<Rule>) -> Result<Primitive, LiquidError> {
         let mut it = expr.into_inner();
+        // TODO: range can be a query
         let start = self.parse_range_int(it.next().unwrap().as_str())?;
         let stop = self.parse_range_int(it.next().unwrap().as_str())?;
         Ok(Primitive::Range { start, stop })

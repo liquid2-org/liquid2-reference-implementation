@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Callable
 from typing import Mapping
 from typing import Type
 
@@ -21,6 +22,8 @@ class Environment:
 
     def __init__(self) -> None:
         self.undefined: Type[Undefined] = Undefined
+        self.auto_escape = False
+        self.filters: dict[str, Callable[..., object]] = {}
 
     def _parse(self, source: str) -> _AST:
         return _AST(self, parse(source))
