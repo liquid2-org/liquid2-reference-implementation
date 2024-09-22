@@ -836,29 +836,18 @@ impl ElsifTag {
 
 #[pyclass(frozen)]
 #[derive(Debug, Clone)]
-pub struct CommonArgument {
-    #[pyo3(get)]
-    pub value: Option<Primitive>,
-    #[pyo3(get)]
-    pub name: Option<String>,
+pub enum CommonArgument {
+    Keyword { name: String, value: Primitive },
+    Positional { value: Primitive },
+    Symbol { name: String },
 }
 
 impl fmt::Display for CommonArgument {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CommonArgument {
-                value: Some(v),
-                name: Some(k),
-            } => write!(f, "{}:{}", k, v),
-            CommonArgument {
-                value: Some(v),
-                name: None,
-            } => write!(f, "{}", v),
-            CommonArgument {
-                value: None,
-                name: Some(k),
-            } => write!(f, "{}", k),
-            _ => Ok(()),
+            CommonArgument::Keyword { name, value } => write!(f, "{}:{}", name, value),
+            CommonArgument::Positional { value } => write!(f, "{}", value),
+            CommonArgument::Symbol { name } => write!(f, "{}", name),
         }
     }
 }

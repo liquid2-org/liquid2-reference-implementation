@@ -69,6 +69,18 @@ class _JSONPathEnvironment:
             env=self, segments=tuple(self._parse_segment(s) for s in query.segments)
         )
 
+    def from_symbol(self, s: str) -> JSONPathQuery:
+        return JSONPathQuery(
+            env=self,
+            segments=(
+                JSONPathChildSegment(
+                    env=self,
+                    span=(0, 0),
+                    selectors=(NameSelector(env=self, span=(0, 0), name=s),),
+                ),
+            ),
+        )
+
     def setup_function_extensions(self) -> None:
         """Initialize function extensions."""
         self.function_extensions["length"] = function_extensions.Length()

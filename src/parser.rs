@@ -254,7 +254,7 @@ impl LiquidParser {
 
         let args = it
             .next()
-            .and_then(|expr| Some(self.parse_common_arguments(expr)))
+            .and_then(|expr| Some(self.parse_common_arguments(expr, false)))
             .transpose()?;
 
         Ok(Filter { name, args })
@@ -263,59 +263,48 @@ impl LiquidParser {
     fn parse_common_arguments(
         &self,
         expression: Pair<Rule>,
+        parse_symbols: bool,
     ) -> Result<Vec<CommonArgument>, LiquidError> {
         expression
             .into_inner()
-            .map(|expr| self.parse_common_argument(expr))
+            .map(|expr| self.parse_common_argument(expr, parse_symbols))
             .collect()
     }
 
-    fn parse_common_argument(&self, expression: Pair<Rule>) -> Result<CommonArgument, LiquidError> {
-        match expression.as_rule() {
-            Rule::positional_argument | Rule::line_positional_argument => Ok(CommonArgument {
-                value: Some(self.parse_primitive(expression.into_inner().next().unwrap())?),
-                name: None,
-            }),
-            Rule::keyword_argument | Rule::line_keyword_argument => {
-                let mut it = expression.into_inner();
-                let name = it.next().unwrap().as_str().to_owned();
-                let value = self.parse_primitive(it.next().unwrap())?;
-                Ok(CommonArgument {
-                    value: Some(value),
-                    name: Some(name),
-                })
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn parse_keywords_and_symbols(
+    fn parse_common_argument(
         &self,
         expression: Pair<Rule>,
-    ) -> Result<Vec<CommonArgument>, LiquidError> {
-        expression
-            .into_inner()
-            .map(|expr| self.parse_keyword_or_symbol(expr))
-            .collect()
-    }
-
-    fn parse_keyword_or_symbol(
-        &self,
-        expression: Pair<Rule>,
+        parse_symbols: bool,
     ) -> Result<CommonArgument, LiquidError> {
         match expression.as_rule() {
-            Rule::positional_argument | Rule::line_positional_argument => Ok(CommonArgument {
-                value: None,
-                name: Some(expression.into_inner().next().unwrap().as_str().to_owned()),
+            Rule::positional_argument | Rule::line_positional_argument => {
+                if parse_symbols == true {
+                    let p = self.parse_primitive(expression.into_inner().next().unwrap())?;
+                    match p {
+                        Primitive::Query { ref path } => {
+                            if let Some(symbol) = path.as_symbol() {
+                                Ok(CommonArgument::Symbol { name: symbol })
+                            } else {
+                                Ok(CommonArgument::Positional { value: p })
+                            }
+                        }
+                        _ => Ok(CommonArgument::Positional { value: p }),
+                    }
+                } else {
+                    Ok(CommonArgument::Positional {
+                        value: self.parse_primitive(expression.into_inner().next().unwrap())?,
+                    })
+                }
+            }
+            Rule::identifier => Ok(CommonArgument::Symbol {
+                // NOTE: not currently allowed by te grammar
+                name: expression.as_str().to_owned(),
             }),
             Rule::keyword_argument | Rule::line_keyword_argument => {
                 let mut it = expression.into_inner();
                 let name = it.next().unwrap().as_str().to_owned();
                 let value = self.parse_primitive(it.next().unwrap())?;
-                Ok(CommonArgument {
-                    value: Some(value),
-                    name: Some(name),
-                })
+                Ok(CommonArgument::Keyword { name, value })
             }
             _ => unreachable!(),
         }
@@ -880,27 +869,27 @@ impl LiquidParser {
                 Rule::for_tag_arguments | Rule::line_for_tag_arguments
             )
         }) {
-            let args = self.parse_keywords_and_symbols(it.next().unwrap())?;
+            let args = self.parse_common_arguments(it.next().unwrap(), true)?;
             for arg in args {
                 match arg {
-                    CommonArgument { name: Some(s), .. } => match s.as_str() {
-                        "limit" => limit = Some(arg.value.unwrap()),
-                        "offset" => offset = Some(arg.value.unwrap()),
-                        "reversed" => {
-                            if arg.value.is_some() {
-                                return Err(LiquidError::syntax(
-                                    "unexpected value for symbol 'reversed'".to_string(),
-                                ));
-                            }
-                            reversed = true
-                        }
+                    CommonArgument::Keyword { name, value } => match name.as_str() {
+                        "limit" => limit = Some(value),
+                        "offset" => offset = Some(value),
                         _ => {
                             return Err(LiquidError::syntax(format!(
-                                "expected 'limit', 'offset' or 'reversed', found '{}'",
-                                s
+                                "expected 'limit or 'offset', found '{name}'",
                             )))
                         }
                     },
+                    CommonArgument::Symbol { name } => {
+                        if name == "reversed" {
+                            reversed = true;
+                        } else {
+                            return Err(LiquidError::syntax(format!(
+                                "expected 'limit, 'offset' or 'reversed', found '{name}'",
+                            )));
+                        }
+                    }
                     _ => {
                         return Err(LiquidError::syntax(format!(
                             "expected 'limit', 'offset' or 'reversed', found {:#?}",
@@ -1167,7 +1156,7 @@ impl LiquidParser {
                     alias = for_it.next().and_then(|p| Some(p.as_str().to_owned()));
                 }
                 Rule::common_arguments | Rule::line_common_arguments => {
-                    args = Some(self.parse_common_arguments(expr)?);
+                    args = Some(self.parse_common_arguments(expr, false)?);
                 }
                 _ => unreachable!(),
             }
@@ -1180,7 +1169,7 @@ impl LiquidParser {
             }) {
                 args = it
                     .next()
-                    .map_or(None, |p| Some(self.parse_common_arguments(p)))
+                    .map_or(None, |p| Some(self.parse_common_arguments(p, false)))
                     .transpose()?;
             }
         }

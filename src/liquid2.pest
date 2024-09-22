@@ -100,8 +100,8 @@ common_arguments    =  { common_argument ~ (S ~ "," ~ S ~ common_argument)* }
 common_argument     = _{ keyword_argument | positional_argument }
 positional_argument =  { primitive }
 
-// TODO: allow `=` as well as `:`?
-keyword_argument = { keyword ~ S ~ ":" ~ S ~ primitive }
+// NOTE: `=` as well as `:`
+keyword_argument = { keyword ~ S ~ (":" | "=") ~ S ~ primitive }
 keyword          = { function_name_first ~ function_name_char* }
 
 boolean_expr       =  { boolean_or_expr }
@@ -233,9 +233,8 @@ line_expr    = _{ line_end_tag | line_standard_tag_expr | line_common_tag_expr }
 line_end_tag =  { "end" ~ tag_name }
 
 // For non-standard tags aka tag extensions
-common_tag          = { tag_start ~ common_tag_expr ~ tag_end }
-common_tag_expr     = { tag_name ~ s ~ (common_tag_argument ~ (S ~ "," ~ S ~ common_tag_argument)*)? }
-common_tag_argument = { keyword_argument | keyword | positional_argument }
+common_tag      = { tag_start ~ common_tag_expr ~ tag_end }
+common_tag_expr = { tag_name ~ s ~ (common_argument ~ (S ~ "," ~ S ~ common_argument)*)? }
 
 /* Newline sensitive expressions for the "liquid" tag. */
 line_filtered_expr    =  { line_primitive ~ line_filters ~ (ls ~ line_inline_condition)? }
@@ -250,9 +249,7 @@ line_filter_expr      = _{ filter_name ~ LS ~ (":" ~ LS ~ line_common_arguments)
 line_common_arguments    =  { line_common_argument ~ (LS ~ "," ~ LS ~ line_common_argument)* }
 line_common_argument     = _{ line_keyword_argument | line_positional_argument }
 line_positional_argument =  { line_primitive }
-
-// TODO: allow `=` as well as `:`?
-line_keyword_argument = { keyword ~ LS ~ ":" ~ LS ~ line_primitive }
+line_keyword_argument    =  { keyword ~ LS ~ (":" | "=") ~ LS ~ line_primitive }
 
 line_boolean_expr       =  { line_boolean_or_expr }
 line_boolean_or_expr    =  { line_boolean_and_expr ~ (ls ~ "or" ~ ls ~ line_boolean_and_expr)* }
@@ -315,8 +312,7 @@ line_include_for           =  { "for" ~ ls ~ line_primitive ~ (ls ~ "as" ~ ls ~ 
 
 line_render_expr = _{ render ~ ls ~ string_literal ~ (ls ~ line_include_tag_arguments)? }
 
-line_common_tag_expr     = { tag_name ~ ls ~ (line_common_tag_argument ~ (LS ~ "," ~ LS ~ line_common_tag_argument)*)? }
-line_common_tag_argument = { line_keyword_argument | keyword | line_positional_argument }
+line_common_tag_expr = { tag_name ~ ls ~ (line_common_argument ~ (LS ~ "," ~ LS ~ line_common_argument)*)? }
 
 /* Modified JSONPath */
 // TODO: move implicit_root_segment so we just have segments*

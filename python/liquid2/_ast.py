@@ -16,6 +16,7 @@ from markupsafe import Markup
 
 from liquid2 import BooleanExpression as IRBooleanExpression
 from liquid2 import BooleanOperator
+from liquid2 import CommonArgument
 from liquid2 import CompareOperator
 from liquid2 import Node as ParseTreeNode
 from liquid2 import Primitive as IRPrimitive
@@ -23,6 +24,7 @@ from liquid2.context import RenderContext
 
 from .limits import to_int
 from .query import compile
+from .query import from_symbol
 from .stringify import to_liquid_string
 
 if TYPE_CHECKING:
@@ -437,6 +439,22 @@ def _primitive(v: IRPrimitive) -> Primitive:  # noqa: PLR0911
             raise NotImplementedError(":(")
 
 
+def _argument(arg: CommonArgument) -> KeywordArgument | PositionalArgument:
+    match arg:
+        case CommonArgument.Keyword(name, value):
+            return KeywordArgument(name, _primitive(value))
+        case CommonArgument.Positional(value):
+            return PositionalArgument(_primitive(value))
+        case CommonArgument.Symbol(name):
+            return PositionalArgument(_symbol_as_query(name))
+        case _:
+            raise NotImplementedError("(")
+
+
+def _symbol_as_query(s: str) -> Query:
+    return Query(from_symbol(s))
+
+
 class FilteredExpression(Expression):
     __slots__ = ("left", "filters")
 
@@ -447,11 +465,7 @@ class FilteredExpression(Expression):
         if expr.filters:
             for f in expr.filters:
                 if f.args:
-                    args = [
-                        CommonArgument(_primitive(arg.value), arg.name)
-                        for arg in f.args
-                        if arg.value is not None
-                    ]
+                    args = [_argument(arg) for arg in f.args]
                 else:
                     args = []
                 self.filters.append(Filter(f.name, args))
@@ -459,13 +473,13 @@ class FilteredExpression(Expression):
     def evaluate(self, context: RenderContext) -> object:
         rv = self.left.evaluate(context)
         for f in self.filters:
-            f.evaluate(rv, context)
+            rv = f.evaluate(rv, context)
         return rv
 
     async def evaluate_async(self, context: RenderContext) -> object:
         rv = await self.left.evaluate_async(context)
         for f in self.filters:
-            await f.evaluate_async(rv, context)
+            rv = await f.evaluate_async(rv, context)
         return rv
 
 
@@ -486,11 +500,7 @@ class TernaryFilteredExpression(Expression):
         if expr.alternative_filters:
             for f in expr.alternative_filters:
                 if f.args:
-                    args = [
-                        CommonArgument(_primitive(arg.value), arg.name)
-                        for arg in f.args
-                        if arg.value is not None
-                    ]
+                    args = [_argument(arg) for arg in f.args]
                 else:
                     args = []
                 self.filters.append(Filter(f.name, args))
@@ -498,11 +508,7 @@ class TernaryFilteredExpression(Expression):
         if expr.tail_filters:
             for f in expr.tail_filters:
                 if f.args:
-                    args = [
-                        CommonArgument(_primitive(arg.value), arg.name)
-                        for arg in f.args
-                        if arg.value is not None
-                    ]
+                    args = [_argument(arg) for arg in f.args]
                 else:
                     args = []
                 self.tail_filters.append(Filter(f.name, args))
@@ -543,7 +549,9 @@ class TernaryFilteredExpression(Expression):
 class Filter:
     __slots__ = ("name", "args")
 
-    def __init__(self, name: str, arguments: list[CommonArgument]) -> None:
+    def __init__(
+        self, name: str, arguments: list[KeywordArgument | PositionalArgument]
+    ) -> None:
         self.name = name
         self.args = arguments
 
@@ -595,18 +603,38 @@ class Filter:
         return positional_args, keyword_args
 
 
-class CommonArgument:
+class KeywordArgument:
     __slots__ = ("name", "value")
 
-    def __init__(self, value: Expression | None, name: str | None = None) -> None:
+    def __init__(self, name: str, value: Expression) -> None:
         self.name = name
         self.value = value
 
-    def evaluate(self, context: RenderContext) -> tuple[str | None, object]:
-        raise NotImplementedError(":(")
+    def evaluate(self, context: RenderContext) -> tuple[str, object]:
+        return (self.name, self.value.evaluate(context))
 
-    async def evaluate_async(self, context: RenderContext) -> tuple[str | None, object]:
-        raise NotImplementedError(":(")
+    async def evaluate_async(self, context: RenderContext) -> tuple[str, object]:
+        return (self.name, await self.value.evaluate_async(context))
+
+
+class PositionalArgument:
+    __slots__ = ("value",)
+
+    def __init__(self, value: Expression) -> None:
+        self.value = value
+
+    def evaluate(self, context: RenderContext) -> tuple[None, object]:
+        return (None, self.value.evaluate(context))
+
+    async def evaluate_async(self, context: RenderContext) -> tuple[None, object]:
+        return (None, await self.value.evaluate_async(context))
+
+
+class SymbolArgument:
+    __slots__ = ("name",)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
 
 
 def _expr(expression: IRBooleanExpression) -> Expression:  # noqa: PLR0911

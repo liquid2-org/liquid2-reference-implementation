@@ -30,6 +30,26 @@ impl Query {
             false
         })
     }
+
+    pub fn as_symbol(&self) -> Option<String> {
+        if self.segments.len() != 1 {
+            return None;
+        }
+
+        if let Some(Segment::Child { selectors }) = self.segments.get(0) {
+            if selectors.len() != 1 {
+                return None;
+            }
+
+            if let Some(Selector::Name { name }) = selectors.get(0) {
+                Some(name.to_owned())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl fmt::Display for Query {

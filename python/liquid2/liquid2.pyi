@@ -203,10 +203,22 @@ class Filter:
     def args(self) -> None | list[CommonArgument]: ...
 
 class CommonArgument:
-    @property
-    def value(self) -> None | Primitive: ...
-    @property
-    def name(self) -> None | str: ...
+    class Keyword:
+        __match_args__ = ("name", "value")
+        @property
+        def name(self) -> str: ...
+        @property
+        def value(self) -> Primitive: ...
+
+    class Positional:
+        __match_args__ = "value"
+        @property
+        def value(self) -> Primitive: ...
+
+    class Symbol:
+        __match_args__ = ("name",)
+        @property
+        def name(self) -> str: ...
 
 class InlineCondition:
     @property

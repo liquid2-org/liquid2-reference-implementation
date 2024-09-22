@@ -10,6 +10,7 @@ from typing import Type
 from liquid2 import parse
 
 from ._ast import AST
+from .builtin import register
 from .template import Template
 from .undefined import Undefined
 
@@ -25,6 +26,7 @@ class Environment:
         self.auto_escape = False
         self.context_depth_limit = 30
         self.filters: dict[str, Callable[..., object]] = {}
+        register(self)
 
     def _parse(self, source: str) -> AST:
         return AST(self, parse(source))
