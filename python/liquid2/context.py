@@ -11,10 +11,10 @@ from typing import Callable
 from typing import Iterator
 from typing import Mapping
 
-from .chainmap import ReadOnlyChainMap
 from .exceptions import ContextDepthError
 from .exceptions import NoSuchFilterFunc
 from .undefined import UNDEFINED
+from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
     from .query import Query

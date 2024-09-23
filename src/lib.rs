@@ -22,7 +22,7 @@ fn parse(template: &str) -> Result<Template, LiquidError> {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add(
         "PyLiquidError",
         m.py().get_type_bound::<errors::PyLiquidError>(),

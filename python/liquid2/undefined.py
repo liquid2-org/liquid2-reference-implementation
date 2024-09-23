@@ -93,6 +93,7 @@ class StrictUndefined(Undefined):
             "hint",
             "obj",
             "msg",
+            "path",
         ]
     )
 

@@ -1,7 +1,38 @@
+"""Filters, tags and expressions built-in to Liquid."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._expressions import BLANK
+from ._expressions import CONTINUE
+from ._expressions import EMPTY
+from ._expressions import FALSE
+from ._expressions import NULL
+from ._expressions import TRUE
+from ._expressions import Blank
+from ._expressions import Boolean
+from ._expressions import BooleanExpression
+from ._expressions import Continue
+from ._expressions import Empty
+from ._expressions import Filter
+from ._expressions import FilteredExpression
+from ._expressions import FloatLiteral
+from ._expressions import IntegerLiteral
+from ._expressions import KeywordArgument
+from ._expressions import Literal
+from ._expressions import LogicalAndExpression
+from ._expressions import LogicalNotExpression
+from ._expressions import LogicalOrExpression
+from ._expressions import Null
+from ._expressions import PositionalArgument
+from ._expressions import Query
+from ._expressions import RangeLiteral
+from ._expressions import StringLiteral
+from ._expressions import SymbolArgument
+from ._expressions import TernaryFilteredExpression
+
+# TODO: export more expressions
 from .filters.array import compact
 from .filters.array import concat
 from .filters.array import first
@@ -43,8 +74,41 @@ from .filters.string import url_encode
 if TYPE_CHECKING:
     from ..environment import Environment  # noqa: TID252
 
+__all__ = (
+    "Blank",
+    "BLANK",
+    "Boolean",
+    "BooleanExpression",
+    "Continue",
+    "CONTINUE",
+    "Empty",
+    "EMPTY",
+    "FALSE",
+    "Filter",
+    "FilteredExpression",
+    "FilteredExpression",
+    "FloatLiteral",
+    "IntegerLiteral",
+    "KeywordArgument",
+    "Literal",
+    "LogicalAndExpression",
+    "LogicalNotExpression",
+    "LogicalOrExpression",
+    "Null",
+    "NULL",
+    "PositionalArgument",
+    "Query",
+    "RangeLiteral",
+    "register_standard_tags_and_filters",
+    "StringLiteral",
+    "SymbolArgument",
+    "TernaryFilteredExpression",
+    "TRUE",
+)
 
-def register(env: Environment) -> None:
+
+def register_standard_tags_and_filters(env: Environment) -> None:
+    """Register standard tags and filters with an environment."""
     env.filters["join"] = join
     env.filters["first"] = first
     env.filters["last"] = last

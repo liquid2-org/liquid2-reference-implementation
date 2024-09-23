@@ -41,7 +41,7 @@ warn_unused_configs = true
 warn_unused_ignores = false
 warn_return_any = true
 warn_unreachable = true
-exclude = ["^liquid2/utils/cache\\.py$"]
+exclude = ["^python/liquid2/utils/cache\\.py$"]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.

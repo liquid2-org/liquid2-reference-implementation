@@ -4,7 +4,7 @@ import operator
 from dataclasses import dataclass
 
 import pytest
-from liquid2 import parse
+from _liquid2 import parse
 
 
 @dataclass

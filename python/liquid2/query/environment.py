@@ -7,8 +7,8 @@ from typing import Any
 from typing import Mapping
 from typing import Sequence
 
-from liquid2 import Segment as IRSegment
-from liquid2 import Selector as IRSelector
+from _liquid2 import Segment as IRSegment
+from _liquid2 import Selector as IRSelector
 
 from . import function_extensions
 from .query import JSONPathQuery
@@ -21,8 +21,8 @@ from .selectors import SliceSelector
 from .selectors import WildcardSelector
 
 if TYPE_CHECKING:
-    from liquid2 import FilterExpression as IRFilterExpression
-    from liquid2 import Query as IRQuery
+    from _liquid2 import FilterExpression as IRFilterExpression
+    from _liquid2 import Query as IRQuery
 
     from .filter_expressions import FilterExpression
     from .function_extensions import FilterFunction

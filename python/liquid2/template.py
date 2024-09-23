@@ -8,8 +8,8 @@ from typing import Any
 from typing import Mapping
 from typing import TextIO
 
-from .chainmap import ReadOnlyChainMap
 from .context import RenderContext
+from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -69,6 +69,7 @@ class Template:
         namespace = dict(*args, **kwargs)
 
         with context.extend(namespace):
+            # TODO: handle whitespace control
             for node in self.ast.nodes:
                 node.render(context, buf)
 

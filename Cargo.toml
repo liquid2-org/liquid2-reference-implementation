@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-name = "liquid2"
+name = "_liquid2"
 crate-type = ["cdylib"]
 
 [dependencies]

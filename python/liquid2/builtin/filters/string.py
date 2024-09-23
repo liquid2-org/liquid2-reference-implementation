@@ -12,17 +12,19 @@ from markupsafe import Markup
 from markupsafe import escape as markupsafe_escape
 from markupsafe import soft_str
 
-from ...exceptions import FilterArgumentError  # noqa: TID252
-from ...filter import liquid_filter  # noqa: TID252
-from ...filter import string_filter  # noqa: TID252
-from ...filter import with_environment  # noqa: TID252
-from ...limits import to_int  # noqa: TID252
-from ...undefined import is_undefined  # noqa: TID252
-from ...utils.html import strip_tags  # noqa: TID252
-from ...utils.text import truncate_chars  # noqa: TID252
+from liquid2.exceptions import FilterArgumentError
+from liquid2.filter import liquid_filter
+from liquid2.filter import string_filter
+from liquid2.filter import with_environment
+from liquid2.limits import to_int
+from liquid2.undefined import is_undefined
+from liquid2.utils.html import strip_tags
+from liquid2.utils.text import truncate_chars
 
 if TYPE_CHECKING:
     from ...environment import Environment  # noqa: TID252
+
+# TODO: Better. This was copied from python-liquid
 
 
 @string_filter

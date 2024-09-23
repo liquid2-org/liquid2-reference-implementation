@@ -7,10 +7,10 @@ from typing import Callable
 from typing import Mapping
 from typing import Type
 
-from liquid2 import parse
+from _liquid2 import parse
 
 from ._ast import AST
-from .builtin import register
+from .builtin import register_standard_tags_and_filters
 from .template import Template
 from .undefined import Undefined
 
@@ -21,14 +21,16 @@ if TYPE_CHECKING:
 class Environment:
     """Template parsing and rendering configuration."""
 
-    def __init__(self) -> None:
-        self.undefined: Type[Undefined] = Undefined
-        self.auto_escape = False
-        self.context_depth_limit = 30
-        self.filters: dict[str, Callable[..., object]] = {}
-        register(self)
+    auto_escape = False
+    context_depth_limit = 30
+    undefined: Type[Undefined] = Undefined
 
-    def _parse(self, source: str) -> AST:
+    def __init__(self) -> None:
+        self.filters: dict[str, Callable[..., object]] = {}
+        register_standard_tags_and_filters(self)
+
+    def parse(self, source: str) -> AST:
+        """Compile template source text and return an abstract syntax tree."""
         return AST(self, parse(source))
 
     def from_string(
@@ -42,7 +44,7 @@ class Environment:
         """Create a template from a string."""
         return Template(
             self,
-            self._parse(source),
+            self.parse(source),
             name=name,
             path=path,
             global_data=global_context_data,
