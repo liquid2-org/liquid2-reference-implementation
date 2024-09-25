@@ -18,6 +18,7 @@ pub enum Markup {
     Comment {
         span: (usize, usize),
         wc: (Whitespace, Whitespace),
+        hashes: String,
         text: String,
     },
     Output {
@@ -28,8 +29,10 @@ pub enum Markup {
     Tag {
         span: (usize, usize),
         wc: (Whitespace, Whitespace),
+        name: String,
         expression: Vec<ExpressionToken>,
     },
+    EOI {},
 }
 
 impl fmt::Display for Markup {
@@ -46,6 +49,7 @@ impl fmt::Display for Markup {
                 write!(f, "Markup.Output(span=({}, {}))", span.0, span.1)
             }
             Markup::Tag { span, .. } => write!(f, "Markup.Tag(span=({}, {}))", span.0, span.1),
+            Markup::EOI {} => Ok(()),
         }
     }
 }
@@ -60,10 +64,43 @@ impl Markup {
 #[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum ExpressionToken {
+    True_ {
+        index: usize,
+    },
+    False_ {
+        index: usize,
+    },
     And {
         index: usize,
     },
     Or {
+        index: usize,
+    },
+    In {
+        index: usize,
+    },
+    Not {
+        index: usize,
+    },
+    Contains {
+        index: usize,
+    },
+    Null {
+        index: usize,
+    },
+    If {
+        index: usize,
+    },
+    Else {
+        index: usize,
+    },
+    With {
+        index: usize,
+    },
+    As {
+        index: usize,
+    },
+    For {
         index: usize,
     },
     Eq {
@@ -84,16 +121,22 @@ pub enum ExpressionToken {
     Lt {
         index: usize,
     },
-    In {
-        index: usize,
-    },
     Colon {
         index: usize,
     },
     Pipe {
         index: usize,
     },
+    DoublePipe {
+        index: usize,
+    },
     Comma {
+        index: usize,
+    },
+    LeftParen {
+        index: usize,
+    },
+    RightParen {
         index: usize,
     },
     StringLiteral {
@@ -102,20 +145,20 @@ pub enum ExpressionToken {
     },
     IntegerLiteral {
         index: usize,
-        value: String,
+        value: i64,
     },
     FloatLiteral {
         index: usize,
-        value: String,
+        value: f64,
     },
-    Name {
+    Word {
         index: usize,
         value: String,
     },
     RangeLiteral {
         index: usize,
-        start: String,
-        stop: String,
+        start: RangeArgument,
+        stop: RangeArgument,
     },
     Query {
         index: usize,
@@ -138,6 +181,15 @@ impl ExpressionToken {
     fn __str__(&self) -> String {
         self.to_string()
     }
+}
+
+#[pyclass(frozen)]
+#[derive(Debug, Clone)]
+pub enum RangeArgument {
+    StringLiteral { index: usize, value: String },
+    IntegerLiteral { index: usize, value: i64 },
+    FloatLiteral { index: usize, value: f64 },
+    Query { index: usize, path: Query },
 }
 
 #[pyclass(eq, eq_int)]
