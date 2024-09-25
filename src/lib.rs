@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod errors;
+pub mod markup;
 pub mod parser;
 pub mod query;
 
