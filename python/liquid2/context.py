@@ -58,7 +58,7 @@ class RenderContext:
         self.loop_iteration_carry = loop_iteration_carry
         self.local_namespace_carry = local_namespace_carry
 
-        self.locals: dict[str, int] = {}
+        self.locals: dict[str, object] = {}
         self.counters: dict[str, int] = {}
         self.scope = ReadOnlyChainMap(
             self.locals,
@@ -69,6 +69,11 @@ class RenderContext:
 
         self.env = template.env
         self.auto_escape = self.env.auto_escape
+
+    def assign(self, key: str, val: object) -> None:
+        """Add _key_ to the local namespace with value _val_."""
+        self.locals[key] = val
+        # TODO: namespace limit
 
     def get(self, path: Query, default: object = UNDEFINED) -> object:
         """Resolve the variable _path_ in the current namespace."""

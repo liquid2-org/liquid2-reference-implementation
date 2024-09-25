@@ -9,6 +9,7 @@ class Whitespace(Enum):
     Default = ...
 
 class WhitespaceControl:
+    __match_args__ = ("left", "right")
     @property
     def left(self) -> Whitespace: ...
     @property
@@ -21,18 +22,21 @@ class Node:
         def text(self) -> str: ...
 
     class Output:
+        __match_args__ = ("wc", "expression")
         @property
         def wc(self) -> WhitespaceControl: ...
         @property
         def expression(self) -> FilteredExpression: ...
 
     class Raw:
+        __match_args__ = ("wc", "text")
         @property
         def wc(self) -> tuple[WhitespaceControl, WhitespaceControl]: ...
         @property
         def text(self) -> str: ...
 
     class Comment:
+        __match_args__ = ("wc", "text")
         @property
         def wc(self) -> WhitespaceControl: ...
         @property
@@ -41,6 +45,7 @@ class Node:
         def hashes(self) -> str: ...
 
     class AssignTag:
+        __match_args__ = ("wc", "identifier", "expression")
         @property
         def wc(self) -> WhitespaceControl: ...
         @property

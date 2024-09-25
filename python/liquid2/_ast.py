@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from typing import TextIO
 
 from _liquid2 import Node as ParseTreeNode
+from _liquid2 import WhitespaceControl
 
 from .builtin import FilteredExpression
 from .builtin import TernaryFilteredExpression
@@ -15,11 +16,11 @@ from .context import RenderContext
 from .stringify import to_liquid_string
 
 if TYPE_CHECKING:
+    from _liquid2 import FilteredExpression as IRFilteredExpression
     from _liquid2 import Template as ParseTree
 
     from .context import RenderContext
     from .environment import Environment
-    from .expression import Expression
 
 
 class AST:
@@ -33,19 +34,38 @@ class AST:
         return [self._make_node(node) for node in parse_tree.liquid]
 
     def _make_node(self, node: ParseTreeNode) -> Node:
+        trim = self.env.trim
+        lstrip = trim
         match node:
             case ParseTreeNode.Content():
+                # TODO: trim
                 return ContentNode(node)
             case ParseTreeNode.Output():
                 return OutputNode(node)
             case ParseTreeNode.Raw():
                 return RawNode(node)
+            case ParseTreeNode.Comment():
+                return CommentNode(node)
+            case ParseTreeNode.AssignTag():
+                return AssignNode(node)
             # TODO:
-        return _TodoNode()
+        return _TodoNode(None)
+
+
+def render_block(nodes: list[Node], context: RenderContext, buffer: TextIO) -> int:
+    return sum(node.render(context, buffer) for node in nodes)
 
 
 class Node(ABC):
-    __slots__ = ()
+    __slots__ = ("wc",)
+
+    __match_args__ = ("wc",)
+
+    def __init__(
+        self, wc: WhitespaceControl | tuple[WhitespaceControl, WhitespaceControl] | None
+    ) -> None:
+        super().__init__()
+        self.wc = wc
 
     def render(self, context: RenderContext, buffer: TextIO) -> int:
         return self.render_to_output(context, buffer)
@@ -71,27 +91,34 @@ class _TodoNode(Node):
 
 
 class ContentNode(Node):
-    __slots__ = ("text",)
+    __slots__ = (
+        "wc",
+        "text",
+    )
 
     def __init__(self, node: ParseTreeNode.Content) -> None:
-        super().__init__()
+        self.wc = None
         self.text = node.text
 
     def render_to_output(self, _context: RenderContext, buffer: TextIO) -> int:
         return buffer.write(self.text)
 
 
+def _filtered_expression(
+    node: IRFilteredExpression,
+) -> FilteredExpression | TernaryFilteredExpression:
+    expr = FilteredExpression(node)
+    if node.condition:
+        return TernaryFilteredExpression(expr, node.condition)
+    return expr
+
+
 class OutputNode(Node):
     __slots__ = ("wc", "expression")
 
     def __init__(self, node: ParseTreeNode.Output) -> None:
-        super().__init__()
         self.wc = node.wc
-        self.expression: Expression = FilteredExpression(node.expression)
-        if node.expression.condition:
-            self.expression = TernaryFilteredExpression(
-                self.expression, node.expression.condition
-            )
+        self.expression = _filtered_expression(node.expression)
 
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         return buffer.write(
@@ -117,3 +144,33 @@ class RawNode(Node):
 
     def render_to_output(self, _context: RenderContext, buffer: TextIO) -> int:
         return buffer.write(self.text)
+
+
+class CommentNode(Node):
+    __slots__ = ("wc", "text")
+
+    def __init__(self, node: ParseTreeNode.Comment) -> None:
+        self.wc = node.wc
+        self.text = node.text
+
+    def render_to_output(self, _context: RenderContext, _buffer: TextIO) -> int:
+        return 0
+
+
+class AssignNode(Node):
+    __slots__ = ("wc", "identifier", "expression")
+
+    def __init__(self, node: ParseTreeNode.AssignTag) -> None:
+        self.wc = node.wc
+        self.identifier = node.identifier
+        self.expression = _filtered_expression(node.expression)
+
+    def render_to_output(self, context: RenderContext, _buffer: TextIO) -> int:
+        context.assign(self.identifier, self.expression.evaluate(context))
+        return 0
+
+    async def render_to_output_async(
+        self, context: RenderContext, _buffer: TextIO
+    ) -> int:
+        context.assign(self.identifier, await self.expression.evaluate_async(context))
+        return 0

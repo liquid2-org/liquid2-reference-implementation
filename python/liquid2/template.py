@@ -69,7 +69,6 @@ class Template:
         namespace = dict(*args, **kwargs)
 
         with context.extend(namespace):
-            # TODO: handle whitespace control
             for node in self.ast.nodes:
                 node.render(context, buf)
 

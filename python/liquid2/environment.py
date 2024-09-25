@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Mapping
 from typing import Type
 
+from _liquid2 import Whitespace
 from _liquid2 import parse
 
 from ._ast import AST
@@ -23,6 +24,7 @@ class Environment:
 
     auto_escape = False
     context_depth_limit = 30
+    trim = Whitespace.Default
     undefined: Type[Undefined] = Undefined
 
     def __init__(self) -> None:
