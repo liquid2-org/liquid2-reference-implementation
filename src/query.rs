@@ -30,8 +30,11 @@ impl Query {
             false
         })
     }
+}
 
-    pub fn as_symbol(&self) -> Option<String> {
+#[pymethods]
+impl Query {
+    pub fn as_word(&self) -> Option<String> {
         if self.segments.len() != 1 {
             return None;
         }

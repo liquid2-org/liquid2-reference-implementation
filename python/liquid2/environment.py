@@ -8,15 +8,18 @@ from typing import Mapping
 from typing import Type
 
 from _liquid2 import Whitespace
-from _liquid2 import parse
+from _liquid2 import tokenize
 
-from ._ast import AST
 from .builtin import register_standard_tags_and_filters
+from .parser import Parser
 from .template import Template
 from .undefined import Undefined
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from .ast import Node
+    from .tag import Tag
 
 
 class Environment:
@@ -29,11 +32,16 @@ class Environment:
 
     def __init__(self) -> None:
         self.filters: dict[str, Callable[..., object]] = {}
+        self.tags: dict[str, Tag] = {}
         register_standard_tags_and_filters(self)
 
-    def parse(self, source: str) -> AST:
+        self.parser = Parser(self)
+
+    def parse(self, source: str) -> list[Node]:
         """Compile template source text and return an abstract syntax tree."""
-        return AST(self, parse(source))
+        # TODO: handle token errors
+        # TODO: handle parser errors
+        return self.parser.parse(tokenize(source))
 
     def from_string(
         self,

@@ -17,6 +17,8 @@ from .undefined import UNDEFINED
 from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
+    from _liquid2 import TokenT
+
     from .query import Query
     from .template import Template
 
@@ -75,13 +77,13 @@ class RenderContext:
         self.locals[key] = val
         # TODO: namespace limit
 
-    def get(self, path: Query, default: object = UNDEFINED) -> object:
+    def get(self, path: Query, *, token: TokenT, default: object = UNDEFINED) -> object:
         """Resolve the variable _path_ in the current namespace."""
         nodes = path.find(self.scope)
 
         if not nodes:
             if default == UNDEFINED:
-                return self.template.env.undefined(path)
+                return self.template.env.undefined(path, token=token)
             return default
 
         if len(nodes) == 1:
@@ -89,12 +91,12 @@ class RenderContext:
 
         return nodes
 
-    def filter(self, name: str) -> Callable[..., object]:
+    def filter(self, name: str, *, token: TokenT) -> Callable[..., object]:
         """Return the filter callable for _name_."""
         try:
             filter_func = self.env.filters[name]
         except KeyError as err:
-            raise NoSuchFilterFunc(f"unknown filter '{name}'") from err
+            raise NoSuchFilterFunc(f"unknown filter '{name}'", token=token) from err
 
         kwargs: dict[str, Any] = {}
 
@@ -123,7 +125,8 @@ class RenderContext:
         """Extend this context with the given read-only namespace."""
         if self.scope.size() > self.env.context_depth_limit:
             raise ContextDepthError(
-                "maximum context depth reached, possible recursive include"
+                "maximum context depth reached, possible recursive include",
+                token=None,
             )
 
         _template = self.template

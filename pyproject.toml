@@ -16,7 +16,12 @@ classifiers = [
 
 dynamic = ["version"]
 
-dependencies = ["regex", "iregexp-check>=0.1.3", "MarkupSafe>=2"]
+dependencies = [
+    "regex",
+    "iregexp-check>=0.1.3",
+    "MarkupSafe>=2",
+    "more-itertools>=10",
+]
 
 [project.optional-dependencies]
 tests = ["pytest"]
@@ -118,3 +123,8 @@ force-single-line = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"python/_liquid2/__init__.py" = ["D104", "I001", "F403", "F405", "A001"]
+"python/liquid2/__init__.py" = ["I001"]
+"python/liquid2/builtin/expressions.py" = ["D101", "D102"]
