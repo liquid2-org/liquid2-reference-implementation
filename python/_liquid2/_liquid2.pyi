@@ -207,24 +207,28 @@ class Token:
 
 class RangeArgument:
     class StringLiteral:
+        __match_args__ = ("value",)
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> str: ...
 
     class IntegerLiteral:
+        __match_args__ = ("value",)
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> int: ...
 
     class FloatLiteral:
+        __match_args__ = ("value",)
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> float: ...
 
     class Query:
+        __match_args__ = ("path",)
         @property
         def index(self) -> int: ...
         @property
@@ -233,6 +237,7 @@ class RangeArgument:
 TokenT: TypeAlias = (
     Markup
     | Token
+    | RangeArgument
     | Markup.Content
     | Markup.Raw
     | Markup.Comment
@@ -270,6 +275,10 @@ TokenT: TypeAlias = (
     | Token.FloatLiteral
     | Token.RangeLiteral
     | Token.Query
+    | RangeArgument.StringLiteral
+    | RangeArgument.IntegerLiteral
+    | RangeArgument.FloatLiteral
+    | RangeArgument.Query
 )
 
 class ComparisonOp(Enum):

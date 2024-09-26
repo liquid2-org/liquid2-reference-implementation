@@ -4,11 +4,13 @@ import sys
 from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Collection
 from typing import Generic
 from typing import Type
 from typing import TypeVar
 from typing import cast
 
+from _liquid2 import RangeArgument
 from _liquid2 import Token
 from _liquid2 import parse_query
 from markupsafe import Markup
@@ -355,13 +357,15 @@ def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
             if value == "blank":
                 return BLANK
             raise LiquidSyntaxError(f"unknown word '{value}'", token=token)
-        case Token.StringLiteral(value):
+        case Token.RangeLiteral(start, stop):
+            return RangeLiteral(parse_primitive(start), parse_primitive(stop))
+        case Token.StringLiteral(value) | RangeArgument.StringLiteral(value):
             return StringLiteral(value)
-        case Token.IntegerLiteral(value):
+        case Token.IntegerLiteral(value) | RangeArgument.IntegerLiteral(value):
             return IntegerLiteral(value)
-        case Token.FloatLiteral(value):
+        case Token.FloatLiteral(value) | RangeArgument.FloatLiteral(value):
             return FloatLiteral(value)
-        case Token.Query(path):
+        case Token.Query(path) | RangeArgument.Query(path):
             return Query(compile(path))
         case _:
             raise LiquidSyntaxError(
@@ -599,7 +603,161 @@ class BooleanExpression(Expression):
     @staticmethod
     def parse(stream: TokenStream) -> BooleanExpression:
         """Return a new BooleanExpression parsed from tokens in _stream_."""
-        raise NotImplementedError(":(")
+        return BooleanExpression(parse_boolean_primitive(stream))
+
+
+PRECEDENCE_LOWEST = 1
+PRECEDENCE_LOGICALRIGHT = 2
+PRECEDENCE_LOGICAL_OR = 3
+PRECEDENCE_LOGICAL_AND = 4
+PRECEDENCE_RELATIONAL = 5
+PRECEDENCE_MEMBERSHIP = 6
+PRECEDENCE_PREFIX = 7
+
+PRECEDENCES = {
+    Token.Eq: PRECEDENCE_RELATIONAL,
+    Token.Lt: PRECEDENCE_RELATIONAL,
+    Token.Gt: PRECEDENCE_RELATIONAL,
+    Token.Ne: PRECEDENCE_RELATIONAL,
+    Token.Le: PRECEDENCE_RELATIONAL,
+    Token.Ge: PRECEDENCE_RELATIONAL,
+    Token.Contains: PRECEDENCE_MEMBERSHIP,
+    Token.In: PRECEDENCE_MEMBERSHIP,
+    Token.And: PRECEDENCE_LOGICAL_AND,
+    Token.Or: PRECEDENCE_LOGICAL_OR,
+    Token.Not: PRECEDENCE_PREFIX,
+    Token.RightParen: PRECEDENCE_LOWEST,
+}
+
+BINARY_OPERATORS = frozenset(
+    [
+        Token.Eq,
+        Token.Lt,
+        Token.Gt,
+        Token.Ne,
+        Token.Le,
+        Token.Ge,
+        Token.Contains,
+        Token.In,
+        Token.And,
+        Token.Or,
+    ]
+)
+
+
+def parse_boolean_primitive(  # noqa: PLR0912
+    stream: TokenStream, precedence: int = PRECEDENCE_LOWEST
+) -> Expression:
+    left: Expression
+
+    match next(stream, None):
+        case Token.True_():
+            left = TRUE
+        case Token.False_():
+            left = FALSE
+        case Token.Null():
+            left = NULL
+        case Token.Word(value):
+            if value == "empty":
+                left = EMPTY
+            elif value == "blank":
+                left = BLANK
+            raise LiquidSyntaxError(f"unknown word '{value}'", token=stream.current)
+        case Token.RangeLiteral(start, stop):
+            left = RangeLiteral(parse_primitive(start), parse_primitive(stop))
+        case Token.StringLiteral(value):
+            left = StringLiteral(value)
+        case Token.IntegerLiteral(value):
+            left = IntegerLiteral(value)
+        case Token.FloatLiteral(value):
+            left = FloatLiteral(value)
+        case Token.Query(path):
+            left = Query(compile(path))
+        case Token.Not():
+            left = LogicalNotExpression.parse(stream)
+        case Token.LeftParen():
+            left = parse_grouped_expression(stream)
+        case _:
+            raise LiquidSyntaxError(
+                "expected a primitive expression, "
+                f"found {stream.current.__class__.__name__}",
+                token=stream.current,
+            )
+
+    while True:
+        peeked = stream.peek(default=None)
+        if (
+            not peeked
+            or PRECEDENCES.get(peeked.__class__, PRECEDENCE_LOWEST) < precedence
+        ):
+            break
+
+        if peeked.__class__ not in BINARY_OPERATORS:
+            return left
+
+        # next(stream)
+        left = parse_infix_expression(stream, left)
+
+    return left
+
+
+def parse_infix_expression(stream: TokenStream, left: Expression) -> Expression:  # noqa: PLR0911
+    """Return a logical, comparison, or membership expression parsed from _stream_."""
+    token = next(stream, None)
+    assert token is not None
+    precedence = PRECEDENCES.get(token.__class__, PRECEDENCE_LOWEST)
+
+    match token:
+        case Token.Eq():
+            return EqExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.Lt():
+            return LtExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.Gt():
+            return GtExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.Ne():
+            return NeExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.Le():
+            return LeExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.Ge():
+            return GeExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.Contains():
+            return ContainsExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.In():
+            return InExpression(left, parse_boolean_primitive(stream, precedence))
+        case Token.And():
+            return LogicalAndExpression(
+                left, parse_boolean_primitive(stream, precedence)
+            )
+        case Token.Or():
+            return LogicalOrExpression(
+                left, parse_boolean_primitive(stream, precedence)
+            )
+        case _:
+            raise LiquidSyntaxError(
+                f"expected an infix expression, found {token.__class__.__name__}",
+                token=token,
+            )
+
+
+def parse_grouped_expression(stream: TokenStream) -> Expression:
+    """Parse an expression from tokens in _stream_ until the next right parenthesis."""
+    expr = parse_boolean_primitive(stream)
+    next(stream, None)  # XXX:
+
+    while not isinstance(stream.current, Token.RightParen):
+        if stream.current is None:
+            raise LiquidSyntaxError("unbalanced parentheses", token=stream.current)
+
+        if stream.current.__class__ not in BINARY_OPERATORS:
+            raise LiquidSyntaxError(
+                f"expected an infix expression, found {stream.current.__class__}",
+                token=stream.current,
+            )
+
+        expr = parse_infix_expression(stream, expr)
+
+    stream.expect(Token.RightParen)
+    return expr
 
 
 class LogicalNotExpression(Expression):
@@ -613,6 +771,10 @@ class LogicalNotExpression(Expression):
 
     async def evaluate_async(self, context: RenderContext) -> object:
         return not is_truthy(await self.expression.evaluate_async(context))
+
+    @staticmethod
+    def parse(stream: TokenStream) -> Expression:
+        return LogicalNotExpression(parse_boolean_primitive(stream))
 
 
 class LogicalAndExpression(Expression):
@@ -659,12 +821,12 @@ class EqExpression(Expression):
         self.right = right
 
     def evaluate(self, context: RenderContext) -> object:
-        return _eq(self.left.evaluate(context), is_truthy(self.right.evaluate(context)))
+        return _eq(self.left.evaluate(context), self.right.evaluate(context))
 
     async def evaluate_async(self, context: RenderContext) -> object:
         return _eq(
             await self.left.evaluate_async(context),
-            is_truthy(await self.right.evaluate_async(context)),
+            await self.right.evaluate_async(context),
         )
 
 
@@ -676,14 +838,12 @@ class NeExpression(Expression):
         self.right = right
 
     def evaluate(self, context: RenderContext) -> object:
-        return not _eq(
-            self.left.evaluate(context), is_truthy(self.right.evaluate(context))
-        )
+        return not _eq(self.left.evaluate(context), self.right.evaluate(context))
 
     async def evaluate_async(self, context: RenderContext) -> object:
         return not _eq(
             await self.left.evaluate_async(context),
-            is_truthy(await self.right.evaluate_async(context)),
+            await self.right.evaluate_async(context),
         )
 
 
@@ -732,12 +892,12 @@ class LtExpression(Expression):
 
     def evaluate(self, context: RenderContext) -> object:
         # TODO: type error?
-        return _lt(self.left.evaluate(context), is_truthy(self.right.evaluate(context)))
+        return _lt(self.left.evaluate(context), self.right.evaluate(context))
 
     async def evaluate_async(self, context: RenderContext) -> object:
         return not _eq(
             await self.left.evaluate_async(context),
-            is_truthy(await self.right.evaluate_async(context)),
+            await self.right.evaluate_async(context),
         )
 
 
@@ -750,12 +910,48 @@ class GtExpression(Expression):
 
     def evaluate(self, context: RenderContext) -> object:
         # TODO: type error?
-        return _lt(self.right.evaluate(context), is_truthy(self.left.evaluate(context)))
+        return _lt(self.right.evaluate(context), self.left.evaluate(context))
 
     async def evaluate_async(self, context: RenderContext) -> object:
         return _lt(
             await self.right.evaluate_async(context),
-            is_truthy(await self.left.evaluate_async(context)),
+            await self.left.evaluate_async(context),
+        )
+
+
+class ContainsExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        # TODO: type error?
+        return _contains(self.left.evaluate(context), self.right.evaluate(context))
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return _contains(
+            await self.left.evaluate_async(context),
+            await self.right.evaluate_async(context),
+        )
+
+
+class InExpression(Expression):
+    __slots__ = ("left", "right")
+
+    def __init__(self, left: Expression, right: Expression) -> None:
+        self.left = left
+        self.right = right
+
+    def evaluate(self, context: RenderContext) -> object:
+        # TODO: type error?
+        return _contains(self.right.evaluate(context), self.left.evaluate(context))
+
+    async def evaluate_async(self, context: RenderContext) -> object:
+        return _contains(
+            await self.right.evaluate_async(context),
+            await self.left.evaluate_async(context),
         )
 
 
@@ -792,3 +988,11 @@ def _lt(left: object, right: object) -> bool:
         return left < right
 
     raise TypeError
+
+
+def _contains(left: object, right: object) -> bool:
+    if isinstance(left, str):
+        return str(right) in left
+    if isinstance(left, Collection):
+        return right in left
+    return False

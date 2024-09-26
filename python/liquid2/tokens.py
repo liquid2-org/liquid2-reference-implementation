@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Container
 from typing import Type
 
 from _liquid2 import Markup
-from _liquid2 import TokenT
 from more_itertools import peekable
 
 from .exceptions import LiquidSyntaxError
 
+if TYPE_CHECKING:
+    from _liquid2 import TokenT
 
-class TokenStream(peekable[TokenT]):
+
+class TokenStream(peekable):  # type: ignore
     """Step through or iterate a stream of tokens."""
 
     def __str__(self) -> str:  # pragma: no cover
@@ -25,7 +28,7 @@ class TokenStream(peekable[TokenT]):
     def current(self) -> TokenT | None:
         """Return the current token in the stream or None if there are no tokens."""
         try:
-            return self[0]
+            return self[0]  # type: ignore
         except StopIteration:
             return None
 
