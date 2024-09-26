@@ -15,6 +15,8 @@ from typing import Mapping
 from .exceptions import UndefinedError
 
 if TYPE_CHECKING:
+    from _liquid2 import TokenT
+
     from .query import Query
 
 UNDEFINED = object()
@@ -26,10 +28,18 @@ class Undefined(Mapping[Any, object]):
     Always evaluates to an empty string. Can be iterated over and indexed without error.
     """
 
-    __slots__ = ("path", "obj", "hint")
+    __slots__ = ("path", "obj", "hint", "token")
 
-    def __init__(self, path: Query, obj: object = UNDEFINED, hint: str | None = None):
+    def __init__(
+        self,
+        path: Query,
+        *,
+        token: TokenT,
+        obj: object = UNDEFINED,
+        hint: str | None = None,
+    ):
         self.path = path
+        self.token = token
         self.obj = obj
         self.hint = hint
 
@@ -97,47 +107,54 @@ class StrictUndefined(Undefined):
         ]
     )
 
-    def __init__(self, path: Query, obj: object = UNDEFINED, hint: str | None = None):
-        super().__init__(path, obj=obj, hint=hint)
+    def __init__(
+        self,
+        path: Query,
+        *,
+        token: TokenT,
+        obj: object = UNDEFINED,
+        hint: str | None = None,
+    ):
+        super().__init__(path, token=token, obj=obj, hint=hint)
         self.msg = self.hint if self.hint else f"'{self.path}' is undefined"
 
     def __getattribute__(self, name: str) -> object:
         if name in object.__getattribute__(self, "allowed_properties"):
             return object.__getattribute__(self, name)
-        raise UndefinedError(object.__getattribute__(self, "msg"))
+        raise UndefinedError(object.__getattribute__(self, "msg"), token=self.token)
 
     def __contains__(self, item: object) -> bool:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __eq__(self, other: object) -> bool:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __getitem__(self, key: str) -> object:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __len__(self) -> int:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __iter__(self) -> Iterator[Any]:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __str__(self) -> str:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __repr__(self) -> str:
         return f"StrictUndefined({self.path})"
 
     def __bool__(self) -> bool:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __int__(self) -> int:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __hash__(self) -> int:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
     def __reversed__(self) -> Iterable[Any]:
-        raise UndefinedError(self.msg)
+        raise UndefinedError(self.msg, token=self.token)
 
 
 class StrictDefaultUndefined(StrictUndefined):

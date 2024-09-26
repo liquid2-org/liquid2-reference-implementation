@@ -38,9 +38,9 @@ impl Lexer {
     }
 
     pub fn parse_query(&self, path: &str) -> Result<Query, LiquidError> {
-        let pairs =
+        let mut pairs =
             Liquid::parse(Rule::query, path).map_err(|err| LiquidError::syntax(err.to_string()))?;
-        self.query_parser.parse(pairs)
+        self.query_parser.parse(pairs.next().unwrap().into_inner())
     }
 
     fn markup(&self, pair: Pair<Rule>) -> Result<Markup, LiquidError> {

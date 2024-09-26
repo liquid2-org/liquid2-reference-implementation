@@ -32,6 +32,10 @@ class TokenStream(peekable):  # type: ignore
         except StopIteration:
             return None
 
+    def peek(self, default: TokenT | None = None) -> TokenT | None:  # type: ignore
+        """Return the item that will be next returned from ``next()``."""
+        return super().peek(default=default)  # type: ignore
+
     def push(self, token: TokenT) -> None:
         """Push a token back on to the stream."""
         self.prepend(token)

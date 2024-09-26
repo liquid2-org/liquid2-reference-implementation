@@ -4,33 +4,34 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._expressions import BLANK
-from ._expressions import CONTINUE
-from ._expressions import EMPTY
-from ._expressions import FALSE
-from ._expressions import NULL
-from ._expressions import TRUE
-from ._expressions import Blank
-from ._expressions import Boolean
-from ._expressions import BooleanExpression
-from ._expressions import Continue
-from ._expressions import Empty
-from ._expressions import Filter
-from ._expressions import FilteredExpression
-from ._expressions import FloatLiteral
-from ._expressions import IntegerLiteral
-from ._expressions import KeywordArgument
-from ._expressions import Literal
-from ._expressions import LogicalAndExpression
-from ._expressions import LogicalNotExpression
-from ._expressions import LogicalOrExpression
-from ._expressions import Null
-from ._expressions import PositionalArgument
-from ._expressions import Query
-from ._expressions import RangeLiteral
-from ._expressions import StringLiteral
-from ._expressions import SymbolArgument
-from ._expressions import TernaryFilteredExpression
+from .content import Content
+from .expressions import BLANK
+from .expressions import CONTINUE
+from .expressions import EMPTY
+from .expressions import FALSE
+from .expressions import NULL
+from .expressions import TRUE
+from .expressions import Blank
+from .expressions import Boolean
+from .expressions import BooleanExpression
+from .expressions import Continue
+from .expressions import Empty
+from .expressions import Filter
+from .expressions import FilteredExpression
+from .expressions import FloatLiteral
+from .expressions import IntegerLiteral
+from .expressions import KeywordArgument
+from .expressions import Literal
+from .expressions import LogicalAndExpression
+from .expressions import LogicalNotExpression
+from .expressions import LogicalOrExpression
+from .expressions import Null
+from .expressions import PositionalArgument
+from .expressions import Query
+from .expressions import RangeLiteral
+from .expressions import StringLiteral
+from .expressions import SymbolArgument
+from .expressions import TernaryFilteredExpression
 
 # TODO: export more expressions
 from .filters.array import compact
@@ -70,6 +71,7 @@ from .filters.string import truncatewords
 from .filters.string import upcase
 from .filters.string import url_decode
 from .filters.string import url_encode
+from .output import Output
 
 if TYPE_CHECKING:
     from ..environment import Environment  # noqa: TID252
@@ -147,3 +149,8 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.filters["truncatewords"] = truncatewords
     env.filters["url_encode"] = url_encode
     env.filters["url_decode"] = url_decode
+
+    env.tags["__COMMENT"] = None
+    env.tags["__CONTENT"] = Content(env)
+    env.tags["__OUTPUT"] = Output(env)
+    env.tags["__RAW"] = None

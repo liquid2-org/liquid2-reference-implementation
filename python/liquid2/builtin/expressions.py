@@ -1,3 +1,5 @@
+"""Expression for built in, standard tags."""
+
 from __future__ import annotations
 
 import sys
@@ -281,10 +283,11 @@ class RangeLiteral(Expression):
 
 
 class Query(Expression):
-    __slots__ = ("path",)
+    __slots__ = ("path", "token")
 
-    def __init__(self, path: _Query) -> None:
+    def __init__(self, token: TokenT, path: _Query) -> None:
         self.path = path
+        self.token = token
 
     def __str__(self) -> str:
         return str(self.path)
@@ -298,7 +301,7 @@ class Query(Expression):
     # TODO: as_tuple?
 
     def evaluate(self, context: RenderContext) -> object:
-        return context.get(self.path)
+        return context.get(self.path, token=self.token)
 
     # TODO: async
     # TODO: children
@@ -344,6 +347,7 @@ class FilteredExpression(Expression):
 
 def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
     """Parse _token_ as a primitive expression."""
+    # TODO: review match args
     match token:
         case Token.True_():
             return TRUE
@@ -351,22 +355,25 @@ def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
             return FALSE
         case Token.Null():
             return NULL
-        case Token.Word(value):
-            if value == "empty":
+        case Token.Word(value=v):
+            if v == "empty":
                 return EMPTY
-            if value == "blank":
+            if v == "blank":
                 return BLANK
-            raise LiquidSyntaxError(f"unknown word '{value}'", token=token)
+            return Query(token, compile(parse_query(v)))
         case Token.RangeLiteral(start, stop):
             return RangeLiteral(parse_primitive(start), parse_primitive(stop))
-        case Token.StringLiteral(value) | RangeArgument.StringLiteral(value):
-            return StringLiteral(value)
-        case Token.IntegerLiteral(value) | RangeArgument.IntegerLiteral(value):
+        case Token.StringLiteral(value=v) | RangeArgument.StringLiteral(value=v):
+            return StringLiteral(v)
+        case (
+            Token.IntegerLiteral(value=value)
+            | RangeArgument.IntegerLiteral(value=value)
+        ):
             return IntegerLiteral(value)
-        case Token.FloatLiteral(value) | RangeArgument.FloatLiteral(value):
+        case Token.FloatLiteral(value=value) | RangeArgument.FloatLiteral(value=value):
             return FloatLiteral(value)
-        case Token.Query(path) | RangeArgument.Query(path):
-            return Query(compile(path))
+        case Token.Query(path=path) | RangeArgument.Query(path=path):
+            return Query(token, compile(path))
         case _:
             raise LiquidSyntaxError(
                 f"expected a primitive expression, found {token.__class__.__name__}",
@@ -453,11 +460,15 @@ class TernaryFilteredExpression(Expression):
 
 
 class Filter:
-    __slots__ = ("name", "args")
+    __slots__ = ("name", "args", "token")
 
     def __init__(
-        self, name: str, arguments: list[KeywordArgument | PositionalArgument]
+        self,
+        token: TokenT,
+        name: str,
+        arguments: list[KeywordArgument | PositionalArgument],
     ) -> None:
+        self.token = token
         self.name = name
         self.args = arguments
 
@@ -467,12 +478,12 @@ class Filter:
         return self.name
 
     def evaluate(self, left: object, context: RenderContext) -> object:
-        func = context.filter(self.name)
+        func = context.filter(self.name, token=self.token)
         positional_args, keyword_args = self.evaluate_args(context)
         return func(left, *positional_args, **keyword_args)
 
     async def evaluate_async(self, left: object, context: RenderContext) -> object:
-        func = context.filter(self.name)
+        func = context.filter(self.name, token=self.token)
         positional_args, keyword_args = await self.evaluate_args_async(context)
 
         if hasattr(func, "filter_async"):
@@ -520,13 +531,15 @@ class Filter:
         while isinstance(stream.peek(), delim):
             next(stream)
             stream.expect(Token.Word)
-            filter_name = cast(Token.Word, next(stream)).value
+            filter_token = cast(Token.Word, next(stream))
+            filter_name = filter_token.value
             filter_arguments: list[KeywordArgument | PositionalArgument] = []
 
             if isinstance(stream.peek(), Token.Colon):
                 next(stream)
                 while isinstance(stream.peek(), (Token.Word, Token.Query)):
-                    match next(stream):
+                    token = next(stream)
+                    match token:
                         case Token.Word(value):
                             if isinstance(stream.peek(), (Token.Assign, Token.Colon)):
                                 # A named or keyword argument
@@ -540,16 +553,14 @@ class Filter:
                                 # A positional query that is a single word
                                 filter_arguments.append(
                                     PositionalArgument(
-                                        Query(compile(parse_query(value)))
+                                        Query(token, compile(parse_query(value)))
                                     )
                                 )
                         case Token.Query(path):
                             filter_arguments.append(
-                                PositionalArgument(Query(compile(path)))
+                                PositionalArgument(Query(token, compile(path)))
                             )
-                filters.append(Filter(filter_name, filter_arguments))
-            else:
-                continue
+            filters.append(Filter(filter_token, filter_name, filter_arguments))
 
         return filters
 
@@ -649,8 +660,9 @@ def parse_boolean_primitive(  # noqa: PLR0912
     stream: TokenStream, precedence: int = PRECEDENCE_LOWEST
 ) -> Expression:
     left: Expression
+    token = next(stream, None)
 
-    match next(stream, None):
+    match token:
         case Token.True_():
             left = TRUE
         case Token.False_():
@@ -672,7 +684,7 @@ def parse_boolean_primitive(  # noqa: PLR0912
         case Token.FloatLiteral(value):
             left = FloatLiteral(value)
         case Token.Query(path):
-            left = Query(compile(path))
+            left = Query(token, compile(path))
         case Token.Not():
             left = LogicalNotExpression.parse(stream)
         case Token.LeftParen():

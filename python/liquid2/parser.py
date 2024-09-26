@@ -34,7 +34,7 @@ class Parser:
         stream = TokenStream(tokens)
 
         while True:
-            match next(stream, None):
+            match stream.peek(None):
                 case Markup.Content():
                     nodes.append(content.parse(stream))
                 case Markup.Comment():
@@ -52,6 +52,8 @@ class Parser:
                         ) from err
                 case Markup.EOI() | None:
                     break
+
+            next(stream, None)
 
         return nodes
 

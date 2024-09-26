@@ -1,16 +1,26 @@
 """Base class for all template nodes."""
 
+from __future__ import annotations
+
 from abc import ABC
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 from typing import TextIO
 
-from .context import RenderContext
+if TYPE_CHECKING:
+    from _liquid2 import TokenT
+
+    from .context import RenderContext
 
 
 class Node(ABC):
     """Base class for all template nodes."""
 
-    __slots__ = ()
+    __slots__ = ("token",)
+
+    def __init__(self, token: TokenT) -> None:
+        super().__init__()
+        self.token = token
 
     def render(self, context: RenderContext, buffer: TextIO) -> int:
         """Write this node's content to _buffer_."""

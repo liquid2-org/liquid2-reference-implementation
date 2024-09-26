@@ -97,17 +97,33 @@ class NoSuchFilterFunc(Error):  # noqa: N818
 class FilterError(Error):
     """Exception raised when a filter fails."""
 
+    def __init__(
+        self,
+        *args: object,
+        filename: str | Path | None = None,
+        source: str | None = None,
+    ):
+        super().__init__(*args, token=None, filename=filename, source=source)
 
-class FilterArgumentError(Error):
+
+class FilterArgumentError(FilterError):
     """Exception raised when a filter's arguments are invalid."""
 
 
-class FilterValueError(Error):
+class FilterValueError(FilterError):
     """Exception raised when a filters value is invalid."""
 
 
 class TemplateNotFound(Error):  # noqa: N818
     """Exception raised when a template could not be found."""
+
+    def __init__(
+        self,
+        *args: object,
+        filename: str | Path | None = None,
+        source: str | None = None,
+    ):
+        super().__init__(*args, token=None, filename=filename, source=source)
 
     def __str__(self) -> str:
         msg = super().__str__()
