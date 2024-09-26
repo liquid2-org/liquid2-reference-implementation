@@ -5,23 +5,22 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Generic
+from typing import Type
 from typing import TypeVar
+from typing import cast
 
-from _liquid2 import BooleanExpression as IRBooleanExpression
-from _liquid2 import BooleanOperator
-from _liquid2 import CommonArgument
-from _liquid2 import CompareOperator
-from _liquid2 import Primitive as IRPrimitive
+from _liquid2 import Token
+from _liquid2 import parse_query
 from markupsafe import Markup
 
+from liquid2.exceptions import LiquidSyntaxError
 from liquid2.expression import Expression
 from liquid2.limits import to_int
 from liquid2.query import compile
-from liquid2.query import from_symbol
+from liquid2.tokens import TokenStream
 
 if TYPE_CHECKING:
-    from _liquid2 import FilteredExpression as IRFilteredExpression
-    from _liquid2 import InlineCondition as IRInlineCondition
+    from _liquid2 import TokenT
 
     from liquid2.context import RenderContext
     from liquid2.query import Query as _Query
@@ -306,70 +305,69 @@ class Query(Expression):
 Primitive = Literal[Any] | RangeLiteral | Query | Null
 
 
-def _primitive(v: IRPrimitive) -> Primitive:  # noqa: PLR0911
-    match v:
-        case IRPrimitive.TrueLiteral():
-            return TRUE
-        case IRPrimitive.FalseLiteral():
-            return FALSE
-        case IRPrimitive.NullLiteral():
-            return NULL
-        case IRPrimitive.Integer(value):
-            return IntegerLiteral(value)
-        case IRPrimitive.Float(value):
-            return FloatLiteral(value)
-        case IRPrimitive.StringLiteral(value):
-            return StringLiteral(value)
-        case IRPrimitive.Range(start, stop):
-            return RangeLiteral(IntegerLiteral(start), IntegerLiteral(stop))
-        case IRPrimitive.Query(path):
-            return Query(compile(path))
-        case _:
-            raise NotImplementedError(":(")
-
-
-def _argument(arg: CommonArgument) -> KeywordArgument | PositionalArgument:
-    match arg:
-        case CommonArgument.Keyword(name, value):
-            return KeywordArgument(name, _primitive(value))
-        case CommonArgument.Positional(value):
-            return PositionalArgument(_primitive(value))
-        case CommonArgument.Symbol(name):
-            return PositionalArgument(_symbol_as_query(name))
-        case _:
-            raise NotImplementedError("(")
-
-
-def _symbol_as_query(s: str) -> Query:
-    return Query(from_symbol(s))
-
-
 class FilteredExpression(Expression):
     __slots__ = ("left", "filters")
 
-    def __init__(self, expr: IRFilteredExpression) -> None:
-        self.left = _primitive(expr.left)
-        self.filters: list[Filter] = []
-
-        if expr.filters:
-            for f in expr.filters:
-                if f.args:
-                    args = [_argument(arg) for arg in f.args]
-                else:
-                    args = []
-                self.filters.append(Filter(f.name, args))
+    def __init__(self, left: Expression, filters: list[Filter] | None = None) -> None:
+        self.left = left
+        self.filters = filters
 
     def evaluate(self, context: RenderContext) -> object:
         rv = self.left.evaluate(context)
-        for f in self.filters:
-            rv = f.evaluate(rv, context)
+        if self.filters:
+            for f in self.filters:
+                rv = f.evaluate(rv, context)
         return rv
 
     async def evaluate_async(self, context: RenderContext) -> object:
         rv = await self.left.evaluate_async(context)
-        for f in self.filters:
-            rv = await f.evaluate_async(rv, context)
+        if self.filters:
+            for f in self.filters:
+                rv = await f.evaluate_async(rv, context)
         return rv
+
+    @staticmethod
+    def parse(tokens: list[Token]) -> FilteredExpression | TernaryFilteredExpression:
+        """Return a new FilteredExpression parsed from _tokens_."""
+        stream = TokenStream(tokens)
+        left = parse_primitive(next(stream, None))
+        filters = Filter.parse(stream, delim=(Token.Pipe,))
+
+        if isinstance(stream.peek(), Token.If):
+            return TernaryFilteredExpression.parse(
+                FilteredExpression(left, filters), stream
+            )
+        return FilteredExpression(left, filters)
+
+
+def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
+    """Parse _token_ as a primitive expression."""
+    match token:
+        case Token.True_():
+            return TRUE
+        case Token.False_():
+            return FALSE
+        case Token.Null():
+            return NULL
+        case Token.Word(value):
+            if value == "empty":
+                return EMPTY
+            if value == "blank":
+                return BLANK
+            raise LiquidSyntaxError(f"unknown word '{value}'", token=token)
+        case Token.StringLiteral(value):
+            return StringLiteral(value)
+        case Token.IntegerLiteral(value):
+            return IntegerLiteral(value)
+        case Token.FloatLiteral(value):
+            return FloatLiteral(value)
+        case Token.Query(path):
+            return Query(compile(path))
+        case _:
+            raise LiquidSyntaxError(
+                f"expected a primitive expression, found {token.__class__.__name__}",
+                token=token,
+            )
 
 
 class TernaryFilteredExpression(Expression):
@@ -378,29 +376,16 @@ class TernaryFilteredExpression(Expression):
     def __init__(
         self,
         left: FilteredExpression,
-        expr: IRInlineCondition,
+        condition: BooleanExpression,
+        alternative: Expression | None = None,
+        filters: list[Filter] | None = None,
+        tail_filters: list[Filter] | None = None,
     ) -> None:
         self.left = left
-        self.condition = BooleanExpression(_expr(expr.expr))
-        self.alternative = _primitive(expr.alternative) if expr.alternative else None
-        self.filters: list[Filter] = []
-        self.tail_filters: list[Filter] = []
-
-        if expr.alternative_filters:
-            for f in expr.alternative_filters:
-                if f.args:
-                    args = [_argument(arg) for arg in f.args]
-                else:
-                    args = []
-                self.filters.append(Filter(f.name, args))
-
-        if expr.tail_filters:
-            for f in expr.tail_filters:
-                if f.args:
-                    args = [_argument(arg) for arg in f.args]
-                else:
-                    args = []
-                self.tail_filters.append(Filter(f.name, args))
+        self.condition = condition
+        self.alternative = alternative
+        self.filters = filters
+        self.tail_filters = tail_filters
 
     def evaluate(self, context: RenderContext) -> object:
         rv: object = None
@@ -409,8 +394,9 @@ class TernaryFilteredExpression(Expression):
             rv = self.left.evaluate(context)
         elif self.alternative:
             rv = self.alternative.evaluate(context)
-            for f in self.filters:
-                f.evaluate(rv, context)
+            if self.filters:
+                for f in self.filters:
+                    f.evaluate(rv, context)
 
         if self.tail_filters:
             for f in self.tail_filters:
@@ -425,14 +411,41 @@ class TernaryFilteredExpression(Expression):
             rv = await self.left.evaluate_async(context)
         elif self.alternative:
             rv = await self.alternative.evaluate_async(context)
-            for f in self.filters:
-                await f.evaluate_async(rv, context)
+            if self.filters:
+                for f in self.filters:
+                    await f.evaluate_async(rv, context)
 
         if self.tail_filters:
             for f in self.tail_filters:
                 await f.evaluate_async(rv, context)
 
         return rv
+
+    @staticmethod
+    def parse(
+        expr: FilteredExpression, stream: TokenStream
+    ) -> TernaryFilteredExpression:
+        """Return a new TernaryFilteredExpression parsed from tokens in _stream_."""
+        stream.expect(Token.If)
+        next(stream)
+        condition = BooleanExpression.parse(stream)
+        alternative: Expression | None = None
+        filters: list[Filter] | None = None
+        tail_filters: list[Filter] | None = None
+
+        if isinstance(stream.peek(), Token.Else):
+            next(stream)
+            alternative = parse_primitive(next(stream, None))
+
+            if isinstance(stream.peek(), Token.Pipe):
+                filters = Filter.parse(stream, delim=(Token.Pipe,))
+
+        if isinstance(stream.peek(), Token.DoublePipe):
+            tail_filters = Filter.parse(stream, delim=(Token.Pipe, Token.DoublePipe))
+
+        return TernaryFilteredExpression(
+            expr, condition, alternative, filters, tail_filters
+        )
 
 
 class Filter:
@@ -491,6 +504,51 @@ class Filter:
 
         return positional_args, keyword_args
 
+    @staticmethod
+    def parse(
+        stream: TokenStream,
+        *,
+        delim: tuple[Type[Token.Pipe] | Type[Token.DoublePipe], ...],
+    ) -> list[Filter]:
+        """Parse as any filters as possible from tokens in _stream_."""
+        filters: list[Filter] = []
+
+        while isinstance(stream.peek(), delim):
+            next(stream)
+            stream.expect(Token.Word)
+            filter_name = cast(Token.Word, next(stream)).value
+            filter_arguments: list[KeywordArgument | PositionalArgument] = []
+
+            if isinstance(stream.peek(), Token.Colon):
+                next(stream)
+                while isinstance(stream.peek(), (Token.Word, Token.Query)):
+                    match next(stream):
+                        case Token.Word(value):
+                            if isinstance(stream.peek(), (Token.Assign, Token.Colon)):
+                                # A named or keyword argument
+                                next(stream)  # skip = or :
+                                filter_arguments.append(
+                                    KeywordArgument(
+                                        value, parse_primitive(next(stream, None))
+                                    )
+                                )
+                            else:
+                                # A positional query that is a single word
+                                filter_arguments.append(
+                                    PositionalArgument(
+                                        Query(compile(parse_query(value)))
+                                    )
+                                )
+                        case Token.Query(path):
+                            filter_arguments.append(
+                                PositionalArgument(Query(compile(path)))
+                            )
+                filters.append(Filter(filter_name, filter_arguments))
+            else:
+                continue
+
+        return filters
+
 
 class KeywordArgument:
     __slots__ = ("name", "value")
@@ -526,34 +584,6 @@ class SymbolArgument:
         self.name = name
 
 
-def _expr(expression: IRBooleanExpression) -> Expression:  # noqa: PLR0911
-    match expression:
-        case IRBooleanExpression.Primitive(expr):
-            return _primitive(expr)
-        case IRBooleanExpression.LogicalNot(expr):
-            return LogicalNotExpression(_expr(expr))
-        case IRBooleanExpression.Logical(left, BooleanOperator.And, right):
-            return LogicalAndExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Logical(left, BooleanOperator.Or, right):
-            return LogicalOrExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Comparison(left, CompareOperator.Eq, right):
-            return EqExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Comparison(left, CompareOperator.Ne, right):
-            return NeExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Comparison(left, CompareOperator.Le, right):
-            return LeExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Comparison(left, CompareOperator.Ge, right):
-            return GeExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Comparison(left, CompareOperator.Lt, right):
-            return LtExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Comparison(left, CompareOperator.Gt, right):
-            return GtExpression(_expr(left), _expr(right))
-        case IRBooleanExpression.Membership(left, op, right):
-            raise NotImplementedError(":(")
-        case _:
-            raise NotImplementedError(":(")
-
-
 class BooleanExpression(Expression):
     __slots__ = ("expression",)
 
@@ -565,6 +595,11 @@ class BooleanExpression(Expression):
 
     async def evaluate_async(self, context: RenderContext) -> object:
         return is_truthy(await self.expression.evaluate_async(context))
+
+    @staticmethod
+    def parse(stream: TokenStream) -> BooleanExpression:
+        """Return a new BooleanExpression parsed from tokens in _stream_."""
+        raise NotImplementedError(":(")
 
 
 class LogicalNotExpression(Expression):

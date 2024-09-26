@@ -37,6 +37,12 @@ impl Lexer {
         tokens
     }
 
+    pub fn parse_query(&self, path: &str) -> Result<Query, LiquidError> {
+        let pairs =
+            Liquid::parse(Rule::query, path).map_err(|err| LiquidError::syntax(err.to_string()))?;
+        self.query_parser.parse(pairs)
+    }
+
     fn markup(&self, pair: Pair<Rule>) -> Result<Markup, LiquidError> {
         match pair.as_rule() {
             Rule::content => self.parse_content(pair),

@@ -43,6 +43,7 @@ class Markup:
         def expression(self) -> list[Token]: ...
 
     class Tag:
+        __match_args__ = ("name",)
         @property
         def span(self) -> tuple[int, int]: ...
         @property
@@ -156,31 +157,40 @@ class Token:
         @property
         def index(self) -> int: ...
 
+    class Assign:
+        @property
+        def index(self) -> int: ...
+
     class Word:
+        __match_args__ = ("value",)
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> str: ...
 
     class StringLiteral:
+        __match_args__ = ("value",)
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> str: ...
 
     class IntegerLiteral:
+        __match_args__ = ("value",)
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> int: ...
 
     class FloatLiteral:
+        __match_args__ = ("value",)
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> float: ...
 
     class RangeLiteral:
+        __match_args__ = ("start", "stop")
         @property
         def index(self) -> int: ...
         @property
@@ -189,6 +199,7 @@ class Token:
         def stop(self) -> RangeArgument: ...
 
     class Query:
+        __match_args__ = ("path",)
         @property
         def index(self) -> int: ...
         @property
@@ -252,6 +263,7 @@ TokenT: TypeAlias = (
     | Token.Comma
     | Token.LeftParen
     | Token.RightParen
+    | Token.Assign
     | Token.Word
     | Token.StringLiteral
     | Token.IntegerLiteral
@@ -376,3 +388,4 @@ class Query:
 
 def tokenize(source: str) -> list[Markup]: ...
 def dump(source: str) -> None: ...
+def parse_query(path: str) -> Query: ...

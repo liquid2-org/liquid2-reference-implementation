@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Container
 from typing import Type
 
+from _liquid2 import Markup
 from _liquid2 import TokenT
 from more_itertools import peekable
 
@@ -41,3 +43,15 @@ class TokenStream(peekable[TokenT]):
         token = self.peek(default=None)
         if not isinstance(token, typ):
             raise LiquidSyntaxError(token=token)
+
+    def is_tag(self, tag_name: str) -> bool:
+        """Return _True_ if the current token is a tag named _tag_name_."""
+        if isinstance(self.current, Markup.Tag):
+            return self.current.name == tag_name
+        return False
+
+    def is_one_of(self, tag_names: Container[str]) -> bool:
+        """Return _True_ if the current token is a tag with a name in _tag_names_."""
+        if isinstance(self.current, Markup.Tag):
+            return self.current.name in tag_names
+        return False

@@ -6,10 +6,18 @@ pub mod query;
 use errors::LiquidError;
 use markup::Markup;
 use pyo3::prelude::*;
+use query::Query;
+
+// TODO: pymethods
 
 #[pyfunction]
 fn tokenize(source: &str) -> Result<Vec<Markup>, LiquidError> {
     lexer::Lexer::new().tokenize(source)
+}
+
+#[pyfunction]
+fn parse_query(path: &str) -> Result<Query, LiquidError> {
+    lexer::Lexer::new().parse_query(path)
 }
 
 #[pyfunction]
@@ -42,6 +50,7 @@ fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add_function(wrap_pyfunction!(dump, m)?)?;
     m.add_function(wrap_pyfunction!(tokenize, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_query, m)?)?;
     m.add_class::<query::Segment>()?;
     m.add_class::<query::Selector>()?;
     m.add_class::<query::ComparisonOperator>()?;
