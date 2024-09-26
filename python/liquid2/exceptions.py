@@ -1,10 +1,12 @@
 """Liquid specific Exceptions and warnings."""
 
-from pathlib import Path
-from typing import Any
-from typing import Type
+from __future__ import annotations
 
-# TODO: rewrite
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from _liquid2 import TokenT
 
 
 class Error(Exception):
@@ -13,25 +15,23 @@ class Error(Exception):
     def __init__(
         self,
         *args: object,
-        linenum: int | None = None,
+        token: TokenT | None,
         filename: str | Path | None = None,
+        source: str | None = None,
     ):
-        # TODO: replace linenum
-        self.linenum = linenum
-        self.filename = filename
         super().__init__(*args)
+        self.token = token
+        self.filename = filename
+        self.source = source
 
     def __str__(self) -> str:
-        msg = super().__str__()
-        if self.linenum:
-            msg = f"{msg}, on line {self.linenum}"
-        if self.filename:
-            msg += f" of {self.filename}"
-        return msg
+        # TODO:
+        return super().__str__()
 
     @property
     def message(self) -> object:
         """The exception's error message if one was given."""
+        # TODO
         if self.args:
             return self.args[0]
         return None
@@ -42,6 +42,7 @@ class Error(Exception):
 
         An empty string is return if a name is not available.
         """
+        # TODO:
         if isinstance(self.filename, Path):
             return self.filename.as_posix()
         if self.filename:
@@ -69,30 +70,12 @@ class LiquidEnvironmentError(Error):
 class LiquidSyntaxError(Error):
     """Exception raised when there is a parser error."""
 
-    def __init__(
-        self,
-        *args: object,
-        linenum: int | None = None,
-        filename: str | Path | None = None,
-    ):
-        super().__init__(*args, linenum=linenum, filename=filename)
-        self.source: str | None = None
-
 
 class TemplateInheritanceError(Error):
     """An exceptions raised when template inheritance tags are used incorrectly.
 
     This could occur when parsing a template or at render time.
     """
-
-    def __init__(
-        self,
-        *args: object,
-        linenum: int | None = None,
-        filename: str | Path | None = None,
-    ):
-        super().__init__(*args, linenum=linenum, filename=filename)
-        self.source: str | None = None
 
 
 class RequiredBlockError(TemplateInheritanceError):
@@ -194,47 +177,6 @@ class LiquidTypeWarning(LiquidWarning):
 
 class FilterWarning(LiquidWarning):
     """Replaces filter exceptions when in WARN mode."""
-
-
-WARNINGS: dict[Type[Error], Type[LiquidWarning]] = {
-    LiquidSyntaxError: LiquidSyntaxWarning,
-    LiquidTypeError: LiquidTypeWarning,
-    FilterArgumentError: FilterWarning,
-    NoSuchFilterFunc: FilterWarning,
-}
-
-
-def lookup_warning(exc: Type[Error]) -> Type[LiquidWarning]:
-    """Return a warning equivalent of the given exception."""
-    return WARNINGS.get(exc, LiquidWarning)
-
-
-def escape(_: Any) -> str:
-    """A dummy escape function that always raises an exception."""
-    raise Error("autoescape requires Markupsafe to be installed")
-
-
-class Markup(str):
-    """A dummy markup class that always raises an exception."""
-
-    def __init__(self, _: object):
-        super().__init__()
-        raise Error("autoescape requires Markupsafe to be installed")
-
-    def join(self, _: object) -> str:  # noqa: D102
-        raise Error(
-            "autoescape requires Markupsafe to be installed"
-        )  # pragma: no cover
-
-    def unescape(self) -> str:  # noqa: D102
-        raise Error(
-            "autoescape requires Markupsafe to be installed"
-        )  # pragma: no cover
-
-    def format(self, *args: Any, **kwargs: Any) -> str:  # noqa: A003, D102, ARG002
-        raise Error(
-            "autoescape requires Markupsafe to be installed"
-        )  # pragma: no cover
 
 
 class CacheCapacityValueError(ValueError):

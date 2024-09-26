@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from _liquid2 import Markup
 
+from .tokens import TokenStream
+
 if TYPE_CHECKING:
     from .ast import Node
     from .environment import Environment
@@ -20,4 +22,5 @@ class Parser:
 
     def parse(self, tokens: list[Markup]) -> list[Node]:
         """Parse _tokens_ into an abstract syntax tree."""
+        stream = TokenStream(tokens)
         raise NotImplementedError(":(")

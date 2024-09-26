@@ -2,73 +2,42 @@
 
 from __future__ import annotations
 
-from collections import deque
-from typing import TYPE_CHECKING
-from typing import Deque
-from typing import Iterator
+from typing import Type
+
+from _liquid2 import TokenT
+from more_itertools import peekable
 
 from .exceptions import LiquidSyntaxError
 
-if TYPE_CHECKING:
-    from _liquid2 import Markup
-    # from _liquid2 import Token
 
-
-class TokenStream:
+class TokenStream(peekable[TokenT]):
     """Step through or iterate a stream of tokens."""
 
-    def __init__(self, tokens: list[Markup]):
-        self.iter = iter(tokens)
-        self._pushed: Deque[Markup] = deque()
-        self.current = next(self.iter)
-
-    class TokenStreamIterator:
-        """An iterable token stream."""
-
-        def __init__(self, stream: TokenStream):
-            self.stream = stream
-
-        def __iter__(self) -> Iterator[Markup]:
-            return self
-
-        def __next__(self) -> Markup:
-            # TODO
-            raise NotImplementedError(":(")
-
-    def __iter__(self) -> Iterator[Markup]:
-        return self.TokenStreamIterator(self)
-
-    def __next__(self) -> Markup:
-        # TODO
-        raise NotImplementedError(":(")
-
     def __str__(self) -> str:  # pragma: no cover
-        buf = [
-            f"current: {self.current}",
-            f"next: {self.peek}",
-        ]
-        return "\n".join(buf)
+        try:
+            return f"current: {self[0]}, next: {self.peek(default=None)}"
+        except StopIteration:
+            return "EOI"
 
-    def next_token(self) -> Markup:
-        """Return the next token from the stream."""
-        return next(self)
+    @property
+    def current(self) -> TokenT | None:
+        """Return the current token in the stream or None if there are no tokens."""
+        try:
+            return self[0]
+        except StopIteration:
+            return None
 
-    def peek(self) -> Markup:
-        """Look at the next token."""
-        # TODO
-        raise NotImplementedError(":(")
+    def push(self, token: TokenT) -> None:
+        """Push a token back on to the stream."""
+        self.prepend(token)
 
-    def close(self) -> None:
-        """Close the stream."""
-        # TODO
-        raise NotImplementedError(":(")
+    def expect(self, typ: Type[TokenT]) -> None:
+        """Raise a _LiquidSyntaxError_ if the current token type doesn't match _typ_."""
+        if not isinstance(self.current, typ):
+            raise LiquidSyntaxError(token=self.current)
 
-    def expect(self, typ: str) -> None:
-        """Raise a `LiquidSyntaxError` if the current token type doesn't match `typ`."""
-        # TODO
-        raise NotImplementedError(":(")
-
-    def expect_peek(self, typ: str) -> None:
-        """Raise a `LiquidSyntaxError` if the next token type does not match `typ`."""
-        # TODO
-        raise NotImplementedError(":(")
+    def expect_peek(self, typ: Type[TokenT]) -> None:
+        """Raise a _LiquidSyntaxError_ if the next token type does not match _typ_."""
+        token = self.peek(default=None)
+        if not isinstance(token, typ):
+            raise LiquidSyntaxError(token=token)

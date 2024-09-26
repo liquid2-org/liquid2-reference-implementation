@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import TypeAlias
 
 class Whitespace(Enum):
     Plus = ...
@@ -217,6 +218,47 @@ class RangeArgument:
         def index(self) -> int: ...
         @property
         def path(self) -> Query: ...
+
+TokenT: TypeAlias = (
+    Markup
+    | Token
+    | Markup.Content
+    | Markup.Raw
+    | Markup.Comment
+    | Markup.Output
+    | Markup.Tag
+    | Token.True_
+    | Token.False_
+    | Token.And
+    | Token.Or
+    | Token.In
+    | Token.Not
+    | Token.Contains
+    | Token.Null
+    | Token.If
+    | Token.Else
+    | Token.With
+    | Token.As
+    | Token.For
+    | Token.Eq
+    | Token.Ne
+    | Token.Ge
+    | Token.Gt
+    | Token.Le
+    | Token.Lt
+    | Token.Colon
+    | Token.Pipe
+    | Token.DoublePipe
+    | Token.Comma
+    | Token.LeftParen
+    | Token.RightParen
+    | Token.Word
+    | Token.StringLiteral
+    | Token.IntegerLiteral
+    | Token.FloatLiteral
+    | Token.RangeLiteral
+    | Token.Query
+)
 
 class ComparisonOp(Enum):
     Eq = ...
