@@ -4,7 +4,7 @@ use pest::{iterators::Pair, iterators::Pairs, Parser};
 use pest_derive::Parser;
 
 use crate::errors::LiquidError;
-use crate::markup::{ExpressionToken, Markup, RangeArgument, Whitespace};
+use crate::markup::{Markup, RangeArgument, Token, Whitespace};
 use crate::query::{
     ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector,
 };
@@ -93,7 +93,7 @@ impl Lexer {
         let mut it = pair.into_inner();
         let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
 
-        let mut tokens: Vec<ExpressionToken> = Vec::new();
+        let mut tokens: Vec<Token> = Vec::new();
         while it.peek().is_some_and(|p| p.as_rule() != Rule::WC) {
             tokens.push(self.parse_expr_token(it.next().unwrap())?);
         }
@@ -112,10 +112,15 @@ impl Lexer {
         let mut it = pair.into_inner();
         let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
         let name = it.next().unwrap().as_str().to_owned();
+        let mut tokens: Option<Vec<Token>> = None;
 
-        let mut tokens: Vec<ExpressionToken> = Vec::new();
-        while it.peek().is_some_and(|p| p.as_rule() != Rule::WC) {
-            tokens.push(self.parse_expr_token(it.next().unwrap())?);
+        // Don't populate Tag.expression with an empty vec.
+        if it.peek().is_some_and(|p| p.as_rule() != Rule::WC) {
+            let mut tokens_ = Vec::new();
+            while it.peek().is_some_and(|p| p.as_rule() != Rule::WC) {
+                tokens_.push(self.parse_expr_token(it.next().unwrap())?);
+            }
+            tokens = Some(tokens_);
         }
 
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
@@ -128,54 +133,55 @@ impl Lexer {
         })
     }
 
-    fn parse_expr_token(&self, pair: Pair<Rule>) -> Result<ExpressionToken, LiquidError> {
+    fn parse_expr_token(&self, pair: Pair<Rule>) -> Result<Token, LiquidError> {
         let index = pair.as_span().start();
         Ok(match pair.as_rule() {
             Rule::symbol => match pair.as_str() {
-                "==" => ExpressionToken::Eq { index },
-                "!=" | "<>" => ExpressionToken::Ne { index },
-                ">=" => ExpressionToken::Ge { index },
-                "<=" => ExpressionToken::Le { index },
-                ">" => ExpressionToken::Gt { index },
-                "<" => ExpressionToken::Lt { index },
-                ":" => ExpressionToken::Colon { index },
-                "||" => ExpressionToken::DoublePipe { index },
-                "|" => ExpressionToken::Pipe { index },
-                "," => ExpressionToken::Comma { index },
-                "(" => ExpressionToken::LeftParen { index },
-                ")" => ExpressionToken::RightParen { index },
+                "==" => Token::Eq { index },
+                "!=" | "<>" => Token::Ne { index },
+                ">=" => Token::Ge { index },
+                "<=" => Token::Le { index },
+                ">" => Token::Gt { index },
+                "<" => Token::Lt { index },
+                ":" => Token::Colon { index },
+                "||" => Token::DoublePipe { index },
+                "|" => Token::Pipe { index },
+                "," => Token::Comma { index },
+                "(" => Token::LeftParen { index },
+                ")" => Token::RightParen { index },
+                "=" => Token::Assign { index },
                 _ => unreachable!(),
             },
             Rule::reserved_word => match pair.as_str() {
-                "true" => ExpressionToken::True_ { index },
-                "false" => ExpressionToken::False_ { index },
-                "and" => ExpressionToken::And { index },
-                "or" => ExpressionToken::Or { index },
-                "in" => ExpressionToken::In { index },
-                "not" => ExpressionToken::Not { index },
-                "contains" => ExpressionToken::Contains { index },
-                "null" | "nil" => ExpressionToken::Null { index },
-                "if" => ExpressionToken::If { index },
-                "else" => ExpressionToken::Else { index },
-                "with" => ExpressionToken::With { index },
-                "as" => ExpressionToken::As { index },
-                "for" => ExpressionToken::For { index },
+                "true" => Token::True_ { index },
+                "false" => Token::False_ { index },
+                "and" => Token::And { index },
+                "or" => Token::Or { index },
+                "in" => Token::In { index },
+                "not" => Token::Not { index },
+                "contains" => Token::Contains { index },
+                "null" | "nil" => Token::Null { index },
+                "if" => Token::If { index },
+                "else" => Token::Else { index },
+                "with" => Token::With { index },
+                "as" => Token::As { index },
+                "for" => Token::For { index },
                 _ => unreachable!(),
             },
             Rule::multiline_double_quoted
             | Rule::multiline_single_quoted
             | Rule::single_quoted
-            | Rule::double_quoted => ExpressionToken::StringLiteral {
+            | Rule::double_quoted => Token::StringLiteral {
                 index,
                 value: pair.as_str().to_owned(),
             },
             Rule::number => self.parse_number(pair)?,
             Rule::range => self.parse_range(pair)?,
-            Rule::query => ExpressionToken::Query {
+            Rule::query => Token::Query {
                 index,
                 path: self.query_parser.parse(pair.into_inner())?,
             },
-            Rule::word => ExpressionToken::Word {
+            Rule::word => Token::Word {
                 index,
                 value: pair.as_str().to_owned(),
             },
@@ -183,11 +189,11 @@ impl Lexer {
         })
     }
 
-    fn parse_number(&self, expr: Pair<Rule>) -> Result<ExpressionToken, LiquidError> {
+    fn parse_number(&self, expr: Pair<Rule>) -> Result<Token, LiquidError> {
         let span = expr.as_span();
 
         if expr.as_str() == "-0" {
-            return Ok(ExpressionToken::IntegerLiteral {
+            return Ok(Token::IntegerLiteral {
                 index: span.start(),
                 value: 0,
             });
@@ -224,14 +230,14 @@ impl Lexer {
         }
 
         if is_float {
-            Ok(ExpressionToken::FloatLiteral {
+            Ok(Token::FloatLiteral {
                 index: span.start(),
                 value: n
                     .parse::<f64>()
                     .map_err(|_| LiquidError::syntax(String::from("invalid float literal")))?,
             })
         } else {
-            Ok(ExpressionToken::IntegerLiteral {
+            Ok(Token::IntegerLiteral {
                 index: span.start(),
                 value: n
                     .parse::<f64>()
@@ -241,12 +247,12 @@ impl Lexer {
         }
     }
 
-    fn parse_range(&self, expr: Pair<Rule>) -> Result<ExpressionToken, LiquidError> {
+    fn parse_range(&self, expr: Pair<Rule>) -> Result<Token, LiquidError> {
         let span = expr.as_span();
         let mut it = expr.into_inner();
         let start = self.parse_range_argument(it.next().unwrap())?;
         let stop = self.parse_range_argument(it.next().unwrap())?;
-        Ok(ExpressionToken::RangeLiteral {
+        Ok(Token::RangeLiteral {
             index: span.start(),
             start,
             stop,
@@ -256,10 +262,10 @@ impl Lexer {
     fn parse_range_argument(&self, pair: Pair<Rule>) -> Result<RangeArgument, LiquidError> {
         match pair.as_rule() {
             Rule::number => match self.parse_number(pair)? {
-                ExpressionToken::FloatLiteral { index, value } => {
+                Token::FloatLiteral { index, value } => {
                     Ok(RangeArgument::FloatLiteral { index, value })
                 }
-                ExpressionToken::IntegerLiteral { index, value } => {
+                Token::IntegerLiteral { index, value } => {
                     Ok(RangeArgument::IntegerLiteral { index, value })
                 }
                 _ => unreachable!(),

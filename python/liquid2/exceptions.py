@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any
 from typing import Type
 
+# TODO: rewrite
+
 
 class Error(Exception):
     """Base class for all Liquid exceptions."""

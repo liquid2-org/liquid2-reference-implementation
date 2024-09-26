@@ -27,15 +27,15 @@ s  = _{ B+ }
 
 tag_expr = _{ (S ~ tag_token ~ S)* }
 
-// XXX: most words will be passed as queries
+// TODO: Prioritize words or paths? Parsers will need to call Query.as_word() or Word.as_query()
 tag_token = _{
     symbol
   | multiline_string_literal
   | number
   | range
   | reserved_word
-  | query
   | word
+  | query
 }
 
 output_expr = _{ (S ~ tag_token)+ }
@@ -51,8 +51,8 @@ line_token = {
   | number
   | range
   | reserved_word
-  | query
   | word
+  | query
 }
 
 symbol = {
@@ -69,6 +69,7 @@ symbol = {
   | ","
   | "("
   | ")"
+  | "="
 }
 
 reserved_word = {
@@ -126,7 +127,7 @@ multiline_unescaped = _{
 }
 
 // NOTE: borrowing name_char from JSONPath
-word = { name_first ~ name_char* }
+word = { name_first ~ name_char* ~ !("." | "[") }
 
 /* Modified JSONPath */
 // TODO: move implicit_root_segment so we just have segments*

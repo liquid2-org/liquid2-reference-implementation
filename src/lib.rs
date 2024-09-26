@@ -46,7 +46,7 @@ fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<query::Selector>()?;
     m.add_class::<query::ComparisonOperator>()?;
     m.add_class::<markup::Markup>()?;
-    m.add_class::<markup::ExpressionToken>()?;
+    m.add_class::<markup::Token>()?;
     m.add_class::<markup::RangeArgument>()?;
     m.add_class::<markup::Whitespace>()?;
     Ok(())

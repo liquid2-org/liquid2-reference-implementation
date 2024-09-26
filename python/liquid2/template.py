@@ -14,7 +14,7 @@ from .utils import ReadOnlyChainMap
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from ._ast import AST
+    from .ast import Node
     from .environment import Environment
 
 
@@ -23,7 +23,7 @@ class Template:
 
     __slots__ = (
         "env",
-        "ast",
+        "nodes",
         "name",
         "path",
         "global_data",
@@ -33,7 +33,7 @@ class Template:
     def __init__(
         self,
         env: Environment,
-        ast: AST,
+        nodes: list[Node],
         *,
         name: str = "<string>",
         path: str | Path | None = None,
@@ -41,7 +41,7 @@ class Template:
         overlay_data: Mapping[str, object] | None = None,
     ) -> None:
         self.env = env
-        self.ast = ast
+        self.nodes = nodes
         self.name = name
         self.path = path
         self.global_data = global_data or {}
@@ -69,7 +69,7 @@ class Template:
         namespace = dict(*args, **kwargs)
 
         with context.extend(namespace):
-            for node in self.ast.nodes:
+            for node in self.nodes:
                 node.render(context, buf)
 
     def make_globals(self, render_args: Mapping[str, object]) -> Mapping[str, object]:
