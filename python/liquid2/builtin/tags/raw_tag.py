@@ -40,6 +40,6 @@ class RawTag(Tag):
 
     def parse(self, stream: TokenStream) -> Node:
         """Parse tokens from _stream_ into an AST node."""
-        token = stream.current
+        token = stream.current()
         assert isinstance(token, Markup.Raw)
         return self.node_class(token, token.text)

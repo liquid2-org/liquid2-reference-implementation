@@ -29,13 +29,13 @@ tag_expr = _{ (S ~ tag_token ~ S)* }
 
 // TODO: Prioritize words or paths? Parsers will need to call Query.as_word() or Word.as_query()
 tag_token = _{
-    symbol
-  | multiline_string_literal
+    multiline_string_literal
   | number
   | range
   | reserved_word
   | word
   | query
+  | symbol
 }
 
 output_expr = _{ (S ~ tag_token)+ }
@@ -46,13 +46,13 @@ line_statement  = { (LS ~ line_token ~ LS)* }
 
 // TODO: need a newline sensitive version of `query`
 line_token = {
-    symbol
-  | string_literal
+    string_literal
   | number
   | range
   | reserved_word
   | word
   | query
+  | symbol
 }
 
 symbol = {
@@ -93,7 +93,12 @@ reserved_word = {
 // NOTE: range literals can't contain newlines
 // XXX: range integers can be negative, but start must be less than stop, even when reversed
 // TODO: range elements can be strings r queries
-range = { "(" ~ LS ~ int ~ LS ~ ".." ~ LS ~ int ~ LS ~ ")" }
+range          =  { "(" ~ LS ~ range_argument ~ LS ~ ".." ~ LS ~ range_argument ~ LS ~ ")" }
+range_argument = _{
+    number
+  | string_literal
+  | query
+}
 
 multiline_string_literal = _{
     ("\x22" ~ multiline_double_quoted ~ "\x22")

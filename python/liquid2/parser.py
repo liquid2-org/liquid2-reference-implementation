@@ -39,7 +39,7 @@ class Parser:
         stream = TokenStream(tokens)
 
         while True:
-            match stream.current:
+            match stream.current():
                 case Markup.Content():
                     nodes.append(content.parse(stream, left_trim=left_trim))
                     left_trim = default_trim
@@ -58,7 +58,7 @@ class Parser:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:
                         raise LiquidSyntaxError(
-                            f"unknown tag {name}", token=stream.current
+                            f"unknown tag '{name}'", token=stream.current()
                         ) from err
                 case Markup.EOI() | None:
                     break
@@ -100,7 +100,7 @@ class Parser:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:
                         raise LiquidSyntaxError(
-                            f"unknown tag {name}", token=stream.current
+                            f"unknown tag {name}", token=stream.current()
                         ) from err
                 case Markup.EOI() | None:
                     break

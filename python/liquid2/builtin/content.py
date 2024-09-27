@@ -46,7 +46,7 @@ class Content(Tag):
         left_trim: Whitespace = Whitespace.Default,
     ) -> Node:
         """Parse tokens from _stream_ into an AST node."""
-        token = stream.current
+        token = stream.current()
         assert isinstance(token, Markup.Content)
         peeked = stream.peek()
 
@@ -58,7 +58,7 @@ class Content(Tag):
 
         return self.node_class(token, self.trim(token.text, left_trim, right_trim))
 
-    def trim(self, text: str, left_trim: Whitespace, right_trim: Whitespace) -> str:
+    def trim(self, text: str, left_trim: Whitespace, right_trim: Whitespace) -> str:  # noqa: PLR0911
         match (left_trim, right_trim):
             case (Whitespace.Default, Whitespace.Default):
                 return self.trim(text, self.env.trim, self.env.trim)

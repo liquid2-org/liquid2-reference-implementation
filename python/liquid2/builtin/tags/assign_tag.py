@@ -54,7 +54,7 @@ class AssignTag(Tag):
 
     def parse(self, stream: TokenStream) -> Node:
         """Parse tokens from _stream_ into an AST node."""
-        token = stream.current
+        token = stream.current()
         assert isinstance(token, Markup.Tag)
 
         stream = TokenStream(token.expression)

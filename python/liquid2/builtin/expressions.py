@@ -239,9 +239,6 @@ class RangeLiteral(Expression):
     def __str__(self) -> str:
         return f"({self.start}..{self.stop})"
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"RangeLiteral(start={self.start}, stop={self.stop})"
-
     def __hash__(self) -> int:
         return hash((self.start, self.stop))
 
@@ -337,7 +334,7 @@ class FilteredExpression(Expression):
         left = parse_primitive(next(stream, None))
         filters = Filter.parse(stream, delim=(Token.Pipe,))
 
-        if isinstance(stream.peek(), Token.If):
+        if isinstance(stream.current(), Token.If):
             return TernaryFilteredExpression.parse(
                 FilteredExpression(left, filters), stream
             )
@@ -402,11 +399,11 @@ class TernaryFilteredExpression(Expression):
             rv = self.alternative.evaluate(context)
             if self.filters:
                 for f in self.filters:
-                    f.evaluate(rv, context)
+                    rv = f.evaluate(rv, context)
 
         if self.tail_filters:
             for f in self.tail_filters:
-                f.evaluate(rv, context)
+                rv = f.evaluate(rv, context)
 
         return rv
 
@@ -419,11 +416,11 @@ class TernaryFilteredExpression(Expression):
             rv = await self.alternative.evaluate_async(context)
             if self.filters:
                 for f in self.filters:
-                    await f.evaluate_async(rv, context)
+                    rv = await f.evaluate_async(rv, context)
 
         if self.tail_filters:
             for f in self.tail_filters:
-                await f.evaluate_async(rv, context)
+                rv = await f.evaluate_async(rv, context)
 
         return rv
 
@@ -439,14 +436,14 @@ class TernaryFilteredExpression(Expression):
         filters: list[Filter] | None = None
         tail_filters: list[Filter] | None = None
 
-        if isinstance(stream.peek(), Token.Else):
+        if isinstance(stream.current(), Token.Else):
             next(stream)
             alternative = parse_primitive(next(stream, None))
 
-            if isinstance(stream.peek(), Token.Pipe):
+            if isinstance(stream.current(), Token.Pipe):
                 filters = Filter.parse(stream, delim=(Token.Pipe,))
 
-        if isinstance(stream.peek(), Token.DoublePipe):
+        if isinstance(stream.current(), Token.DoublePipe):
             tail_filters = Filter.parse(stream, delim=(Token.Pipe, Token.DoublePipe))
 
         return TernaryFilteredExpression(
@@ -523,20 +520,22 @@ class Filter:
         """Parse as any filters as possible from tokens in _stream_."""
         filters: list[Filter] = []
 
-        while isinstance(stream.peek(), delim):
+        while isinstance(stream.current(), delim):
             next(stream)
             stream.expect(Token.Word)
             filter_token = cast(Token.Word, next(stream))
             filter_name = filter_token.value
             filter_arguments: list[KeywordArgument | PositionalArgument] = []
 
-            if isinstance(stream.peek(), Token.Colon):
-                next(stream)
-                while isinstance(stream.peek(), (Token.Word, Token.Query)):
-                    token = next(stream)
+            if isinstance(stream.current(), Token.Colon):
+                next(stream)  # Move past ':'
+                while True:
+                    token = stream.current()
                     match token:
                         case Token.Word(_, value):
-                            if isinstance(stream.peek(), (Token.Assign, Token.Colon)):
+                            if isinstance(
+                                stream.current(), (Token.Assign, Token.Colon)
+                            ):
                                 # A named or keyword argument
                                 next(stream)  # skip = or :
                                 filter_arguments.append(
@@ -555,6 +554,22 @@ class Filter:
                             filter_arguments.append(
                                 PositionalArgument(Query(token, compile(path)))
                             )
+                        case (
+                            Token.IntegerLiteral()
+                            | Token.FloatLiteral()
+                            | Token.StringLiteral()
+                        ):
+                            filter_arguments.append(
+                                PositionalArgument(parse_primitive(next(stream)))
+                            )
+                        case Token.Comma():
+                            # XXX: leading, trailing and duplicate commas are OK
+                            next(stream, None)
+                        case _:
+                            break
+
+                    next(stream, None)
+
             filters.append(Filter(filter_token, filter_name, filter_arguments))
 
         return filters
@@ -670,7 +685,7 @@ def parse_boolean_primitive(  # noqa: PLR0912
                 left = EMPTY
             elif value == "blank":
                 left = BLANK
-            raise LiquidSyntaxError(f"unknown word '{value}'", token=stream.current)
+            raise LiquidSyntaxError(f"unknown word '{value}'", token=stream.current())
         case Token.RangeLiteral(_, start, stop):
             left = RangeLiteral(parse_primitive(start), parse_primitive(stop))
         case Token.StringLiteral(_, value):
@@ -688,8 +703,8 @@ def parse_boolean_primitive(  # noqa: PLR0912
         case _:
             raise LiquidSyntaxError(
                 "expected a primitive expression, "
-                f"found {stream.current.__class__.__name__}",
-                token=stream.current,
+                f"found {stream.current().__class__.__name__}",
+                token=stream.current(),
             )
 
     while True:
@@ -752,14 +767,14 @@ def parse_grouped_expression(stream: TokenStream) -> Expression:
     expr = parse_boolean_primitive(stream)
     next(stream, None)  # XXX:
 
-    while not isinstance(stream.current, Token.RightParen):
-        if stream.current is None:
-            raise LiquidSyntaxError("unbalanced parentheses", token=stream.current)
+    while not isinstance(stream.current(), Token.RightParen):
+        if stream.current() is None:
+            raise LiquidSyntaxError("unbalanced parentheses", token=stream.current())
 
-        if stream.current.__class__ not in BINARY_OPERATORS:
+        if stream.current().__class__ not in BINARY_OPERATORS:
             raise LiquidSyntaxError(
-                f"expected an infix expression, found {stream.current.__class__}",
-                token=stream.current,
+                f"expected an infix expression, found {stream.current().__class__}",
+                token=stream.current(),
             )
 
         expr = parse_infix_expression(stream, expr)

@@ -7,7 +7,7 @@ from markupsafe import escape
 from markupsafe import soft_str
 
 
-def to_liquid_string(val: Any, auto_escape: bool) -> str:
+def to_liquid_string(val: Any, *, auto_escape: bool) -> str:
     """Stringify a Python object ready for output in a Liquid template."""
     if isinstance(val, str) or (auto_escape and hasattr(val, "__html__")):
         pass

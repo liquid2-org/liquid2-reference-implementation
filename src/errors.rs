@@ -56,25 +56,35 @@ impl LiquidError {
 impl std::error::Error for LiquidError {}
 
 create_exception!(
-    jpq,
+    liquid2,
     PyLiquidError,
     PyException,
     "Base exception for all Liquid errors."
 );
 
-create_exception!(jpq, LiquidTypeError, PyLiquidError, "Liquid type error.");
+create_exception!(
+    liquid2,
+    LiquidTypeError,
+    PyLiquidError,
+    "Liquid type error."
+);
 
 create_exception!(
-    jpq,
+    liquid2,
     LiquidSyntaxError,
     PyLiquidError,
     "Liquid syntax error."
 );
 
-create_exception!(jpq, LiquidNameError, PyLiquidError, "Liquid name error.");
+create_exception!(
+    liquid2,
+    LiquidNameError,
+    PyLiquidError,
+    "Liquid name error."
+);
 
 create_exception!(
-    jpq,
+    liquid2,
     LiquidExtensionError,
     PyLiquidError,
     "Liquid function extension error."

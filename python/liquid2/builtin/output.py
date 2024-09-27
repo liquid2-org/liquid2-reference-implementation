@@ -36,7 +36,7 @@ class OutputNode(Node):
         return buffer.write(
             to_liquid_string(
                 self.expression.evaluate(context),
-                context.auto_escape,
+                auto_escape=context.auto_escape,
             )
         )
 
@@ -60,7 +60,7 @@ class Output(Tag):
 
     def parse(self, stream: TokenStream) -> Node:
         """Parse tokens from _stream_ into an AST node."""
-        token = stream.current
+        token = stream.current()
         assert isinstance(token, Markup.Output)
         return self.node_class(
             token, FilteredExpression.parse(TokenStream(token.expression))

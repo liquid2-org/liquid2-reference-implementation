@@ -25,11 +25,10 @@ class TokenStream(peekable):  # type: ignore
 
     def __str__(self) -> str:  # pragma: no cover
         try:
-            return f"current: {self[0]}, next: {self.peek()}"
+            return f"current: {self.current()}, next: {self.peek()}"
         except StopIteration:
             return "EOI"
 
-    @property
     def current(self) -> TokenT | None:
         """Return the next token in the stream or None if there are no tokens."""
         try:
@@ -50,8 +49,12 @@ class TokenStream(peekable):  # type: ignore
 
     def expect(self, typ: Type[TokenT]) -> None:
         """Raise a _LiquidSyntaxError_ if the current token type doesn't match _typ_."""
-        if not isinstance(self.current, typ):
-            raise LiquidSyntaxError(token=self.current)
+        token = self.current()
+        if not isinstance(token, typ):
+            raise LiquidSyntaxError(
+                f"expected {typ.__name__}, found {token.__class__.__name__}",
+                token=token,
+            )
 
     def expect_peek(self, typ: Type[TokenT]) -> None:
         """Raise a _LiquidSyntaxError_ if the next token type does not match _typ_."""
@@ -61,14 +64,16 @@ class TokenStream(peekable):  # type: ignore
 
     def is_tag(self, tag_name: str) -> bool:
         """Return _True_ if the current token is a tag named _tag_name_."""
-        if isinstance(self.current, Markup.Tag):
-            return self.current.name == tag_name
+        token = self.current()
+        if isinstance(token, Markup.Tag):
+            return token.name == tag_name
         return False
 
     def is_one_of(self, tag_names: Container[str]) -> bool:
         """Return _True_ if the current token is a tag with a name in _tag_names_."""
-        if isinstance(self.current, Markup.Tag):
-            return self.current.name in tag_names
+        token = self.current()
+        if isinstance(token, Markup.Tag):
+            return token.name in tag_names
         return False
 
     def peek_one_of(self, tag_names: Container[str]) -> bool:

@@ -290,7 +290,7 @@ impl Lexer {
                     value: pair.as_str().to_owned(),
                 })
             }
-            _ => unreachable!(),
+            _ => unreachable!("{:#?}", pair),
         }
     }
 }
