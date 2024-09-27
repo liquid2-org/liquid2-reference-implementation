@@ -43,7 +43,7 @@ class Parser:
                     nodes.append(raw.parse(stream))
                 case Markup.Output():
                     nodes.append(output.parse(stream))
-                case Markup.Tag(name):
+                case Markup.Tag(_, _, name):
                     try:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:
@@ -67,7 +67,7 @@ class Parser:
 
         nodes: list[Node] = []
 
-        while not stream.is_one_of(end):
+        while not stream.peek_one_of(end):
             match stream.current:
                 case Markup.Content():
                     nodes.append(content.parse(stream))
@@ -77,7 +77,7 @@ class Parser:
                     nodes.append(raw.parse(stream))
                 case Markup.Output():
                     nodes.append(output.parse(stream))
-                case Markup.Tag(name):
+                case Markup.Tag(_, _, name):
                     try:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:

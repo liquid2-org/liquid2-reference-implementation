@@ -62,3 +62,10 @@ class TokenStream(peekable):  # type: ignore
         if isinstance(self.current, Markup.Tag):
             return self.current.name in tag_names
         return False
+
+    def peek_one_of(self, tag_names: Container[str]) -> bool:
+        """Return _True_ if the next token is a tag with a name in _tag_names_."""
+        peeked = self.peek()
+        if isinstance(peeked, Markup.Tag):
+            return peeked.name in tag_names
+        return False

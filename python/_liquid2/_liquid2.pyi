@@ -43,7 +43,7 @@ class Markup:
         def expression(self) -> list[Token]: ...
 
     class Tag:
-        __match_args__ = ("name",)
+        __match_args__ = ("span", "wc", "name", "expression")
         @property
         def span(self) -> tuple[int, int]: ...
         @property
@@ -162,35 +162,35 @@ class Token:
         def index(self) -> int: ...
 
     class Word:
-        __match_args__ = ("value",)
+        __match_args__ = ("index", "value")
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> str: ...
 
     class StringLiteral:
-        __match_args__ = ("value",)
+        __match_args__ = ("index", "value")
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> str: ...
 
     class IntegerLiteral:
-        __match_args__ = ("value",)
+        __match_args__ = ("index", "value")
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> int: ...
 
     class FloatLiteral:
-        __match_args__ = ("value",)
+        __match_args__ = ("index", "value")
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> float: ...
 
     class RangeLiteral:
-        __match_args__ = ("start", "stop")
+        __match_args__ = ("index", "start", "stop")
         @property
         def index(self) -> int: ...
         @property
@@ -199,7 +199,7 @@ class Token:
         def stop(self) -> RangeArgument: ...
 
     class Query:
-        __match_args__ = ("path",)
+        __match_args__ = ("index", "path")
         @property
         def index(self) -> int: ...
         @property
@@ -207,28 +207,28 @@ class Token:
 
 class RangeArgument:
     class StringLiteral:
-        __match_args__ = ("value",)
+        __match_args__ = ("index", "value")
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> str: ...
 
     class IntegerLiteral:
-        __match_args__ = ("value",)
+        __match_args__ = ("index", "value")
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> int: ...
 
     class FloatLiteral:
-        __match_args__ = ("value",)
+        __match_args__ = ("index", "value")
         @property
         def index(self) -> int: ...
         @property
         def value(self) -> float: ...
 
     class Query:
-        __match_args__ = ("path",)
+        __match_args__ = ("index", "path")
         @property
         def index(self) -> int: ...
         @property

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .comments import Comment
 from .content import Content
 from .expressions import BLANK
 from .expressions import CONTINUE
@@ -72,6 +73,8 @@ from .filters.string import upcase
 from .filters.string import url_decode
 from .filters.string import url_encode
 from .output import Output
+from .tags.assign_tag import AssignTag
+from .tags.raw_tag import RawTag
 
 if TYPE_CHECKING:
     from ..environment import Environment  # noqa: TID252
@@ -106,6 +109,9 @@ __all__ = (
     "SymbolArgument",
     "TernaryFilteredExpression",
     "TRUE",
+    "Output",
+    "Comment",
+    "RawTag",
 )
 
 
@@ -150,7 +156,8 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.filters["url_encode"] = url_encode
     env.filters["url_decode"] = url_decode
 
-    env.tags["__COMMENT"] = None
+    env.tags["__COMMENT"] = Comment(env)
     env.tags["__CONTENT"] = Content(env)
     env.tags["__OUTPUT"] = Output(env)
-    env.tags["__RAW"] = None
+    env.tags["__RAW"] = RawTag(env)
+    env.tags["assign"] = AssignTag(env)

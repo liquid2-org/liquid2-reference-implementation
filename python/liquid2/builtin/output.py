@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from liquid2 import TokenT
     from liquid2.context import RenderContext
     from liquid2.expression import Expression
-    from liquid2.tokens import TokenStream
 
 
 class OutputNode(Node):
@@ -63,4 +62,6 @@ class Output(Tag):
         """Parse tokens from _stream_ into an AST node."""
         token = stream.current
         assert isinstance(token, Markup.Output)
-        return self.node_class(token, FilteredExpression.parse(token.expression))
+        return self.node_class(
+            token, FilteredExpression.parse(TokenStream(token.expression))
+        )

@@ -1,4 +1,4 @@
-"""The built in, standard implementation of the comment node."""
+"""The built in, standard implementation of the _raw_ tag."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ if TYPE_CHECKING:
     from liquid2.tokens import TokenStream
 
 
-class CommentNode(Node):
-    """The built in, standard implementation of the comment node."""
+class RawNode(Node):
+    """The built in, standard implementation of the _raw_ node."""
 
     __slots__ = ("text",)
 
@@ -27,19 +27,19 @@ class CommentNode(Node):
     def __str__(self) -> str:
         return self.text
 
-    def render_to_output(self, _context: RenderContext, _buffer: TextIO) -> int:
+    def render_to_output(self, _context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
-        return 0
+        return buffer.write(self.text)
 
 
-class Comment(Tag):
-    """The built in pseudo tag representing template comments."""
+class RawTag(Tag):
+    """The standard _raw_ tag."""
 
     block = False
-    node_class = CommentNode
+    node_class = RawNode
 
     def parse(self, stream: TokenStream) -> Node:
         """Parse tokens from _stream_ into an AST node."""
         token = stream.current
-        assert isinstance(token, Markup.Comment)
+        assert isinstance(token, Markup.Raw)
         return self.node_class(token, token.text)

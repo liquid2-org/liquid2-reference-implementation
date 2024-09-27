@@ -21,13 +21,13 @@ from liquid2.exceptions import LiquidSyntaxError
 from liquid2.expression import Expression
 from liquid2.limits import to_int
 from liquid2.query import compile
-from liquid2.tokens import TokenStream
 
 if TYPE_CHECKING:
     from _liquid2 import TokenT
 
     from liquid2.context import RenderContext
     from liquid2.query import Query as _Query
+    from liquid2.tokens import TokenStream
 
 
 class Null(Expression):
@@ -332,9 +332,8 @@ class FilteredExpression(Expression):
         return rv
 
     @staticmethod
-    def parse(tokens: list[Token]) -> FilteredExpression | TernaryFilteredExpression:
+    def parse(stream: TokenStream) -> FilteredExpression | TernaryFilteredExpression:
         """Return a new FilteredExpression parsed from _tokens_."""
-        stream = TokenStream(tokens)
         left = parse_primitive(next(stream, None))
         filters = Filter.parse(stream, delim=(Token.Pipe,))
 
@@ -347,7 +346,6 @@ class FilteredExpression(Expression):
 
 def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
     """Parse _token_ as a primitive expression."""
-    # TODO: review match args
     match token:
         case Token.True_():
             return TRUE
@@ -355,24 +353,21 @@ def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
             return FALSE
         case Token.Null():
             return NULL
-        case Token.Word(value=v):
-            if v == "empty":
+        case Token.Word(_, value):
+            if value == "empty":
                 return EMPTY
-            if v == "blank":
+            if value == "blank":
                 return BLANK
-            return Query(token, compile(parse_query(v)))
-        case Token.RangeLiteral(start, stop):
+            return Query(token, compile(parse_query(value)))
+        case Token.RangeLiteral(_, start, stop):
             return RangeLiteral(parse_primitive(start), parse_primitive(stop))
-        case Token.StringLiteral(value=v) | RangeArgument.StringLiteral(value=v):
-            return StringLiteral(v)
-        case (
-            Token.IntegerLiteral(value=value)
-            | RangeArgument.IntegerLiteral(value=value)
-        ):
+        case Token.StringLiteral(_, value) | RangeArgument.StringLiteral(_, value):
+            return StringLiteral(value)
+        case Token.IntegerLiteral(_, value) | RangeArgument.IntegerLiteral(_, value):
             return IntegerLiteral(value)
-        case Token.FloatLiteral(value=value) | RangeArgument.FloatLiteral(value=value):
+        case Token.FloatLiteral(_, value) | RangeArgument.FloatLiteral(_, value):
             return FloatLiteral(value)
-        case Token.Query(path=path) | RangeArgument.Query(path=path):
+        case Token.Query(_, path) | RangeArgument.Query(_, path):
             return Query(token, compile(path))
         case _:
             raise LiquidSyntaxError(
@@ -540,7 +535,7 @@ class Filter:
                 while isinstance(stream.peek(), (Token.Word, Token.Query)):
                     token = next(stream)
                     match token:
-                        case Token.Word(value):
+                        case Token.Word(_, value):
                             if isinstance(stream.peek(), (Token.Assign, Token.Colon)):
                                 # A named or keyword argument
                                 next(stream)  # skip = or :
@@ -556,7 +551,7 @@ class Filter:
                                         Query(token, compile(parse_query(value)))
                                     )
                                 )
-                        case Token.Query(path):
+                        case Token.Query(_, path):
                             filter_arguments.append(
                                 PositionalArgument(Query(token, compile(path)))
                             )
@@ -659,6 +654,7 @@ BINARY_OPERATORS = frozenset(
 def parse_boolean_primitive(  # noqa: PLR0912
     stream: TokenStream, precedence: int = PRECEDENCE_LOWEST
 ) -> Expression:
+    """Parse a Boolean expression from tokens in _stream_."""
     left: Expression
     token = next(stream, None)
 
@@ -669,21 +665,21 @@ def parse_boolean_primitive(  # noqa: PLR0912
             left = FALSE
         case Token.Null():
             left = NULL
-        case Token.Word(value):
+        case Token.Word(_, value):
             if value == "empty":
                 left = EMPTY
             elif value == "blank":
                 left = BLANK
             raise LiquidSyntaxError(f"unknown word '{value}'", token=stream.current)
-        case Token.RangeLiteral(start, stop):
+        case Token.RangeLiteral(_, start, stop):
             left = RangeLiteral(parse_primitive(start), parse_primitive(stop))
-        case Token.StringLiteral(value):
+        case Token.StringLiteral(_, value):
             left = StringLiteral(value)
-        case Token.IntegerLiteral(value):
+        case Token.IntegerLiteral(_, value):
             left = IntegerLiteral(value)
-        case Token.FloatLiteral(value):
+        case Token.FloatLiteral(_, value):
             left = FloatLiteral(value)
-        case Token.Query(path):
+        case Token.Query(_, path):
             left = Query(token, compile(path))
         case Token.Not():
             left = LogicalNotExpression.parse(stream)
@@ -968,6 +964,7 @@ class InExpression(Expression):
 
 
 def is_truthy(obj: object) -> bool:
+    """Return _True_ if _obj_ is considered Liquid truthy."""
     if hasattr(obj, "__liquid__"):
         obj = obj.__liquid__()
     return not (obj is False or obj is None)
