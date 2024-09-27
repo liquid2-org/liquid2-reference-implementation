@@ -7,6 +7,7 @@ from typing import TextIO
 
 from liquid2 import Markup
 from liquid2 import Node
+from liquid2 import Whitespace
 from liquid2.tag import Tag
 
 if TYPE_CHECKING:
@@ -38,8 +39,52 @@ class Content(Tag):
     block = False
     node_class = ContentNode
 
-    def parse(self, stream: TokenStream) -> Node:
+    def parse(
+        self,
+        stream: TokenStream,
+        *,
+        left_trim: Whitespace = Whitespace.Default,
+    ) -> Node:
         """Parse tokens from _stream_ into an AST node."""
         token = stream.current
         assert isinstance(token, Markup.Content)
-        return self.node_class(token, token.text)
+        peeked = stream.peek()
+
+        right_trim = (
+            peeked.wc[0]  # type: ignore
+            if peeked is not None and not isinstance(peeked, Markup.EOI)
+            else self.env.trim
+        )
+
+        return self.node_class(token, self.trim(token.text, left_trim, right_trim))
+
+    def trim(self, text: str, left_trim: Whitespace, right_trim: Whitespace) -> str:
+        match (left_trim, right_trim):
+            case (Whitespace.Default, Whitespace.Default):
+                return self.trim(text, self.env.trim, self.env.trim)
+            case (Whitespace.Default, _):
+                return self.trim(text, self.env.trim, right_trim)
+            case (_, Whitespace.Default):
+                return self.trim(text, left_trim, self.env.trim)
+
+            case (Whitespace.Minus, Whitespace.Minus):
+                return text.strip()
+            case (Whitespace.Minus, Whitespace.Plus):
+                return text.lstrip()
+            case (Whitespace.Plus, Whitespace.Minus):
+                return text.rstrip()
+            case (Whitespace.Plus, Whitespace.Plus):
+                return text
+
+            case (Whitespace.Smart, Whitespace.Smart):
+                # TODO
+                raise NotImplementedError(":(")
+            case (Whitespace.Smart, _):
+                # TODO
+                raise NotImplementedError(":(")
+            case (_, Whitespace.Smart):
+                # TODO
+                raise NotImplementedError(":(")
+
+            case _:
+                return text

@@ -27,7 +27,7 @@ class Environment:
 
     auto_escape = False
     context_depth_limit = 30
-    trim = Whitespace.Default
+    trim = Whitespace.Plus
     undefined: Type[Undefined] = Undefined
 
     def __init__(self) -> None:
@@ -36,6 +36,8 @@ class Environment:
         register_standard_tags_and_filters(self)
 
         self.parser = Parser(self)
+
+        # TODO: raise if trim is set to "Default"
 
     def parse(self, source: str) -> list[Node]:
         """Compile template source text and return an abstract syntax tree."""

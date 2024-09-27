@@ -17,6 +17,7 @@ class Markup:
         def text(self) -> str: ...
 
     class Raw:
+        __match_args__ = ("span", "wc", "text")
         @property
         def span(self) -> tuple[int, int]: ...
         @property
@@ -25,6 +26,7 @@ class Markup:
         def text(self) -> str: ...
 
     class Comment:
+        __match_args__ = ("span", "wc", "hashes", "text")
         @property
         def span(self) -> tuple[int, int]: ...
         @property
@@ -35,6 +37,7 @@ class Markup:
         def text(self) -> str: ...
 
     class Output:
+        __match_args__ = ("span", "wc", "expression")
         @property
         def span(self) -> tuple[int, int]: ...
         @property

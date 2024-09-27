@@ -693,7 +693,7 @@ def parse_boolean_primitive(  # noqa: PLR0912
             )
 
     while True:
-        peeked = stream.peek(default=None)
+        peeked = stream.peek()
         if (
             not peeked
             or PRECEDENCES.get(peeked.__class__, PRECEDENCE_LOWEST) < precedence

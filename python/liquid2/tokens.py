@@ -16,25 +16,33 @@ if TYPE_CHECKING:
 
 
 class TokenStream(peekable):  # type: ignore
-    """Step through or iterate a stream of tokens."""
+    """Step through or iterate a stream of tokens.
+
+    Note that _peek()_ has been redefined to return self[1] rather than
+    self[0]. Use _current_ to get self[0].
+
+    """
 
     def __str__(self) -> str:  # pragma: no cover
         try:
-            return f"current: {self[0]}, next: {self.peek(default=None)}"
+            return f"current: {self[0]}, next: {self.peek()}"
         except StopIteration:
             return "EOI"
 
     @property
     def current(self) -> TokenT | None:
-        """Return the current token in the stream or None if there are no tokens."""
+        """Return the next token in the stream or None if there are no tokens."""
         try:
             return self[0]  # type: ignore
-        except StopIteration:
+        except IndexError:
             return None
 
-    def peek(self, default: TokenT | None = None) -> TokenT | None:  # type: ignore
-        """Return the item that will be next returned from ``next()``."""
-        return super().peek(default=default)  # type: ignore
+    def peek(self) -> TokenT | None:  # type: ignore
+        """Return the item at self[1]."""
+        try:
+            return self[1]  # type: ignore
+        except IndexError:
+            return None
 
     def push(self, token: TokenT) -> None:
         """Push a token back on to the stream."""
@@ -47,7 +55,7 @@ class TokenStream(peekable):  # type: ignore
 
     def expect_peek(self, typ: Type[TokenT]) -> None:
         """Raise a _LiquidSyntaxError_ if the next token type does not match _typ_."""
-        token = self.peek(default=None)
+        token = self.peek()
         if not isinstance(token, typ):
             raise LiquidSyntaxError(token=token)
 

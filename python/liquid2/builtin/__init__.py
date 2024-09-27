@@ -112,6 +112,8 @@ __all__ = (
     "Output",
     "Comment",
     "RawTag",
+    "Content",
+    "AssignTag",
 )
 
 

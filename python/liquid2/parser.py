@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Container
+from typing import cast
 
 from _liquid2 import Markup
 
+from .builtin import Content
 from .exceptions import LiquidSyntaxError
 from .tokens import TokenStream
 
@@ -26,24 +28,32 @@ class Parser:
         """Parse _tokens_ into an abstract syntax tree."""
         tags = self.tags
         comment = tags["__COMMENT"]
-        content = tags["__CONTENT"]
+        content = cast(Content, tags["__CONTENT"])
         output = tags["__OUTPUT"]
         raw = tags["__RAW"]
+
+        default_trim = self.env.trim
+        left_trim = default_trim
 
         nodes: list[Node] = []
         stream = TokenStream(tokens)
 
         while True:
-            match stream.peek(None):
+            match stream.current:
                 case Markup.Content():
-                    nodes.append(content.parse(stream))
-                case Markup.Comment():
+                    nodes.append(content.parse(stream, left_trim=left_trim))
+                    left_trim = default_trim
+                case Markup.Comment(_, wc):
+                    left_trim = wc[-1]
                     nodes.append(comment.parse(stream))
-                case Markup.Raw():
+                case Markup.Raw(_, wc):
+                    left_trim = wc[-1]
                     nodes.append(raw.parse(stream))
-                case Markup.Output():
+                case Markup.Output(_, wc):
+                    left_trim = wc[-1]
                     nodes.append(output.parse(stream))
-                case Markup.Tag(_, _, name):
+                case Markup.Tag(_, wc, name):
+                    left_trim = wc[-1]
                     try:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:
@@ -61,23 +71,31 @@ class Parser:
         """Parse markup tokens from _stream_ until wee find a tag in _end_."""
         tags = self.tags
         comment = tags["__COMMENT"]
-        content = tags["__CONTENT"]
+        content = cast(Content, tags["__CONTENT"])
         output = tags["__OUTPUT"]
         raw = tags["__RAW"]
+
+        default_trim = self.env.trim
+        left_trim = default_trim
 
         nodes: list[Node] = []
 
         while not stream.peek_one_of(end):
-            match stream.current:
+            match next(stream, None):
                 case Markup.Content():
-                    nodes.append(content.parse(stream))
-                case Markup.Comment():
+                    nodes.append(content.parse(stream, left_trim=left_trim))
+                    left_trim = default_trim
+                case Markup.Comment(_, wc):
+                    left_trim = wc[-1]
                     nodes.append(comment.parse(stream))
-                case Markup.Raw():
+                case Markup.Raw(_, wc):
+                    left_trim = wc[-1]
                     nodes.append(raw.parse(stream))
-                case Markup.Output():
+                case Markup.Output(_, wc):
+                    left_trim = wc[-1]
                     nodes.append(output.parse(stream))
-                case Markup.Tag(_, _, name):
+                case Markup.Tag(_, wc, name):
+                    left_trim = wc[-1]
                     try:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:

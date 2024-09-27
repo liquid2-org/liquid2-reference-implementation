@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from _liquid2 import Markup
 from _liquid2 import Token
+from _liquid2 import Whitespace
 from .ast import Node
 from .context import RenderContext
 from .environment import Environment
@@ -22,6 +23,7 @@ __all__ = [
     "Undefined",
     "Markup",
     "Token",
+    "Whitespace",
 ]
 
 if TYPE_CHECKING:
