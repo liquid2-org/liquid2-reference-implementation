@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Compliance Test Suite",
+  "description": "Liquid2 Compliance Test Suite",
+  "type": "object",
+  "properties": {
+    "tests": {
+      "description": "Individual test cases",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/test_case"
+      }
+    }
+  },
+  "required": ["tests"],
+  "$defs": {
+    "test_case": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/test_case_name"
+        },
+        "template": {
+          "$ref": "#/$defs/template"
+        },
+        "data": {
+          "$ref": "#/$defs/data"
+        },
+        "result": {
+          "$ref": "#/$defs/test_case_result"
+        },
+        "results": {
+          "$ref": "#/$defs/test_case_results"
+        },
+        "invalid": {
+          "$ref": "#/$defs/invalid"
+        }
+      },
+      "required": ["name", "template"],
+      "oneOf": [
+        {
+          "required": ["data", "result"],
+          "properties": {
+            "invalid": false
+          }
+        },
+        {
+          "required": ["invalid"],
+          "properties": {
+            "data": false,
+            "result": false
+          }
+        }
+      ]
+    },
+    "test_case_name": {
+      "description": "The name of the test case",
+      "type": "string",
+      "pattern": "^\\S.*\\S$"
+    },
+    "test_case_result": {
+      "type": "string",
+      "description": "The expected result of rendering the template with the given context data"
+    },
+    "template": {
+      "description": "The Liquid template",
+      "type": "string"
+    },
+    "data": {
+      "description": "Render context data"
+    },
+    "invalid": {
+      "type": "boolean",
+      "const": true,
+      "description": "The flag indicating that the template is invalid"
+    }
+  }
+}

@@ -8,3 +8,5 @@ regex==2024.9.11
 types-regex==2024.9.11.20240912
 MarkupSafe==2.1.5
 more-itertools==10.5.0
+jsonschema==4.23.0
+types-jsonschema==4.23.0.20240813
