@@ -19,10 +19,23 @@ class TokenStream(peekable):  # type: ignore
     """Step through or iterate a stream of tokens."""
 
     def __str__(self) -> str:  # pragma: no cover
+        token = self.current()
+        peeked = self.peek()
+
         try:
-            return f"current: {self.current()}, next: {self.peek()}"
+            return (
+                f"current: '{token}' at {self._index(token)}, "
+                f"next: '{peeked}' at {self._index(peeked)}"
+            )
         except StopIteration:
             return "EOI"
+
+    def _index(self, token: TokenT | None) -> int:
+        if hasattr(token, "index"):
+            return token.index  # type: ignore
+        if hasattr(token, "span"):
+            return token.span[0]  # type: ignore
+        return -1
 
     def current(self) -> TokenT | None:
         """Return the item at self[0] without advancing the iterator."""

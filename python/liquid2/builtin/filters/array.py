@@ -17,7 +17,6 @@ from typing import Union
 
 from markupsafe import Markup
 
-from liquid2.builtin import NULL
 from liquid2.exceptions import FilterArgumentError
 from liquid2.exceptions import FilterError
 from liquid2.filter import array_filter
@@ -135,7 +134,7 @@ def concat(sequence: ArrayT, second_array: ArrayT) -> ArrayT:
 def map_(sequence: ArrayT, key: object) -> List[object]:
     """Return an array/list of items in _sequence_ selected by _key_."""
     try:
-        return [_getitem(itm, str(key), default=NULL) for itm in sequence]
+        return [_getitem(itm, str(key), default=None) for itm in sequence]
     except TypeError as err:
         raise FilterError("can't map sequence") from err
 

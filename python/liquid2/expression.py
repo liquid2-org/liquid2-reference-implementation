@@ -7,13 +7,18 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from liquid2 import TokenT
+
     from .context import RenderContext
 
 
 class Expression(ABC):
     """Base class for all Liquid expressions."""
 
-    __slots__ = ()
+    __slots__ = ("token",)
+
+    def __init__(self, token: TokenT) -> None:
+        self.token = token
 
     @abstractmethod
     def evaluate(self, context: RenderContext) -> object:

@@ -109,6 +109,18 @@
       "result": ""
     },
     {
+      "name": "less than, truthy, strings",
+      "template": "{% if 'abc' < 'acb' %}x{% endif %}",
+      "data": {},
+      "result": "x"
+    },
+    {
+      "name": "less than, falsy, strings",
+      "template": "{% if 'bbb' < 'aaa' %}x{% else %}y{% endif %}",
+      "data": {},
+      "result": "y"
+    },
+    {
       "name": "non-empty hash or dict or map is truthy",
       "template": "{% if a %}d{% endif %}",
       "data": { "a": { "b": "c" } },
@@ -131,6 +143,12 @@
       "template": "{% if nosuchthing %}a{% else %}b{% endif %}",
       "data": {},
       "result": "b"
+    },
+    {
+      "name": "undefined variables are equal to null",
+      "template": "{% if nosuchthing == null %}a{% else %}b{% endif %}",
+      "data": {},
+      "result": "a"
     },
     {
       "name": "nested, truthy",
@@ -179,6 +197,12 @@
       "template": "{% if 'foobar' contains 'baz' %}b{% else %}c{% endif %}",
       "data": {},
       "result": "c"
+    },
+    {
+      "name": "contains, string and integer",
+      "template": "{% if 'foo2bar' contains 2 %}a{% else %}b{% endif %}",
+      "data": {},
+      "result": "a"
     },
     {
       "name": "in, truthy, strings",
@@ -318,6 +342,22 @@
       "result": "a"
     },
     {
+      "name": "group terms with parentheses",
+      "template": "{% if (true and (false and (false or true))) %}a{% else %}b{% endif %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "unbalanced parentheses",
+      "template": "{% if true and (false and true %}a{% else %}b{% endif %}",
+      "invalid": true
+    },
+    {
+      "name": "more unbalanced parentheses",
+      "template": "{% if (true and (false and (false or true)) %}a{% else %}b{% endif %}",
+      "invalid": true
+    },
+    {
       "name": "zero is not equal to false",
       "template": "{% if 0 == false %}a{% else %}b{% endif %}",
       "data": {},
@@ -334,6 +374,33 @@
       "template": "{% if 0.0 %}a{% else %}b{% endif %}",
       "data": {},
       "result": "a"
+    },
+    {
+      "name": "missing whitespace after tag name",
+      "template": "{% iftrue %}a{% endif %}",
+      "invalid": true
+    },
+    {
+      "name": "no whitespace before tag name",
+      "template": "{%if true %}a{% endif %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "no whitespace after expression",
+      "template": "{% if true%}a{% endif %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "extra else block",
+      "template": "{% if false %}a{% else %}b{% else %}c{% endif %}",
+      "invalid": true
+    },
+    {
+      "name": "extra elsif block",
+      "template": "{% if false %}a{% else %}b{% elsif true %}c{% endif %}",
+      "invalid": true
     }
   ]
 }

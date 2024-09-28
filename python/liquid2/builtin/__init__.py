@@ -6,17 +6,11 @@ from typing import TYPE_CHECKING
 
 from .comments import Comment
 from .content import Content
-from .expressions import BLANK
-from .expressions import CONTINUE
-from .expressions import EMPTY
-from .expressions import FALSE
-from .expressions import NULL
-from .expressions import TRUE
 from .expressions import Blank
-from .expressions import Boolean
 from .expressions import BooleanExpression
 from .expressions import Continue
 from .expressions import Empty
+from .expressions import FalseLiteral
 from .expressions import Filter
 from .expressions import FilteredExpression
 from .expressions import FloatLiteral
@@ -33,6 +27,7 @@ from .expressions import RangeLiteral
 from .expressions import StringLiteral
 from .expressions import SymbolArgument
 from .expressions import TernaryFilteredExpression
+from .expressions import TrueLiteral
 from .expressions import is_truthy
 
 # TODO: export more expressions
@@ -83,14 +78,11 @@ if TYPE_CHECKING:
 
 __all__ = (
     "Blank",
-    "BLANK",
     "Boolean",
     "BooleanExpression",
     "Continue",
-    "CONTINUE",
     "Empty",
-    "EMPTY",
-    "FALSE",
+    "FalseLiteral",
     "Filter",
     "FilteredExpression",
     "FilteredExpression",
@@ -102,7 +94,6 @@ __all__ = (
     "LogicalNotExpression",
     "LogicalOrExpression",
     "Null",
-    "NULL",
     "PositionalArgument",
     "Query",
     "RangeLiteral",
@@ -110,7 +101,7 @@ __all__ = (
     "StringLiteral",
     "SymbolArgument",
     "TernaryFilteredExpression",
-    "TRUE",
+    "TrueLiteral",
     "Output",
     "Comment",
     "RawTag",
