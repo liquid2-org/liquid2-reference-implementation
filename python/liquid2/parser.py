@@ -76,7 +76,8 @@ class Parser:
         raw = tags["__RAW"]
 
         default_trim = self.env.trim
-        left_trim = default_trim
+        left_trim = stream.trim_carry
+        stream.trim_carry = default_trim
 
         nodes: list[Node] = []
 
@@ -95,10 +96,12 @@ class Parser:
                     left_trim = wc[-1]
                     nodes.append(output.parse(stream))
                 case Markup.Tag(_, wc, name):
+                    left_trim = wc[-1]
+
                     if name in end:
+                        stream.trim_carry = left_trim
                         break
 
-                    left_trim = wc[-1]
                     try:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:

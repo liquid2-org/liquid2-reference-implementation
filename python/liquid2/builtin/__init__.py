@@ -72,6 +72,7 @@ from .output import Output
 from .tags.assign_tag import AssignTag
 from .tags.if_tag import IfTag
 from .tags.raw_tag import RawTag
+from .tags.unless_tag import UnlessTag
 
 if TYPE_CHECKING:
     from ..environment import Environment  # noqa: TID252
@@ -108,6 +109,7 @@ __all__ = (
     "Content",
     "AssignTag",
     "IfTag",
+    "UnlessTag",
     "is_truthy",
 )
 
@@ -159,3 +161,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.tags["__RAW"] = RawTag(env)
     env.tags["assign"] = AssignTag(env)
     env.tags["if"] = IfTag(env)
+    env.tags["unless"] = UnlessTag(env)

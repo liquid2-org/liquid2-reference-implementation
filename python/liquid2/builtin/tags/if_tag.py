@@ -1,4 +1,4 @@
-"""The standard if tag."""
+"""The standard _if_ tag."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class IfNode(Node):
-    """The standard if tag."""
+    """The standard _if_ tag."""
 
     __slots__ = ("condition", "consequence", "alternatives", "alternative")
 
@@ -87,7 +87,7 @@ class IfNode(Node):
 
 
 class IfTag(Tag):
-    """The standard _raw_ tag."""
+    """The standard _if_ tag."""
 
     block = False
     node_class = IfNode

@@ -136,6 +136,69 @@
       "invalid": true
     },
     {
+      "name": "tags, unless, literal true, no alternative",
+      "template": "{% unless true %}a{% endunless %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, unless, literal false",
+      "template": "{% unless false %}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, literal true, alternative",
+      "template": "{% unless true %}a{% else %}b{% endunless %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, unless, literal true, truthy alternative",
+      "template": "{% unless true %}a{% elsif true %}b{% endunless %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, unless, literal true, falsy alternative",
+      "template": "{% unless true %}a{% elsif false %}b{% endunless %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, unless, literal true, falsy alternative, final alternative",
+      "template": "{% unless true %}a{% elsif false %}b{% else %}c{% endunless %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, unless, missing whitespace after tag name",
+      "template": "{% unlesstrue %}a{% endunless %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, unless, no whitespace before tag name",
+      "template": "{%unless false %}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, no whitespace after expression",
+      "template": "{% unless false%}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, extra else block",
+      "template": "{% unless true %}a{% else %}b{% else %}c{% endunless %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, unless, extra elsif block",
+      "template": "{% unless true %}a{% else %}b{% elsif true %}c{% endunless %}",
+      "invalid": true
+    },
+    {
       "name": "tags, if, literal true",
       "template": "{% if true %}a{% endif %}",
       "data": {},

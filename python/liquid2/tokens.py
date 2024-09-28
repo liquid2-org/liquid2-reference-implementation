@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Container
+from typing import Iterable
 from typing import Type
 
-from _liquid2 import Markup
 from more_itertools import peekable
+
+from liquid2 import Markup
+from liquid2 import Whitespace
 
 from .exceptions import LiquidSyntaxError
 
@@ -17,6 +20,10 @@ if TYPE_CHECKING:
 
 class TokenStream(peekable):  # type: ignore
     """Step through or iterate a stream of tokens."""
+
+    def __init__(self, iterable: Iterable[TokenT]) -> None:
+        super().__init__(iterable)
+        self.trim_carry = Whitespace.Default
 
     def __str__(self) -> str:  # pragma: no cover
         token = self.current()
