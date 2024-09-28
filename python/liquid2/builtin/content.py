@@ -34,7 +34,7 @@ class ContentNode(Node):
 
 
 class Content(Tag):
-    """The built in pseudo tag representing template text content."""
+    """The template text content pseudo tag."""
 
     block = False
     node_class = ContentNode

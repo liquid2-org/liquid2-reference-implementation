@@ -60,7 +60,24 @@ class TokenStream(peekable):  # type: ignore
         """Raise a _LiquidSyntaxError_ if the next token type does not match _typ_."""
         token = self.peek()
         if not isinstance(token, typ):
-            raise LiquidSyntaxError(token=token)
+            raise LiquidSyntaxError(
+                f"expected {typ.__name__}, found {token.__class__.__name__}",
+                token=token,
+            )
+
+    def expect_tag(self, tag_name: str) -> None:
+        """Raise a syntax error if the current token is not a tag with _tag_name_."""
+        token = self.current()
+        if not isinstance(token, Markup.Tag):
+            raise LiquidSyntaxError(
+                f"expected a '{tag_name}' tag, found {token.__class__.__name__}",
+                token=token,
+            )
+
+        if token.name != tag_name:
+            raise LiquidSyntaxError(
+                f"expected a '{tag_name}' tag, found {token.name}", token=token
+            )
 
     def is_tag(self, tag_name: str) -> bool:
         """Return _True_ if the current token is a tag named _tag_name_."""

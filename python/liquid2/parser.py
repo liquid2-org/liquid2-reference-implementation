@@ -80,8 +80,8 @@ class Parser:
 
         nodes: list[Node] = []
 
-        while not stream.peek_one_of(end):
-            match next(stream, None):
+        while True:
+            match stream.current():
                 case Markup.Content():
                     nodes.append(content.parse(stream, left_trim=left_trim))
                     left_trim = default_trim
@@ -95,6 +95,9 @@ class Parser:
                     left_trim = wc[-1]
                     nodes.append(output.parse(stream))
                 case Markup.Tag(_, wc, name):
+                    if name in end:
+                        break
+
                     left_trim = wc[-1]
                     try:
                         nodes.append(tags[name].parse(stream))
@@ -104,6 +107,8 @@ class Parser:
                         ) from err
                 case Markup.EOI() | None:
                     break
+
+            next(stream, None)
 
         return nodes
 

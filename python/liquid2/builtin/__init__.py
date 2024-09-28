@@ -33,6 +33,7 @@ from .expressions import RangeLiteral
 from .expressions import StringLiteral
 from .expressions import SymbolArgument
 from .expressions import TernaryFilteredExpression
+from .expressions import is_truthy
 
 # TODO: export more expressions
 from .filters.array import compact
@@ -74,6 +75,7 @@ from .filters.string import url_decode
 from .filters.string import url_encode
 from .output import Output
 from .tags.assign_tag import AssignTag
+from .tags.if_tag import IfTag
 from .tags.raw_tag import RawTag
 
 if TYPE_CHECKING:
@@ -114,6 +116,8 @@ __all__ = (
     "RawTag",
     "Content",
     "AssignTag",
+    "IfTag",
+    "is_truthy",
 )
 
 
@@ -163,3 +167,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.tags["__OUTPUT"] = Output(env)
     env.tags["__RAW"] = RawTag(env)
     env.tags["assign"] = AssignTag(env)
+    env.tags["if"] = IfTag(env)

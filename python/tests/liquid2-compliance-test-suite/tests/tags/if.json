@@ -1,0 +1,40 @@
+{
+  "tests": [
+    {
+      "name": "literal true",
+      "template": "{% if true %}a{% endif %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "literal false, no alternative",
+      "template": "{% if false %}a{% endif %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "literal false, alternative",
+      "template": "{% if false %}a{% else %}b{% endif %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "literal false, truthy alternative",
+      "template": "{% if false %}a{% elsif true %}b{% endif %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "literal false, falsy alternative",
+      "template": "{% if false %}a{% elsif false %}b{% endif %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "literal false, falsy alternative, final alternative",
+      "template": "{% if false %}a{% elsif false %}b{% else %}c{% endif %}",
+      "data": {},
+      "result": "c"
+    }
+  ]
+}
