@@ -73,6 +73,9 @@ class Undefined(Mapping[Any, object]):
     def __reversed__(self) -> Iterable[Any]:
         return []
 
+    def __liquid__(self) -> bool:
+        return False
+
 
 class DebugUndefined(Undefined):
     """An undefined that returns debug information when rendered."""
@@ -104,6 +107,7 @@ class StrictUndefined(Undefined):
             "obj",
             "msg",
             "path",
+            "token",
         ]
     )
 

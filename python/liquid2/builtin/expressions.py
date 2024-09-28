@@ -685,7 +685,8 @@ def parse_boolean_primitive(  # noqa: PLR0912
                 left = EMPTY
             elif value == "blank":
                 left = BLANK
-            raise LiquidSyntaxError(f"unknown word '{value}'", token=stream.current())
+            else:
+                left = Query(token, compile(parse_query(value)))
         case Token.RangeLiteral(_, start, stop):
             left = RangeLiteral(parse_primitive(start), parse_primitive(stop))
         case Token.StringLiteral(_, value):
@@ -708,14 +709,14 @@ def parse_boolean_primitive(  # noqa: PLR0912
             )
 
     while True:
-        peeked = stream.peek()
+        token = stream.current()
         if (
-            not peeked
-            or PRECEDENCES.get(peeked.__class__, PRECEDENCE_LOWEST) < precedence
+            not token
+            or PRECEDENCES.get(token.__class__, PRECEDENCE_LOWEST) < precedence
         ):
             break
 
-        if peeked.__class__ not in BINARY_OPERATORS:
+        if token.__class__ not in BINARY_OPERATORS:
             return left
 
         # next(stream)

@@ -45,6 +45,7 @@ def load_tests(path: Path) -> list[dict[str, Any]]:
         tests = json.load(fd)
 
     validate(instance=tests, schema=SCHEMA)
+    # TODO: check for duplicate test names
     return [add_prefix(prefix, test) for test in tests["tests"]]
 
 

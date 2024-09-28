@@ -16,12 +16,7 @@ if TYPE_CHECKING:
 
 
 class TokenStream(peekable):  # type: ignore
-    """Step through or iterate a stream of tokens.
-
-    Note that _peek()_ has been redefined to return self[1] rather than
-    self[0]. Use _current_ to get self[0].
-
-    """
+    """Step through or iterate a stream of tokens."""
 
     def __str__(self) -> str:  # pragma: no cover
         try:
@@ -30,14 +25,14 @@ class TokenStream(peekable):  # type: ignore
             return "EOI"
 
     def current(self) -> TokenT | None:
-        """Return the next token in the stream or None if there are no tokens."""
+        """Return the item at self[0] without advancing the iterator."""
         try:
             return self[0]  # type: ignore
         except IndexError:
             return None
 
     def peek(self) -> TokenT | None:  # type: ignore
-        """Return the item at self[1]."""
+        """Return the item at self[1] without advancing the iterator."""
         try:
             return self[1]  # type: ignore
         except IndexError:
