@@ -17,10 +17,12 @@ from .undefined import UNDEFINED
 from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
-    from _liquid2 import TokenT
+    from liquid2 import TokenT
+    from liquid2.builtin.tags.for_tag import ForLoop
 
     from .query import Query
     from .template import Template
+    from .undefined import Undefined
 
 
 class RenderContext:
@@ -39,6 +41,8 @@ class RenderContext:
         "scope",
         "auto_escape",
         "env",
+        "tag_namespace",
+        "loops",
     )
 
     def __init__(
@@ -71,6 +75,16 @@ class RenderContext:
 
         self.env = template.env
         self.auto_escape = self.env.auto_escape
+
+        # A namespace supporting stateful tags. Such as `cycle`, `increment`,
+        # `decrement` and `ifchanged`.
+        self.tag_namespace: dict[str, Any] = {
+            "cycles": {},
+            "stopindex": {},
+        }
+
+        # As stack of forloop objects. Used for populating forloop.parentloop.
+        self.loops: list[ForLoop] = []
 
     def assign(self, key: str, val: object) -> None:
         """Add _key_ to the local namespace with value _val_."""
@@ -141,6 +155,35 @@ class RenderContext:
             if template:
                 self.template = _template
             self.scope.pop()
+
+    def stopindex(self, key: str, index: int | None = None) -> int:
+        """Set or return the stop index of a for loop."""
+        if index is not None:
+            self.tag_namespace["stopindex"][key] = index
+            return index
+
+        idx: int = self.tag_namespace["stopindex"].get(key, 0)
+        return idx
+
+    @contextmanager
+    def loop(
+        self, namespace: Mapping[str, object], forloop: ForLoop
+    ) -> Iterator[RenderContext]:
+        """Just like `Context.extend`, but keeps track of ForLoop objects too."""
+        # TODO: self.raise_for_loop_limit(forloop.length)
+        self.loops.append(forloop)
+        with self.extend(namespace) as context:
+            try:
+                yield context
+            finally:
+                self.loops.pop()
+
+    def parentloop(self, token: TokenT) -> Undefined | object:
+        """Return the last ForLoop object from the loop stack."""
+        try:
+            return self.loops[-1]
+        except IndexError:
+            return self.env.undefined("parentloop", token=token)
 
 
 class BuiltIn(Mapping[str, object]):

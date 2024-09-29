@@ -32,7 +32,7 @@ class Undefined(Mapping[Any, object]):
 
     def __init__(
         self,
-        path: Query,
+        path: Query | str,
         *,
         token: TokenT,
         obj: object = UNDEFINED,

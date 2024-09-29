@@ -20,6 +20,7 @@ from .expressions import Literal
 from .expressions import LogicalAndExpression
 from .expressions import LogicalNotExpression
 from .expressions import LogicalOrExpression
+from .expressions import LoopExpression
 from .expressions import Null
 from .expressions import PositionalArgument
 from .expressions import Query
@@ -29,6 +30,7 @@ from .expressions import SymbolArgument
 from .expressions import TernaryFilteredExpression
 from .expressions import TrueLiteral
 from .expressions import is_truthy
+from .expressions import parse_identifier
 
 # TODO: export more expressions
 from .filters.array import compact
@@ -70,6 +72,7 @@ from .filters.string import url_decode
 from .filters.string import url_encode
 from .output import Output
 from .tags.assign_tag import AssignTag
+from .tags.for_tag import ForTag
 from .tags.if_tag import IfTag
 from .tags.raw_tag import RawTag
 from .tags.unless_tag import UnlessTag
@@ -78,9 +81,12 @@ if TYPE_CHECKING:
     from ..environment import Environment  # noqa: TID252
 
 __all__ = (
+    "AssignTag",
     "Blank",
     "Boolean",
     "BooleanExpression",
+    "Comment",
+    "Content",
     "Continue",
     "Empty",
     "FalseLiteral",
@@ -88,29 +94,29 @@ __all__ = (
     "FilteredExpression",
     "FilteredExpression",
     "FloatLiteral",
+    "IfTag",
     "IntegerLiteral",
+    "is_truthy",
     "KeywordArgument",
     "Literal",
     "LogicalAndExpression",
     "LogicalNotExpression",
     "LogicalOrExpression",
+    "LoopExpression",
     "Null",
+    "Output",
     "PositionalArgument",
     "Query",
     "RangeLiteral",
+    "RawTag",
     "register_standard_tags_and_filters",
     "StringLiteral",
     "SymbolArgument",
     "TernaryFilteredExpression",
     "TrueLiteral",
-    "Output",
-    "Comment",
-    "RawTag",
-    "Content",
-    "AssignTag",
-    "IfTag",
     "UnlessTag",
-    "is_truthy",
+    "ForTag",
+    "parse_identifier",
 )
 
 
@@ -162,3 +168,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.tags["assign"] = AssignTag(env)
     env.tags["if"] = IfTag(env)
     env.tags["unless"] = UnlessTag(env)
+    env.tags["for"] = ForTag(env)

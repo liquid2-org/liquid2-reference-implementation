@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import sys
 from decimal import Decimal
+from itertools import islice
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Collection
 from typing import Generic
+from typing import Iterator
+from typing import Mapping
+from typing import Sequence
 from typing import Type
 from typing import TypeVar
 from typing import cast
@@ -17,6 +21,7 @@ from _liquid2 import Token
 from _liquid2 import parse_query
 from markupsafe import Markup
 
+from liquid2.context import RenderContext
 from liquid2.exceptions import LiquidSyntaxError
 from liquid2.exceptions import LiquidTypeError
 from liquid2.expression import Expression
@@ -1026,6 +1031,199 @@ class InExpression(Expression):
             await self.right.evaluate_async(context),
             await self.left.evaluate_async(context),
         )
+
+
+class LoopExpression(Expression):
+    __slots__ = ("identifier", "iterable", "limit", "offset", "reversed", "cols")
+
+    def __init__(
+        self,
+        token: TokenT,
+        identifier: str,
+        iterable: Expression,
+        *,
+        limit: Expression | None,
+        offset: Expression | None,
+        reversed_: bool,
+        cols: Expression | None,
+    ) -> None:
+        super().__init__(token)
+        self.identifier = identifier
+        self.iterable = iterable
+        self.limit = limit
+        self.offset = offset
+        self.reversed = reversed_
+        self.cols = cols
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, LoopExpression)
+            and self.identifier == other.identifier
+            and self.iterable == other.iterable
+            and self.limit == other.limit
+            and self.offset == other.offset
+            and self.cols == other.cols
+            and self.reversed == other.reversed
+        )
+
+    def __str__(self) -> str:
+        buf = [f"{self.identifier} in", str(self.iterable)]
+
+        if self.limit is not None:
+            buf.append(f"limit:{self.limit}")
+
+        if self.offset is not None:
+            buf.append(f"offset:{self.offset}")
+
+        if self.cols is not None:
+            buf.append(f"cols:{self.cols}")
+
+        if self.reversed:
+            buf.append("reversed")
+
+        return " ".join(buf)
+
+    def _to_iter(self, obj: object) -> tuple[Iterator[Any], int]:
+        if isinstance(obj, Mapping):
+            return iter(obj.items()), len(obj)
+        if isinstance(obj, range):
+            return iter(obj), len(obj)
+        if isinstance(obj, Sequence):
+            return iter(obj), len(obj)
+
+        raise LiquidTypeError(
+            f"expected an iterable at '{self.iterable}', found '{obj}'",
+            token=self.token,
+        )
+
+    def _eval_int(self, expr: Expression | None, context: RenderContext) -> int | None:
+        if expr is None:
+            return None
+
+        val = expr.evaluate(context)
+        if not isinstance(val, int):
+            raise LiquidTypeError(
+                f"expected an integer, found {expr.__class__.__name__}",
+                token=expr.token,
+            )
+
+        return val
+
+    async def _eval_int_async(
+        self, expr: Expression | None, context: RenderContext
+    ) -> int | None:
+        if expr is None:
+            return None
+
+        val = await expr.evaluate_async(context)
+        if not isinstance(val, int):
+            raise LiquidTypeError(
+                f"expected an integer, found {expr.__class__.__name__}",
+                token=expr.token,
+            )
+
+        return val
+
+    def _slice(
+        self,
+        it: Iterator[object],
+        length: int,
+        context: RenderContext,
+        *,
+        limit: int | None,
+        offset: int | str | None,
+    ) -> tuple[Iterator[object], int]:
+        offset_key = f"{self.identifier}-{self.iterable}"
+
+        if limit is None and offset is None:
+            context.stopindex(key=offset_key, index=length)
+            if self.reversed:
+                return reversed(list(it)), length
+            return it, length
+
+        if offset == "continue":
+            offset = context.stopindex(key=offset_key)
+            length = max(length - offset, 0)
+        elif offset is not None:
+            assert isinstance(offset, int), f"found {offset!r}"
+            length = max(length - offset, 0)
+
+        if limit is not None:
+            length = min(length, limit)
+
+        stop = offset + length if offset else length
+        context.stopindex(key=offset_key, index=stop)
+        it = islice(it, offset, stop)
+
+        if self.reversed:
+            return reversed(list(it)), length
+        return it, length
+
+    def evaluate(self, context: RenderContext) -> tuple[Iterator[object], int]:
+        it, length = self._to_iter(self.iterable.evaluate(context))
+        limit = self._eval_int(self.limit, context)
+
+        if isinstance(self.offset, StringLiteral):
+            offset: str | int | None = self.offset.evaluate(context)
+            if offset != "continue":
+                raise LiquidSyntaxError(
+                    f"expected 'continue' or an integer, found '{offset}'",
+                    token=self.offset.token,
+                )
+        else:
+            offset = self._eval_int(self.offset, context)
+
+        return self._slice(it, length, context, limit=limit, offset=offset)
+
+    async def evaluate_async(
+        self, context: RenderContext
+    ) -> tuple[Iterator[object], int]:
+        it, length = self._to_iter(await self.iterable.evaluate_async(context))
+        limit = await self._eval_int_async(self.limit, context)
+
+        if isinstance(self.offset, StringLiteral):
+            offset: str | int | None = self.offset.evaluate(context)
+            if offset != "continue":
+                raise LiquidSyntaxError(
+                    f"expected 'continue' or an integer, found '{offset}'",
+                    token=self.offset.token,
+                )
+        else:
+            offset = await self._eval_int_async(self.offset, context)
+
+        return self._slice(it, length, context, limit=limit, offset=offset)
+
+    @staticmethod
+    def parse(stream: TokenStream) -> LoopExpression:
+        """Parse tokens from _stream_ in to a LoopExpression."""
+        token = stream.current()
+        identifier = parse_identifier(token)
+        next(stream, None)
+        stream.expect(Token.In)
+        next(stream)
+        iterable = parse_primitive(stream.current())
+
+        # TODO: parse loop arguments
+        raise NotImplementedError
+
+
+def parse_identifier(token: TokenT | None) -> str:
+    """Parse _token_ as an identifier."""
+    match token:
+        case Token.Word(_, value):
+            return value
+        case Token.Query(_, path):
+            word = path.as_word()
+            if word is None:
+                raise LiquidSyntaxError(
+                    "expected an identifier, found a path", token=token
+                )
+            return word
+        case _:
+            raise LiquidSyntaxError(
+                f"expected an identifier, found {token.__class__.__name__}",
+                token=token,
+            )
 
 
 def is_truthy(obj: object) -> bool:

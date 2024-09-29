@@ -38,6 +38,10 @@ class Environment:
         self.parser = Parser(self)
 
         # TODO: raise if trim is set to "Default"
+        # TODO: environment globals
+        # TODO: loaders, loaders that handle caching
+        # TODO: limits
+        # TODO: template_class
 
     def parse(self, source: str) -> list[Node]:
         """Compile template source text and return an abstract syntax tree."""
