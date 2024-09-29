@@ -2,6 +2,244 @@
   "description": "Liquid2 compliance test suite",
   "tests": [
     {
+      "name": "tags, for, range literal",
+      "template": "{% for a in (1..3) %}{{ a }},{% endfor %}",
+      "data": {},
+      "result": "1,2,3,"
+    },
+    {
+      "name": "tags, for, array",
+      "template": "{% for a in b %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "1,2,3,"
+    },
+    {
+      "name": "tags, for, hash or dict or map",
+      "template": "{% for a in b %}{{ a[0] }} {{ a[1] }},{% endfor %}",
+      "data": {
+        "b": {
+          "x": 1,
+          "y": 2,
+          "z": 3
+        }
+      },
+      "result": "x 1,y 2,z 3,"
+    },
+    {
+      "name": "tags, for, empty array",
+      "template": "{% for a in b %}{{ a }},{% endfor %}",
+      "data": {
+        "b": []
+      },
+      "result": ""
+    },
+    {
+      "name": "tags, for, empty array with default",
+      "template": "{% for a in b %}{{ a }},{% else %}c{% endfor %}",
+      "data": {
+        "b": []
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, for, string",
+      "template": "{% for a in '123' %}{{ a }},{% endfor %}",
+      "data": {},
+      "result": "1,2,3,"
+    },
+    {
+      "name": "tags, for, break",
+      "template": "{% for a in b %}{{ a }},{% if a == 2 %}{% break %}{% endif %}{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "1,2,"
+    },
+    {
+      "name": "tags, for, continue",
+      "template": "{% for a in b %}{% if a == 2 %}{% continue %}{% endif %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "1,3,"
+    },
+    {
+      "name": "tags, for, array, limit, colon",
+      "template": "{% for a in b limit:3 %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "1,2,3,"
+    },
+    {
+      "name": "tags, for, array, limit, equals",
+      "template": "{% for a in b limit=3 %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "1,2,3,"
+    },
+    {
+      "name": "tags, for, array, offset, colon",
+      "template": "{% for a in b offset:2 %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "3,4,5,"
+    },
+    {
+      "name": "tags, for, array, offset, equals",
+      "template": "{% for a in b offset=2 %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "3,4,5,"
+    },
+    {
+      "name": "tags, for, array, reversed",
+      "template": "{% for a in b reversed %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "3,2,1,"
+    },
+    {
+      "name": "tags, for, comma separated arguments",
+      "template": "{% for a in b offset:1, limit:3, reversed %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "4,3,2,"
+    },
+    {
+      "name": "tags, for, space separated arguments",
+      "template": "{% for a in b offset:1 limit:3 reversed %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "4,3,2,"
+    },
+    {
+      "name": "tags, for, reversed is first",
+      "template": "{% for a in b reversed offset:1, limit:3 %}{{ a }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "4,3,2,"
+    },
+    {
+      "name": "tags, for, length",
+      "template": "{% for a in b %}{{ a }} {{ forloop.length }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "1 3,2 3,3 3,"
+    },
+    {
+      "name": "tags, for, length, limit",
+      "template": "{% for a in b limit:3 %}{{ a }} {{ forloop.length }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "1 3,2 3,3 3,"
+    },
+    {
+      "name": "tags, for, length, offset",
+      "template": "{% for a in b offset:2 %}{{ a }} {{ forloop.length }},{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "result": "3 3,4 3,5 3,"
+    },
+    {
+      "name": "tags, for, forloop goes out of scope",
+      "template": "{% for a in b %}{{ a }} {{ forloop.length }},{% endfor %}{{ forloop.length }}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "1 3,2 3,3 3,"
+    },
+    {
       "name": "tags, assign, string literal",
       "template": "{% assign a = 'b' %}{{ a }}",
       "data": {},

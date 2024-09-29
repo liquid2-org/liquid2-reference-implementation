@@ -1,0 +1,124 @@
+{
+  "tests": [
+    {
+      "name": "range literal",
+      "template": "{% for a in (1..3) %}{{ a }},{% endfor %}",
+      "data": {},
+      "result": "1,2,3,"
+    },
+    {
+      "name": "array",
+      "template": "{% for a in b %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1,2,3,"
+    },
+    {
+      "name": "hash or dict or map",
+      "template": "{% for a in b %}{{ a[0] }} {{ a[1] }},{% endfor %}",
+      "data": { "b": { "x": 1, "y": 2, "z": 3 } },
+      "result": "x 1,y 2,z 3,"
+    },
+    {
+      "name": "empty array",
+      "template": "{% for a in b %}{{ a }},{% endfor %}",
+      "data": { "b": [] },
+      "result": ""
+    },
+    {
+      "name": "empty array with default",
+      "template": "{% for a in b %}{{ a }},{% else %}c{% endfor %}",
+      "data": { "b": [] },
+      "result": "c"
+    },
+    {
+      "name": "string",
+      "template": "{% for a in '123' %}{{ a }},{% endfor %}",
+      "data": {},
+      "result": "1,2,3,"
+    },
+    {
+      "name": "break",
+      "template": "{% for a in b %}{{ a }},{% if a == 2 %}{% break %}{% endif %}{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1,2,"
+    },
+    {
+      "name": "continue",
+      "template": "{% for a in b %}{% if a == 2 %}{% continue %}{% endif %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1,3,"
+    },
+    {
+      "name": "array, limit, colon",
+      "template": "{% for a in b limit:3 %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "1,2,3,"
+    },
+    {
+      "name": "array, limit, equals",
+      "template": "{% for a in b limit=3 %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "1,2,3,"
+    },
+    {
+      "name": "array, offset, colon",
+      "template": "{% for a in b offset:2 %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "3,4,5,"
+    },
+    {
+      "name": "array, offset, equals",
+      "template": "{% for a in b offset=2 %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "3,4,5,"
+    },
+    {
+      "name": "array, reversed",
+      "template": "{% for a in b reversed %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "3,2,1,"
+    },
+    {
+      "name": "comma separated arguments",
+      "template": "{% for a in b offset:1, limit:3, reversed %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "4,3,2,"
+    },
+    {
+      "name": "space separated arguments",
+      "template": "{% for a in b offset:1 limit:3 reversed %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "4,3,2,"
+    },
+    {
+      "name": "reversed is first",
+      "template": "{% for a in b reversed offset:1, limit:3 %}{{ a }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "4,3,2,"
+    },
+    {
+      "name": "length",
+      "template": "{% for a in b %}{{ a }} {{ forloop.length }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 3,2 3,3 3,"
+    },
+    {
+      "name": "length, limit",
+      "template": "{% for a in b limit:3 %}{{ a }} {{ forloop.length }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "1 3,2 3,3 3,"
+    },
+    {
+      "name": "length, offset",
+      "template": "{% for a in b offset:2 %}{{ a }} {{ forloop.length }},{% endfor %}",
+      "data": { "b": [1, 2, 3, 4, 5] },
+      "result": "3 3,4 3,5 3,"
+    },
+    {
+      "name": "forloop goes out of scope",
+      "template": "{% for a in b %}{{ a }} {{ forloop.length }},{% endfor %}{{ forloop.length }}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 3,2 3,3 3,"
+    }
+  ]
+}

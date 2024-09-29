@@ -1200,11 +1200,56 @@ class LoopExpression(Expression):
         identifier = parse_identifier(token)
         next(stream, None)
         stream.expect(Token.In)
-        next(stream)
+        next(stream)  # Move past 'in'
         iterable = parse_primitive(stream.current())
+        next(stream)  # Move past identifier
 
-        # TODO: parse loop arguments
-        raise NotImplementedError
+        reversed_ = False
+        offset: Expression | None = None
+        limit: Expression | None = None
+
+        while True:
+            arg_token = next(stream, None)
+            match arg_token:
+                case Token.Word(_, value):
+                    match value:
+                        case "reversed":
+                            reversed_ = True
+                        case "limit":
+                            stream.expect_one_of(Token.Colon, Token.Assign)
+                            next(stream)
+                            limit = parse_primitive(next(stream, None))
+                        case "offset":
+                            stream.expect_one_of(Token.Colon, Token.Assign)
+                            next(stream)
+                            offset = parse_primitive(next(stream, None))
+                        case _:
+                            raise LiquidSyntaxError(
+                                "expected 'reversed', 'offset' or 'limit', "
+                                f"found '{value}'",
+                                token=arg_token,
+                            )
+                case Token.Comma():
+                    continue
+                case None:
+                    break
+                case _:
+                    raise LiquidSyntaxError(
+                        f"expected 'reversed', 'offset' or 'limit', found '{value}' "
+                        f"of type {arg_token.__class__.__name__}",
+                        token=arg_token,
+                    )
+
+        assert token is not None
+        return LoopExpression(
+            token,
+            identifier,
+            iterable,
+            limit=limit,
+            offset=offset,
+            reversed_=reversed_,
+            cols=None,
+        )
 
 
 def parse_identifier(token: TokenT | None) -> str:

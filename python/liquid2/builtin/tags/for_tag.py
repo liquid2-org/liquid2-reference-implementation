@@ -282,3 +282,23 @@ class ContinueNode(Node):
     def render_to_output(self, _context: RenderContext, _buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         raise ContinueLoop("continue")
+
+
+class BreakTag(Tag):
+    """The built-in "break" tag."""
+
+    block = False
+
+    def parse(self, stream: TokenStream) -> BreakNode:
+        """Parse tokens from _stream_ into an AST node."""
+        return BreakNode(stream.current())  # type: ignore
+
+
+class ContinueTag(Tag):
+    """The built-in "continue" tag."""
+
+    block = False
+
+    def parse(self, stream: TokenStream) -> ContinueNode:
+        """Parse tokens from _stream_ into an AST node."""
+        return ContinueNode(stream.current())  # type: ignore

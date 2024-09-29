@@ -71,6 +71,16 @@ class TokenStream(peekable):  # type: ignore
                 token=token,
             )
 
+    def expect_one_of(self, *types: Type[TokenT]) -> None:
+        """Raise a _LiquidSyntaxError_ if the current token type is not in _types_."""
+        token = self.current()
+        if not isinstance(token, types):
+            type_string = " or ".join([t.__name__ for t in types])
+            raise LiquidSyntaxError(
+                f"expected {type_string}, found {token.__class__.__name__}",
+                token=token,
+            )
+
     def expect_peek(self, typ: Type[TokenT]) -> None:
         """Raise a _LiquidSyntaxError_ if the next token type does not match _typ_."""
         token = self.peek()

@@ -9,6 +9,8 @@ from typing import Mapping
 from typing import TextIO
 
 from .context import RenderContext
+from .exceptions import LiquidInterrupt
+from .exceptions import LiquidSyntaxError
 from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
@@ -62,6 +64,7 @@ class Template:
         context: RenderContext,
         buf: TextIO,
         *args: Any,
+        partial: bool = False,
         **kwargs: Any,
     ) -> None:
         """Render this template using an existing render context and output buffer."""
@@ -70,7 +73,14 @@ class Template:
 
         with context.extend(namespace):
             for node in self.nodes:
-                node.render(context, buf)
+                try:
+                    node.render(context, buf)
+                except LiquidInterrupt as err:
+                    if not partial:
+                        raise LiquidSyntaxError(
+                            f"unexpected '{err}'", token=node.token
+                        ) from err
+                    raise
 
     def make_globals(self, render_args: Mapping[str, object]) -> Mapping[str, object]:
         """Return a mapping including render arguments and template globals."""
