@@ -305,8 +305,6 @@ class FunctionExtension(Expression):
         except KeyError:
             return NOTHING
         args = [arg.evaluate(context) for arg in self.args]
-        print("$$", self.args)
-        print("££", args)
         return func(*self._unpack_node_lists(func, args))
 
     def _unpack_node_lists(

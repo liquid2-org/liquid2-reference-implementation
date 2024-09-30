@@ -7,10 +7,17 @@ from typing import Callable
 from typing import Mapping
 from typing import Type
 
+from _liquid2 import LiquidExtensionError as _LiquidExtensionError
+from _liquid2 import LiquidNameError as _LiquidNameError
+from _liquid2 import LiquidSyntaxError as _LiquidSyntaxError
+from _liquid2 import LiquidTypeError as _LiquidTypeError
 from _liquid2 import Whitespace
 from _liquid2 import tokenize
 
 from .builtin import register_standard_tags_and_filters
+from .exceptions import LiquidError
+from .exceptions import LiquidSyntaxError
+from .exceptions import LiquidTypeError
 from .parser import Parser
 from .template import Template
 from .undefined import Undefined
@@ -45,9 +52,16 @@ class Environment:
 
     def parse(self, source: str) -> list[Node]:
         """Compile template source text and return an abstract syntax tree."""
-        # TODO: handle token errors
-        # TODO: handle parser errors
-        return self.parser.parse(tokenize(source))
+        # TODO: pass tokens to exceptions
+        # XXX:
+        try:
+            return self.parser.parse(tokenize(source))
+        except _LiquidSyntaxError as err:
+            raise LiquidSyntaxError(err, token=None) from err
+        except _LiquidTypeError as err:
+            raise LiquidTypeError(err, token=None) from err
+        except (_LiquidNameError, _LiquidExtensionError) as err:
+            raise LiquidError(err, token=None) from err
 
     def from_string(
         self,

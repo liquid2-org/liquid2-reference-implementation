@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from _liquid2 import TokenT
 
 
-class Error(Exception):
+class LiquidError(Exception):
     """Base class for all Liquid exceptions."""
 
     def __init__(
@@ -63,15 +63,15 @@ class StopRender(Exception):  # noqa: N818
     """
 
 
-class LiquidEnvironmentError(Error):
+class LiquidEnvironmentError(LiquidError):
     """An exception raised due to a misconfigured environment."""
 
 
-class LiquidSyntaxError(Error):
+class LiquidSyntaxError(LiquidError):
     """Exception raised when there is a parser error."""
 
 
-class TemplateInheritanceError(Error):
+class TemplateInheritanceError(LiquidError):
     """An exceptions raised when template inheritance tags are used incorrectly.
 
     This could occur when parsing a template or at render time.
@@ -82,19 +82,19 @@ class RequiredBlockError(TemplateInheritanceError):
     """An exception raised when a required block has not been overridden."""
 
 
-class LiquidTypeError(Error):
+class LiquidTypeError(LiquidError):
     """Exception raised when an error occurs at render time."""
 
 
-class DisabledTagError(Error):
+class DisabledTagError(LiquidError):
     """Exception raised when an attempt is made to render a disabled tag."""
 
 
-class NoSuchFilterFunc(Error):  # noqa: N818
+class NoSuchFilterFunc(LiquidError):  # noqa: N818
     """Exception raised when a filter lookup fails."""
 
 
-class FilterError(Error):
+class FilterError(LiquidError):
     """Exception raised when a filter fails."""
 
     def __init__(
@@ -114,7 +114,7 @@ class FilterValueError(FilterError):
     """Exception raised when a filters value is invalid."""
 
 
-class TemplateNotFound(Error):  # noqa: N818
+class TemplateNotFound(LiquidError):  # noqa: N818
     """Exception raised when a template could not be found."""
 
     def __init__(
@@ -130,7 +130,7 @@ class TemplateNotFound(Error):  # noqa: N818
         return f"template not found {msg}"
 
 
-class ResourceLimitError(Error):
+class ResourceLimitError(LiquidError):
     """Base class for exceptions relating to resource limits."""
 
 
@@ -163,7 +163,7 @@ class LiquidValueError(LiquidSyntaxError):
     """Exception raised when a cast from str to int exceeds the length limit."""
 
 
-class UndefinedError(Error):
+class UndefinedError(LiquidError):
     """Exception raised by the StrictUndefined type."""
 
 
@@ -175,7 +175,7 @@ class ContinueLoop(LiquidInterrupt):
     """Exception raised when a ContinueNode is rendered."""
 
 
-class TemplateTraversalError(Error):
+class TemplateTraversalError(LiquidError):
     """Exception raised when an AST node or expression can not be visited."""
 
 

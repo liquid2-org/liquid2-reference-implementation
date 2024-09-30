@@ -2,13 +2,12 @@ pub mod errors;
 pub mod lexer;
 pub mod markup;
 pub mod query;
+pub mod unescape;
 
 use errors::LiquidError;
 use markup::Markup;
 use pyo3::prelude::*;
 use query::Query;
-
-// TODO: pymethods
 
 #[pyfunction]
 fn tokenize(source: &str) -> Result<Vec<Markup>, LiquidError> {
@@ -25,7 +24,11 @@ fn dump(source: &str) {
     lexer::Lexer::new().dump(source);
 }
 
-/// A Python module implemented in Rust.
+#[pyfunction]
+fn unescape_string(s: &str) -> Result<String, LiquidError> {
+    unescape::unescape(s, (0, 0))
+}
+
 #[pymodule]
 fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add(
@@ -51,6 +54,7 @@ fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(dump, m)?)?;
     m.add_function(wrap_pyfunction!(tokenize, m)?)?;
     m.add_function(wrap_pyfunction!(parse_query, m)?)?;
+    m.add_function(wrap_pyfunction!(unescape_string, m)?)?;
     m.add_class::<query::Segment>()?;
     m.add_class::<query::Selector>()?;
     m.add_class::<query::ComparisonOperator>()?;

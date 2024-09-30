@@ -8,6 +8,7 @@ use crate::markup::{Markup, RangeArgument, Token, Whitespace};
 use crate::query::{
     ComparisonOperator, FilterExpression, LogicalOperator, Query, Segment, Selector,
 };
+use crate::unescape::unescape;
 
 #[derive(Parser)]
 #[grammar = "markup.pest"]
@@ -365,10 +366,10 @@ impl QueryParser {
     fn parse_selector(&self, selector: Pair<Rule>) -> Result<Selector, LiquidError> {
         Ok(match selector.as_rule() {
             Rule::double_quoted => Selector::Name {
-                name: unescape_string(selector.as_str()),
+                name: unescape(selector.as_str(), selector.line_col())?,
             },
             Rule::single_quoted => Selector::Name {
-                name: unescape_string(&selector.as_str().replace("\\'", "'")),
+                name: unescape(&selector.as_str().replace("\\'", "'"), selector.line_col())?,
             },
             Rule::wildcard_selector => Selector::Wild {},
             Rule::slice_selector => self.parse_slice_selector(selector)?,
@@ -532,40 +533,20 @@ impl QueryParser {
         Ok(match expr.as_rule() {
             Rule::number => self.parse_number(expr)?,
             Rule::double_quoted => FilterExpression::StringLiteral {
-                value: unescape_string(expr.as_str()),
+                value: unescape(expr.as_str(), expr.line_col())?,
             },
             Rule::single_quoted => FilterExpression::StringLiteral {
-                value: unescape_string(&expr.as_str().replace("\\'", "'")),
+                value: unescape(&expr.as_str().replace("\\'", "'"), expr.line_col())?,
             },
             Rule::true_literal => FilterExpression::True_ {},
             Rule::false_literal => FilterExpression::False_ {},
             Rule::null => FilterExpression::Null {},
-            Rule::rel_singular_query => {
-                // XXX: unwrap and self.parse() instead of map to parse_segment()
-                let segments: Result<Vec<_>, _> = expr
-                    .into_inner()
-                    .map(|segment| self.parse_segment(segment))
-                    .collect();
-
-                FilterExpression::RelativeQuery {
-                    query: Box::new(Query {
-                        segments: segments?,
-                    }),
-                }
-            }
-            Rule::abs_singular_query => {
-                // XXX: unwrap and self.parse() instead of map to parse_segment()
-                let segments: Result<Vec<_>, _> = expr
-                    .into_inner()
-                    .map(|segment| self.parse_segment(segment))
-                    .collect();
-
-                FilterExpression::RootQuery {
-                    query: Box::new(Query {
-                        segments: segments?,
-                    }),
-                }
-            }
+            Rule::rel_singular_query => FilterExpression::RelativeQuery {
+                query: Box::new(self.parse(expr.into_inner())?),
+            },
+            Rule::abs_singular_query => FilterExpression::RootQuery {
+                query: Box::new(self.parse(expr.into_inner())?),
+            },
             Rule::function_expr => self.parse_function_expression(expr)?,
             _ => unreachable!(),
         })
@@ -638,30 +619,12 @@ impl QueryParser {
         expr: Pair<Rule>,
     ) -> Result<FilterExpression, LiquidError> {
         Ok(match expr.as_rule() {
-            Rule::rel_query => {
-                let segments: Result<Vec<_>, _> = expr
-                    .into_inner()
-                    .map(|segment| self.parse_segment(segment))
-                    .collect();
-
-                FilterExpression::RelativeQuery {
-                    query: Box::new(Query {
-                        segments: segments?,
-                    }),
-                }
-            }
-            Rule::root_query => {
-                let segments: Result<Vec<_>, _> = expr
-                    .into_inner()
-                    .map(|segment| self.parse_segment(segment))
-                    .collect();
-
-                FilterExpression::RootQuery {
-                    query: Box::new(Query {
-                        segments: segments?,
-                    }),
-                }
-            }
+            Rule::rel_query => FilterExpression::RelativeQuery {
+                query: Box::new(self.parse(expr.into_inner())?),
+            },
+            Rule::root_query => FilterExpression::RootQuery {
+                query: Box::new(self.parse(expr.into_inner())?),
+            },
             Rule::function_expr => self.parse_function_expression(expr)?,
             _ => unreachable!(),
         })
@@ -682,20 +645,28 @@ impl QueryParser {
         Ok(match expr.as_rule() {
             Rule::number => self.parse_number(expr)?,
             Rule::double_quoted => FilterExpression::StringLiteral {
-                value: unescape_string(expr.as_str()),
+                value: unescape(expr.as_str(), expr.line_col())?,
             },
             Rule::single_quoted => FilterExpression::StringLiteral {
-                value: unescape_string(&expr.as_str().replace("\\'", "'")),
+                value: unescape(&expr.as_str().replace("\\'", "'"), expr.line_col())?,
             },
             Rule::true_literal => FilterExpression::True_ {},
             Rule::false_literal => FilterExpression::False_ {},
             Rule::null => FilterExpression::Null {},
             Rule::rel_query => FilterExpression::RelativeQuery {
-                query: Box::new(self.parse(expr.into_inner().next().unwrap().into_inner())?),
+                query: Box::new(self.parse(expr.into_inner())?),
             },
-            Rule::root_query => FilterExpression::RootQuery {
-                query: Box::new(self.parse(expr.into_inner().next().unwrap().into_inner())?),
-            },
+            Rule::root_query => {
+                if let Some(segments) = expr.into_inner().next() {
+                    FilterExpression::RootQuery {
+                        query: Box::new(self.parse(segments.into_inner())?),
+                    }
+                } else {
+                    FilterExpression::RootQuery {
+                        query: Box::new(Query { segments: vec![] }),
+                    }
+                }
+            }
             Rule::logical_or_expr => self.parse_logical_or_expression(expr, false)?,
             Rule::function_expr => self.parse_function_expression(expr)?,
             _ => unreachable!(),
@@ -877,72 +848,6 @@ impl QueryParser {
             _ => false,
         }
     }
-}
-
-// TODO: improve
-fn unescape_string(value: &str) -> String {
-    let chars = value.chars().collect::<Vec<char>>();
-    let length = chars.len();
-    let mut rv = String::new();
-    let mut index: usize = 0;
-
-    while index < length {
-        match chars[index] {
-            '\\' => {
-                index += 1;
-
-                match chars[index] {
-                    '"' => rv.push('"'),
-                    '\\' => rv.push('\\'),
-                    '/' => rv.push('/'),
-                    'b' => rv.push('\x08'),
-                    'f' => rv.push('\x0C'),
-                    'n' => rv.push('\n'),
-                    'r' => rv.push('\r'),
-                    't' => rv.push('\t'),
-                    'u' => {
-                        index += 1;
-
-                        let digits = chars
-                            .get(index..index + 4)
-                            .unwrap()
-                            .iter()
-                            .collect::<String>();
-
-                        let mut codepoint = u32::from_str_radix(&digits, 16).unwrap();
-
-                        if index + 5 < length && chars[index + 4] == '\\' && chars[index + 5] == 'u'
-                        {
-                            let digits = &chars
-                                .get(index + 6..index + 10)
-                                .unwrap()
-                                .iter()
-                                .collect::<String>();
-
-                            let low_surrogate = u32::from_str_radix(digits, 16).unwrap();
-
-                            codepoint =
-                                0x10000 + (((codepoint & 0x03FF) << 10) | (low_surrogate & 0x03FF));
-
-                            index += 6;
-                        }
-
-                        let unescaped = char::from_u32(codepoint).unwrap();
-                        rv.push(unescaped);
-                        index += 3;
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            c => {
-                rv.push(c);
-            }
-        }
-
-        index += 1;
-    }
-
-    rv
 }
 
 #[derive(Debug)]

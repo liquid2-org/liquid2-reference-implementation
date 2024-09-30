@@ -129,3 +129,4 @@ convention = "google"
 "python/liquid2/__init__.py" = ["I001"]
 "python/liquid2/builtin/expressions.py" = ["D101", "D102"]
 "python/tests/test_compliance.py" = ["D103"]
+"python/tests/test_jsonpath_compliance.py" = ["D103"]

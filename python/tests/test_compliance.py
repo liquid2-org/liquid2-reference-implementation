@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 from liquid2 import Environment
-from liquid2.exceptions import Error
+from liquid2.exceptions import LiquidError
 
 
 @dataclass
@@ -63,7 +63,7 @@ def test_compliance_async(env: Environment, case: Case) -> None:
 
 @pytest.mark.parametrize("case", invalid_cases(), ids=operator.attrgetter("name"))
 def test_invalid_compliance(env: Environment, case: Case) -> None:
-    with pytest.raises(Error):
+    with pytest.raises(LiquidError):
         env.from_string(case.template).render(**case.data)
 
 
@@ -73,5 +73,5 @@ def test_invalid_compliance_async(env: Environment, case: Case) -> None:
         template = env.from_string(case.template)
         return template.render(**case.data)
 
-    with pytest.raises(Error):
+    with pytest.raises(LiquidError):
         asyncio.run(coro())
