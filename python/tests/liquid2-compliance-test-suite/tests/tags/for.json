@@ -115,10 +115,79 @@
       "result": "3 3,4 3,5 3,"
     },
     {
+      "name": "first",
+      "template": "{% for a in b %}{{ a }} {{ forloop.first }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 true,2 false,3 false,"
+    },
+    {
+      "name": "first, offset",
+      "template": "{% for a in b offset:1 %}{{ a }} {{ forloop.first }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "2 true,3 false,"
+    },
+    {
+      "name": "last",
+      "template": "{% for a in b %}{{ a }} {{ forloop.last }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 false,2 false,3 true,"
+    },
+    {
+      "name": "last, limit",
+      "template": "{% for a in b limit:2 %}{{ a }} {{ forloop.last }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 false,2 true,"
+    },
+    {
+      "name": "index",
+      "template": "{% for a in b %}{{ a }} {{ forloop.index }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 1,2 2,3 3,"
+    },
+    {
+      "name": "index0",
+      "template": "{% for a in b %}{{ a }} {{ forloop.index0 }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 0,2 1,3 2,"
+    },
+    {
+      "name": "rindex",
+      "template": "{% for a in b %}{{ a }} {{ forloop.rindex }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 3,2 2,3 1,"
+    },
+    {
+      "name": "rindex0",
+      "template": "{% for a in b %}{{ a }} {{ forloop.rindex0 }},{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "1 2,2 1,3 0,"
+    },
+    {
+      "name": "name",
+      "template": "{% for a in b limit:1 %}{{ forloop.name }}{% endfor %}",
+      "data": { "b": [1, 2, 3] },
+      "result": "a-$['b']"
+    },
+    {
+      "name": "name, range",
+      "template": "{% for a in (1..3) limit:1 %}{{ forloop.name }}{% endfor %}",
+      "data": {},
+      "result": "a-(1..3)"
+    },
+    {
       "name": "forloop goes out of scope",
       "template": "{% for a in b %}{{ a }} {{ forloop.length }},{% endfor %}{{ forloop.length }}",
       "data": { "b": [1, 2, 3] },
       "result": "1 3,2 3,3 3,"
+    },
+    {
+      "name": "iterate nested path",
+      "template": "{% for link in linklists[section.settings.menu].links %}{{ link }} {% endfor %}",
+      "data": {
+        "linklists": { "main": { "links": ["1", "2"] } },
+        "section": { "settings": { "menu": "main" } }
+      },
+      "result": "1 2 "
     }
   ]
 }

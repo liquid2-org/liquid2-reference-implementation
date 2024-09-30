@@ -103,7 +103,7 @@ class RenderContext:
         if len(nodes) == 1:
             return nodes[0].value
 
-        return nodes
+        return nodes.values()
 
     def filter(self, name: str, *, token: TokenT) -> Callable[..., object]:
         """Return the filter callable for _name_."""

@@ -42,6 +42,7 @@ class JSONPathQuery:
         self.segments = segments
 
     def __str__(self) -> str:
+        # TODO: canonical string repr or closer to legacy liquid?
         return "$" + "".join(str(segment) for segment in self.segments)
 
     def __hash__(self) -> int:

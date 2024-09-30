@@ -331,6 +331,14 @@ impl QueryParser {
                     selectors: vec![self.parse_selector(segment.into_inner().next().unwrap())?],
                 }
             }
+            Rule::member_name_shorthand => {
+                // Implicit root segment from singular query selector.
+                Segment::Child {
+                    selectors: vec![Selector::Name {
+                        name: segment.as_str().to_owned(),
+                    }],
+                }
+            }
             Rule::EOI => Segment::Eoi {},
             _ => unreachable!("Rule: {:#?}", segment),
         })
@@ -533,6 +541,7 @@ impl QueryParser {
             Rule::false_literal => FilterExpression::False_ {},
             Rule::null => FilterExpression::Null {},
             Rule::rel_singular_query => {
+                // XXX: unwrap and self.parse() instead of map to parse_segment()
                 let segments: Result<Vec<_>, _> = expr
                     .into_inner()
                     .map(|segment| self.parse_segment(segment))
@@ -545,6 +554,7 @@ impl QueryParser {
                 }
             }
             Rule::abs_singular_query => {
+                // XXX: unwrap and self.parse() instead of map to parse_segment()
                 let segments: Result<Vec<_>, _> = expr
                     .into_inner()
                     .map(|segment| self.parse_segment(segment))
@@ -680,30 +690,12 @@ impl QueryParser {
             Rule::true_literal => FilterExpression::True_ {},
             Rule::false_literal => FilterExpression::False_ {},
             Rule::null => FilterExpression::Null {},
-            Rule::rel_query => {
-                let segments: Result<Vec<_>, _> = expr
-                    .into_inner()
-                    .map(|segment| self.parse_segment(segment))
-                    .collect();
-
-                FilterExpression::RelativeQuery {
-                    query: Box::new(Query {
-                        segments: segments?,
-                    }),
-                }
-            }
-            Rule::root_query => {
-                let segments: Result<Vec<_>, _> = expr
-                    .into_inner()
-                    .map(|segment| self.parse_segment(segment))
-                    .collect();
-
-                FilterExpression::RootQuery {
-                    query: Box::new(Query {
-                        segments: segments?,
-                    }),
-                }
-            }
+            Rule::rel_query => FilterExpression::RelativeQuery {
+                query: Box::new(self.parse(expr.into_inner().next().unwrap().into_inner())?),
+            },
+            Rule::root_query => FilterExpression::RootQuery {
+                query: Box::new(self.parse(expr.into_inner().next().unwrap().into_inner())?),
+            },
             Rule::logical_or_expr => self.parse_logical_or_expression(expr, false)?,
             Rule::function_expr => self.parse_function_expression(expr)?,
             _ => unreachable!(),

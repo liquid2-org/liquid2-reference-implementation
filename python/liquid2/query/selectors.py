@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .environment import _JSONPathEnvironment
     from .filter_expressions import FilterExpression
     from .node import JSONPathNode
+    from .query import JSONPathQuery
 
 
 class JSONPathSelector(ABC):
@@ -278,3 +279,55 @@ class Filter(JSONPathSelector):
                     if not err.span:
                         err.span = self.span
                     raise
+
+
+class SingularQuerySelector(JSONPathSelector):
+    """Nested query selector."""
+
+    __slots__ = ("query",)
+
+    def __init__(
+        self,
+        *,
+        env: _JSONPathEnvironment,
+        span: tuple[int, int],
+        query: JSONPathQuery,
+    ) -> None:
+        super().__init__(env=env, span=span)
+        self.query = query
+
+    def __str__(self) -> str:
+        return str(self.query)
+
+    def __eq__(self, value: object) -> bool:
+        return (
+            isinstance(value, SingularQuerySelector)
+            and self.query == value.query
+            and self.span == value.span
+        )
+
+    def __hash__(self) -> int:
+        return hash((str(self.query), self.span))
+
+    def _normalized_index(self, index: int, obj: Sequence[object]) -> int:
+        if index < 0 and len(obj) >= abs(index):
+            return len(obj) + index
+        return index
+
+    def resolve(self, node: JSONPathNode) -> Iterable[JSONPathNode]:
+        """Select array items or object values using the result of an embedded query."""
+        # XXX: assuming root query
+        nodes = self.query.find(node.root)
+        if not nodes:
+            return
+
+        value = nodes[0].value
+
+        if isinstance(value, int) and isinstance(node.value, Sequence):
+            norm_index = self._normalized_index(value, node.value)
+            with suppress(IndexError):
+                yield node.new_child(node.value[value], norm_index)
+
+        if isinstance(value, str) and isinstance(node.value, Mapping):
+            with suppress(KeyError):
+                yield node.new_child(node.value[value], value)

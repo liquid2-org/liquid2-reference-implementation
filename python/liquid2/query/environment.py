@@ -7,24 +7,37 @@ from typing import Any
 from typing import Mapping
 from typing import Sequence
 
-from _liquid2 import Segment as IRSegment
-from _liquid2 import Selector as IRSelector
+from _liquid2 import FilterExpression as _FilterExpression
+from _liquid2 import Segment as _Segment
+from _liquid2 import Selector as _Selector
 
 from . import function_extensions
+from .filter_expressions import BooleanLiteral
+from .filter_expressions import ComparisonExpression
+from .filter_expressions import Expression
+from .filter_expressions import FilterExpression
+from .filter_expressions import FloatLiteral
+from .filter_expressions import FunctionExtension
+from .filter_expressions import IntegerLiteral
+from .filter_expressions import LogicalExpression
+from .filter_expressions import NullLiteral
+from .filter_expressions import PrefixExpression
+from .filter_expressions import RelativeFilterQuery
+from .filter_expressions import RootFilterQuery
+from .filter_expressions import StringLiteral
 from .query import JSONPathQuery
 from .segments import JSONPathChildSegment
 from .segments import JSONPathRecursiveDescentSegment
 from .selectors import Filter
 from .selectors import IndexSelector
 from .selectors import NameSelector
+from .selectors import SingularQuerySelector
 from .selectors import SliceSelector
 from .selectors import WildcardSelector
 
 if TYPE_CHECKING:
-    from _liquid2 import FilterExpression as IRFilterExpression
-    from _liquid2 import Query as IRQuery
+    from _liquid2 import Query as _Query
 
-    from .filter_expressions import FilterExpression
     from .function_extensions import FilterFunction
     from .segments import JSONPathSegment
     from .selectors import JSONPathSelector
@@ -64,7 +77,7 @@ class _JSONPathEnvironment:
 
         self.setup_function_extensions()
 
-    def compile(self, query: IRQuery) -> JSONPathQuery:  # noqa: A003
+    def compile(self, query: _Query) -> JSONPathQuery:  # noqa: A003
         return JSONPathQuery(
             env=self, segments=tuple(self._parse_segment(s) for s in query.segments)
         )
@@ -89,15 +102,15 @@ class _JSONPathEnvironment:
         self.function_extensions["search"] = function_extensions.Search()
         self.function_extensions["value"] = function_extensions.Value()
 
-    def _parse_segment(self, segment: IRSegment) -> JSONPathSegment:
+    def _parse_segment(self, segment: _Segment) -> JSONPathSegment:
         match segment:
-            case IRSegment.Child(selectors):
+            case _Segment.Child(selectors):
                 return JSONPathChildSegment(
                     env=self,
                     span=(0, 0),
                     selectors=tuple(self._parse_selector(s) for s in selectors),
                 )
-            case IRSegment.Recursive(selectors):
+            case _Segment.Recursive(selectors):
                 return JSONPathRecursiveDescentSegment(
                     env=self,
                     span=(0, 0),
@@ -106,28 +119,83 @@ class _JSONPathEnvironment:
             case _:
                 raise Exception(":(")
 
-    def _parse_selector(self, selector: IRSelector) -> JSONPathSelector:
+    def _parse_selector(self, selector: _Selector) -> JSONPathSelector:
         match selector:
-            case IRSelector.Name(name):
+            case _Selector.Name(name):
                 return NameSelector(env=self, span=(0, 0), name=name)
-            case IRSelector.Index(index):
+            case _Selector.Index(index):
                 return IndexSelector(env=self, span=(0, 0), index=index)
-            case IRSelector.Slice(start, stop, step):
+            case _Selector.Slice(start, stop, step):
                 return SliceSelector(
                     env=self, span=(0, 0), start=start, stop=stop, step=step
                 )
-            case IRSelector.Wild():
+            case _Selector.Wild():
                 return WildcardSelector(env=self, span=(0, 0))
-            case IRSelector.Filter(expression):
+            case _Selector.Filter(expression):
                 return Filter(
                     env=self,
                     span=(0, 0),
-                    expression=self._parse_filter_expression(expression),
+                    expression=FilterExpression(
+                        span=(0, 0),
+                        expression=self._parse_filter_expression(expression),
+                    ),
+                )
+            case _Selector.SingularQuery(query):
+                return SingularQuerySelector(
+                    env=self, span=(0, 0), query=self.compile(query)
                 )
             case _:
-                raise Exception(":(")
+                raise NotImplementedError(selector.__class__.__name__)
 
-    def _parse_filter_expression(
-        self, expression: IRFilterExpression
-    ) -> FilterExpression:
-        raise NotImplementedError(":(")
+    def _parse_filter_expression(  # noqa: PLR0912
+        self, expression: _FilterExpression
+    ) -> Expression:
+        expr: Expression
+        match expression:
+            case _FilterExpression.True_():
+                expr = BooleanLiteral(span=(0, 0), value=True)
+            case _FilterExpression.False_():
+                expr = BooleanLiteral(span=(0, 0), value=False)
+            case _FilterExpression.Null():
+                expr = NullLiteral(span=(0, 0), value=None)
+            case _FilterExpression.StringLiteral(value):
+                expr = StringLiteral(span=(0, 0), value=value)
+            case _FilterExpression.Int(value):
+                expr = IntegerLiteral(span=(0, 0), value=value)
+            case _FilterExpression.Float(value):
+                expr = FloatLiteral(span=(0, 0), value=value)
+            case _FilterExpression.Not(_expr):
+                expr = PrefixExpression(
+                    span=(0, 0),
+                    operator="!",
+                    right=self._parse_filter_expression(_expr),
+                )
+            case _FilterExpression.Logical(left, operator, right):
+                expr = LogicalExpression(
+                    span=(0, 0),
+                    left=self._parse_filter_expression(left),
+                    operator=str(operator),
+                    right=self._parse_filter_expression(right),
+                )
+            case _FilterExpression.Comparison(left, operator, right):
+                expr = ComparisonExpression(
+                    span=(0, 0),
+                    left=self._parse_filter_expression(left),
+                    operator=str(operator),
+                    right=self._parse_filter_expression(right),
+                )
+            case _FilterExpression.RelativeQuery(query):
+                expr = RelativeFilterQuery(span=(0, 0), query=self.compile(query))
+            case _FilterExpression.RootQuery(query):
+                expr = RootFilterQuery(span=(0, 0), query=self.compile(query))
+            case _FilterExpression.Function(name, args):
+                expr = FunctionExtension(
+                    span=(0, 0),
+                    name=name,
+                    args=[self._parse_filter_expression(arg) for arg in args],
+                )
+            case _:
+                # TODO
+                raise NotImplementedError
+
+        return expr

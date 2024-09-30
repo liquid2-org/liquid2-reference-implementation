@@ -128,6 +128,7 @@ pub enum Selector {
     SingularQuery {
         query: Box<Query>,
     },
+    // TODO: RootSingularQuery vs RelativeSingularQuery
 }
 
 impl fmt::Display for Selector {
@@ -291,6 +292,13 @@ impl fmt::Display for LogicalOperator {
     }
 }
 
+#[pymethods]
+impl LogicalOperator {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+}
+
 #[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ComparisonOperator {
@@ -312,6 +320,13 @@ impl fmt::Display for ComparisonOperator {
             ComparisonOperator::Le => f.write_str("<="),
             ComparisonOperator::Lt => f.write_str("<"),
         }
+    }
+}
+
+#[pymethods]
+impl ComparisonOperator {
+    fn __str__(&self) -> String {
+        self.to_string()
     }
 }
 
