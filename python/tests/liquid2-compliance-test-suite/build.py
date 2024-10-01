@@ -1,7 +1,7 @@
 """Liquid2 compliance test suite build script.
 
-This script and the accompanying JSON schema were heavily inspired by
-the JSONPath Compliance Test Suite.
+This script and the accompanying JSON schema were inspired by the JSONPath
+Compliance Test Suite.
 
 https://github.com/jsonpath-standard/jsonpath-compliance-test-suite
 """
@@ -31,6 +31,7 @@ def build() -> str:
         "tests": tests,
     }
 
+    validate(instance=cts, schema=SCHEMA)
     return json.dumps(cts, indent=2)
 
 
