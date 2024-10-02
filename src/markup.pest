@@ -135,7 +135,7 @@ multiline_unescaped = _{
 word = { name_first ~ name_char* ~ !("." | "[") }
 
 // Entry point for JSONPath query testing
-_jsonpath = _{ SOI ~ (jsonpath_query | implicit_root_query) ~ EOI }
+_jsonpath = { SOI ~ (jsonpath_query | implicit_root_query) ~ EOI }
 
 /* Modified JSONPath */
 query = {

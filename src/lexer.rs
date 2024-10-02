@@ -344,7 +344,7 @@ impl QueryParser {
                 }
             }
             Rule::EOI => Segment::Eoi {},
-            _ => return Err(LiquidError::syntax("invalid query".to_owned())),
+            _ => unreachable!("{:#?}", segment),
         })
     }
 
