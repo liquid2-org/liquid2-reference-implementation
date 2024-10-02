@@ -217,7 +217,6 @@ impl Lexer {
             });
         }
 
-        // TODO: change pest grammar to indicate positive or negative exponent?
         let mut it = expr.into_inner();
         let mut is_float = false;
         let mut n = it.next().unwrap().as_str().to_string(); // int
