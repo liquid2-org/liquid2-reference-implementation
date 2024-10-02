@@ -44,6 +44,17 @@ impl Lexer {
         self.query_parser.parse(pairs.next().unwrap().into_inner())
     }
 
+    pub fn parse_jsonpath_query(&self, path: &str) -> Result<Query, LiquidError> {
+        let mut pairs = Liquid::parse(Rule::_jsonpath, path)
+            .map_err(|err| LiquidError::syntax(err.to_string()))?;
+        self.query_parser.parse(pairs.next().unwrap().into_inner())
+    }
+
+    pub fn dump_query(&self, path: &str) {
+        let pairs = Liquid::parse(Rule::_jsonpath, path);
+        println!("{:#?}", pairs)
+    }
+
     fn markup(&self, pair: Pair<Rule>) -> Result<Markup, LiquidError> {
         match pair.as_rule() {
             Rule::content => self.parse_content(pair),
@@ -327,21 +338,13 @@ impl QueryParser {
             Rule::descendant_segment => Segment::Recursive {
                 selectors: self.parse_segment_inner(segment.into_inner().next().unwrap())?,
             },
-            Rule::name_segment | Rule::implicit_root_name_segment | Rule::index_segment => {
+            Rule::name_segment | Rule::index_segment | Rule::implicit_root_name_segment => {
                 Segment::Child {
                     selectors: vec![self.parse_selector(segment.into_inner().next().unwrap())?],
                 }
             }
-            Rule::member_name_shorthand => {
-                // Implicit root segment from singular query selector.
-                Segment::Child {
-                    selectors: vec![Selector::Name {
-                        name: segment.as_str().to_owned(),
-                    }],
-                }
-            }
             Rule::EOI => Segment::Eoi {},
-            _ => unreachable!("Rule: {:#?}", segment),
+            _ => return Err(LiquidError::syntax("invalid query".to_owned())),
         })
     }
 
@@ -382,7 +385,7 @@ impl QueryParser {
                 name: selector.as_str().to_owned(),
             },
             Rule::singular_query_selector => self.parse_singular_query_selector(selector)?,
-            _ => unreachable!(),
+            _ => unreachable!("{:#?}", selector),
         })
     }
 
@@ -541,12 +544,30 @@ impl QueryParser {
             Rule::true_literal => FilterExpression::True_ {},
             Rule::false_literal => FilterExpression::False_ {},
             Rule::null => FilterExpression::Null {},
-            Rule::rel_singular_query => FilterExpression::RelativeQuery {
-                query: Box::new(self.parse(expr.into_inner())?),
-            },
-            Rule::abs_singular_query => FilterExpression::RootQuery {
-                query: Box::new(self.parse(expr.into_inner())?),
-            },
+            Rule::rel_singular_query => {
+                let segments: Result<Vec<_>, _> = expr
+                    .into_inner()
+                    .map(|segment| self.parse_segment(segment))
+                    .collect();
+
+                FilterExpression::RelativeQuery {
+                    query: Box::new(Query {
+                        segments: segments?,
+                    }),
+                }
+            }
+            Rule::abs_singular_query => {
+                let segments: Result<Vec<_>, _> = expr
+                    .into_inner()
+                    .map(|segment| self.parse_segment(segment))
+                    .collect();
+
+                FilterExpression::RootQuery {
+                    query: Box::new(Query {
+                        segments: segments?,
+                    }),
+                }
+            }
             Rule::function_expr => self.parse_function_expression(expr)?,
             _ => unreachable!(),
         })
@@ -619,12 +640,30 @@ impl QueryParser {
         expr: Pair<Rule>,
     ) -> Result<FilterExpression, LiquidError> {
         Ok(match expr.as_rule() {
-            Rule::rel_query => FilterExpression::RelativeQuery {
-                query: Box::new(self.parse(expr.into_inner())?),
-            },
-            Rule::root_query => FilterExpression::RootQuery {
-                query: Box::new(self.parse(expr.into_inner())?),
-            },
+            Rule::rel_query => {
+                let segments: Result<Vec<_>, _> = expr
+                    .into_inner()
+                    .map(|segment| self.parse_segment(segment))
+                    .collect();
+
+                FilterExpression::RelativeQuery {
+                    query: Box::new(Query {
+                        segments: segments?,
+                    }),
+                }
+            }
+            Rule::root_query => {
+                let segments: Result<Vec<_>, _> = expr
+                    .into_inner()
+                    .map(|segment| self.parse_segment(segment))
+                    .collect();
+
+                FilterExpression::RootQuery {
+                    query: Box::new(Query {
+                        segments: segments?,
+                    }),
+                }
+            }
             Rule::function_expr => self.parse_function_expression(expr)?,
             _ => unreachable!(),
         })
@@ -653,18 +692,28 @@ impl QueryParser {
             Rule::true_literal => FilterExpression::True_ {},
             Rule::false_literal => FilterExpression::False_ {},
             Rule::null => FilterExpression::Null {},
-            Rule::rel_query => FilterExpression::RelativeQuery {
-                query: Box::new(self.parse(expr.into_inner())?),
-            },
+            Rule::rel_query => {
+                let segments: Result<Vec<_>, _> = expr
+                    .into_inner()
+                    .map(|segment| self.parse_segment(segment))
+                    .collect();
+
+                FilterExpression::RelativeQuery {
+                    query: Box::new(Query {
+                        segments: segments?,
+                    }),
+                }
+            }
             Rule::root_query => {
-                if let Some(segments) = expr.into_inner().next() {
-                    FilterExpression::RootQuery {
-                        query: Box::new(self.parse(segments.into_inner())?),
-                    }
-                } else {
-                    FilterExpression::RootQuery {
-                        query: Box::new(Query { segments: vec![] }),
-                    }
+                let segments: Result<Vec<_>, _> = expr
+                    .into_inner()
+                    .map(|segment| self.parse_segment(segment))
+                    .collect();
+
+                FilterExpression::RootQuery {
+                    query: Box::new(Query {
+                        segments: segments?,
+                    }),
                 }
             }
             Rule::logical_or_expr => self.parse_logical_or_expression(expr, false)?,

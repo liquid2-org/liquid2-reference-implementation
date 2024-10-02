@@ -134,15 +134,20 @@ multiline_unescaped = _{
 // NOTE: borrowing name_char from JSONPath
 word = { name_first ~ name_char* ~ !("." | "[") }
 
+// Entry point for JSONPath query testing
+_jsonpath = _{ SOI ~ (jsonpath_query | implicit_root_query) ~ EOI }
+
 /* Modified JSONPath */
-// TODO: move implicit_root_segment so we just have segments*
 query = {
-    (root_identifier ~ segments)
-  | (implicit_root_segment ~ segments)
+    jsonpath_query
+  | implicit_root_query
 }
 
+jsonpath_query      = _{ root_identifier ~ segments }
+implicit_root_query = _{ implicit_root_segment ~ segments }
+segments            = _{ (S ~ segment)* }
+
 root_identifier = _{ "$" }
-segments        = _{ (S ~ segment)* }
 
 selector = _{
     name_selector
@@ -208,24 +213,20 @@ non_surrogate = _{
   | (^"D" ~ '\u{30}'..'\u{37}' ~ ASCII_HEX_DIGIT{2})
 }
 
-high_surrogate    = _{ ^"D" ~ ("8" | "9" | ^"A" | ^"B") ~ ASCII_HEX_DIGIT{2} }
-low_surrogate     = _{ ^"D" ~ (^"C" | ^"D" | ^"E" | ^"F") ~ ASCII_HEX_DIGIT{2} }
-wildcard_selector =  { "*" }
-index_selector    = @{ int }
-int               =  { "0" | ("-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
-slice_selector    =  { (start ~ S)? ~ ":" ~ S ~ (stop ~ S)? ~ (":" ~ (S ~ step)?)? }
-start             = @{ int }
-stop              = @{ int }
-step              = @{ int }
-filter_selector   =  { "?" ~ S ~ logical_expr }
-logical_expr      = _{ logical_or_expr }
-logical_or_expr   =  { logical_and_expr ~ (S ~ "||" ~ S ~ logical_and_expr)* }
-logical_and_expr  =  { basic_expr ~ (S ~ "&&" ~ S ~ basic_expr)* }
-
-singular_query_selector = {
-    (root_identifier ~ singular_query_segments)
-  | ((implicit_root_name_segment | index_segment) ~ singular_query_segments)
-}
+high_surrogate          = _{ ^"D" ~ ("8" | "9" | ^"A" | ^"B") ~ ASCII_HEX_DIGIT{2} }
+low_surrogate           = _{ ^"D" ~ (^"C" | ^"D" | ^"E" | ^"F") ~ ASCII_HEX_DIGIT{2} }
+wildcard_selector       =  { "*" }
+index_selector          = @{ int }
+int                     =  { "0" | ("-"? ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
+slice_selector          =  { (start ~ S)? ~ ":" ~ S ~ (stop ~ S)? ~ (":" ~ (S ~ step)?)? }
+start                   = @{ int }
+stop                    = @{ int }
+step                    = @{ int }
+filter_selector         =  { "?" ~ S ~ logical_expr }
+logical_expr            = _{ logical_or_expr }
+logical_or_expr         =  { logical_and_expr ~ (S ~ "||" ~ S ~ logical_and_expr)* }
+logical_and_expr        =  { basic_expr ~ (S ~ "&&" ~ S ~ basic_expr)* }
+singular_query_selector =  { (root_identifier ~ singular_query_segments) | implicit_root_singular_query_segments }
 
 basic_expr = _{
     paren_expr
@@ -237,7 +238,7 @@ paren_expr              =  { (logical_not_op ~ S)? ~ "(" ~ S ~ logical_expr ~ S 
 logical_not_op          =  { "!" }
 test_expr               =  { (logical_not_op ~ S)? ~ (filter_query | function_expr) }
 filter_query            = _{ rel_query | root_query }
-root_query              =  { query }
+root_query              =  { jsonpath_query }
 rel_query               =  { current_node_identifier ~ segments }
 current_node_identifier = _{ "@" }
 comparison_expr         =  { comparable ~ S ~ comparison_op ~ S ~ comparable }
@@ -268,20 +269,18 @@ comparison_op = {
 // TODO: silencing singular_query and/or singular_query_segments leads to
 // undesirable error messages.
 
-singular_query          = _{ rel_singular_query | abs_singular_query }
-rel_singular_query      =  { current_node_identifier ~ singular_query_segments }
-abs_singular_query      =  { root_identifier ~ singular_query_segments }
-singular_query_segments = _{ (S ~ (name_segment | index_segment | singular_query_segment))* }
-singular_query_segment  =  { "[" ~ singular_query_selector ~ "]" }
+singular_query                        = _{ rel_singular_query | abs_singular_query }
+rel_singular_query                    =  { current_node_identifier ~ singular_query_segments }
+abs_singular_query                    =  { root_identifier ~ singular_query_segments }
+singular_query_segments               = _{ (S ~ (name_segment | index_segment))* }
+implicit_root_singular_query_segments = _{ (implicit_root_name_segment | index_segment) ~ singular_query_segments }
 
-// TODO: whitespace?
 name_segment = {
     ("[" ~ name_selector ~ "]")
   | ("." ~ member_name_shorthand)
 }
 
-// TODO: whitespace?
-implicit_root_name_segment = _{
+implicit_root_name_segment = {
     ("[" ~ name_selector ~ "]")
   | member_name_shorthand
 }
@@ -313,14 +312,14 @@ segment = _{
   | descendant_segment
 }
 
+implicit_root_segment = {
+    bracketed_selection
+  | member_name_shorthand
+}
+
 child_segment = {
     bracketed_selection
   | ("." ~ (wildcard_selector | member_name_shorthand))
-}
-
-implicit_root_segment = {
-    bracketed_selection
-  | (wildcard_selector | member_name_shorthand)
 }
 
 bracketed_selection   = { "[" ~ S ~ selector ~ (S ~ "," ~ S ~ selector)* ~ S ~ "]" }

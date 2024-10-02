@@ -11,8 +11,7 @@ from _liquid2 import LiquidExtensionError as _LiquidExtensionError
 from _liquid2 import LiquidNameError as _LiquidNameError
 from _liquid2 import LiquidSyntaxError as _LiquidSyntaxError
 from _liquid2 import LiquidTypeError as _LiquidTypeError
-from _liquid2 import parse_query
-from liquid2.query import JSONPathNodeList
+from _liquid2 import parse_jsonpath_query
 from liquid2.query import JSONValue
 from liquid2.query import compile
 from liquid2.query import find
@@ -56,7 +55,7 @@ def test_compliance(case: Case) -> None:
         pytest.skip(reason=SKIP[case.name])  # no cov
 
     assert case.document is not None
-    rv = JSONPathNodeList(find(case.selector, case.document)).values()
+    rv = find(case.selector, case.document).values()
 
     if case.results is not None:
         assert rv in case.results
@@ -72,4 +71,4 @@ def test_invalid_selectors(case: Case) -> None:
     with pytest.raises(
         (_LiquidExtensionError, _LiquidNameError, _LiquidSyntaxError, _LiquidTypeError)
     ):
-        compile(parse_query(case.selector))
+        compile(parse_jsonpath_query(case.selector))
