@@ -1163,15 +1163,16 @@ class LoopExpression(Expression):
         it, length = self._to_iter(self.iterable.evaluate(context))
         limit = self._eval_int(self.limit, context)
 
-        if isinstance(self.offset, StringLiteral):
-            offset: str | int | None = self.offset.evaluate(context)
-            if offset != "continue":
-                raise LiquidSyntaxError(
-                    f"expected 'continue' or an integer, found '{offset}'",
-                    token=self.offset.token,
-                )
-        else:
-            offset = self._eval_int(self.offset, context)
+        match self.offset:
+            case StringLiteral(value=value):
+                offset: str | int | None = value
+                if offset != "continue":
+                    raise LiquidSyntaxError(
+                        f"expected 'continue' or an integer, found '{offset}'",
+                        token=self.offset.token,
+                    )
+            case _offset:
+                offset = self._eval_int(_offset, context)
 
         return self._slice(it, length, context, limit=limit, offset=offset)
 
@@ -1222,7 +1223,16 @@ class LoopExpression(Expression):
                         case "offset":
                             stream.expect_one_of(Token.Colon, Token.Assign)
                             next(stream)
-                            offset = parse_primitive(next(stream, None))
+                            offset_token = next(stream, None)
+                            if (
+                                isinstance(offset_token, Token.Word)
+                                and offset_token.value == "continue"
+                            ):
+                                offset = StringLiteral(
+                                    token=offset_token, value="continue"
+                                )
+                            else:
+                                offset = parse_primitive(offset_token)
                         case _:
                             raise LiquidSyntaxError(
                                 "expected 'reversed', 'offset' or 'limit', "

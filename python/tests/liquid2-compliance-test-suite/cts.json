@@ -374,6 +374,326 @@
       "result": "1 2 "
     },
     {
+      "name": "tags, for, offset, continue",
+      "template": "{% for a in b limit:3 %}a{{ a }} {% endfor %}{% for a in b offset:continue %}b{{ a }} {% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "result": "a1 a2 a3 b4 b5 b6 "
+    },
+    {
+      "name": "tags, for, offset, continue, range",
+      "template": "{% for a in (1..6) limit:3 %}a{{ a }} {% endfor %}{% for a in (1..6) offset:continue %}b{{ a }} {% endfor %}",
+      "data": {},
+      "result": "a1 a2 a3 b4 b5 b6 "
+    },
+    {
+      "name": "tags, for, offset, continue, assigned range",
+      "template": "{% assign b = (1..6) %}{% for a in b limit:3 %}a{{ a }} {% endfor %}{% for a in b offset:continue %}b{{ a }} {% endfor %}",
+      "data": {},
+      "result": "a1 a2 a3 b4 b5 b6 "
+    },
+    {
+      "name": "tags, for, offset, continue, reassigned array",
+      "template": "{% assign b = '1,2,3,4,5,6' | split: ',' %}{% for a in b limit:3 %}{{ a }} {% endfor %}{% assign b = 'u,v,w,x,y,z' | split: ',' %}{% for a in b offset:continue %}{{ a }} {% endfor %}",
+      "data": {},
+      "result": "1 2 3 x y z "
+    },
+    {
+      "name": "tags, for, offset, continue, different loop variable",
+      "template": "{% for a in b limit:3 %}a{{ a }} {% endfor %}{% for x in b offset:continue %}b{{ x }} {% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "result": "a1 a2 a3 b1 b2 b3 b4 b5 b6 "
+    },
+    {
+      "name": "tags, for, offset, continue, nothing to continue from",
+      "template": "{% for a in b %}a{{ a }} {% endfor %}{% for a in b offset:continue %}b{{ a }} {% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "result": "a1 a2 a3 a4 a5 a6 "
+    },
+    {
+      "name": "tags, for, offset, continue, no preceding loop",
+      "template": "{% for a in b offset:continue %}{{ a }} {% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "result": "1 2 3 4 5 6 "
+    },
+    {
+      "name": "tags, for, offset, continue, twice",
+      "template": "{% for a in b limit:2 %}a{{ a }} {% endfor %}{% for a in b offset:continue limit: 2 %}b{{ a }} {% endfor %}{% for a in b offset:continue %}c{{ a }} {% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "result": "a1 a2 b3 b4 c5 c6 "
+    },
+    {
+      "name": "tags, for, offset, continue, broken",
+      "template": "{% for a in b limit:4 %}{% if a == 3 %}{% break %}{% endif %}a{{ a }} {% endfor %}{% for a in b offset:continue limit: 2 %}b{{ a }} {% endfor %}{% for a in b offset:continue %}c{{ a }} {% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "result": "a1 a2 b5 b6 "
+    },
+    {
+      "name": "tags, for, offset, continue, forloop length",
+      "template": "{% for a in b limit: 2 %}a{{ a }}-{{ forloop.length }} {% endfor %}{% for a in b offset:continue %}b{{ a }}-{{ forloop.length }} {% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "result": "a1-2 a2-2 b3-4 b4-4 b5-4 b6-4 "
+    },
+    {
+      "name": "tags, assign, string literal",
+      "template": "{% assign a = 'b' %}{{ a }}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, assign, integer literal",
+      "template": "{% assign a = 123 %}{{ a }}",
+      "data": {},
+      "result": "123"
+    },
+    {
+      "name": "tags, assign, float literal",
+      "template": "{% assign a = 1.23 %}{{ a }}",
+      "data": {},
+      "result": "1.23"
+    },
+    {
+      "name": "tags, assign, range literal",
+      "template": "{% assign a = (1..3) %}{{ a | join: '#' }}",
+      "data": {},
+      "result": "1#2#3"
+    },
+    {
+      "name": "tags, assign, simple query",
+      "template": "{% assign a = b %}{{ a }}",
+      "data": {
+        "b": "c"
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, assign, query, nested object",
+      "template": "{% assign a = b.c %}{{ a }}",
+      "data": {
+        "b": {
+          "c": "d"
+        }
+      },
+      "result": "d"
+    },
+    {
+      "name": "tags, assign, query, nested array element",
+      "template": "{% assign a = b.c[1] %}{{ a }}",
+      "data": {
+        "b": {
+          "c": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "result": "2"
+    },
+    {
+      "name": "tags, assign, string literal containing an end tag delimiter",
+      "template": "{% assign a = 'foo%}bar' %}{{ a }}",
+      "data": {},
+      "result": "foo%}bar"
+    },
+    {
+      "name": "tags, assign, string literal containing a start output delimiter",
+      "template": "{% assign a = 'foo{{bar' %}{{ a }}",
+      "data": {},
+      "result": "foo{{bar"
+    },
+    {
+      "name": "tags, assign, shadow global variable",
+      "template": "{{ a }}{% assign a = 'c' %}{{ a }}",
+      "data": {
+        "a": "b"
+      },
+      "result": "bc"
+    },
+    {
+      "name": "tags, assign, string literal, filtered",
+      "template": "{% assign a = 'b' | upcase %}{{ a }}",
+      "data": {},
+      "result": "B"
+    },
+    {
+      "name": "tags, assign, ternary expression, truthy",
+      "template": "{% assign a = 'b' if true else 'c' %}{{ a }}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, assign, ternary expression, falsy",
+      "template": "{% assign a = 'b' if false else 'c' %}{{ a }}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, assign, ternary expression, truthy filter",
+      "template": "{% assign a = 'b' | upcase if true else 'c' %}{{ a }}",
+      "data": {},
+      "result": "B"
+    },
+    {
+      "name": "tags, assign, ternary expression, falsy filter",
+      "template": "{% assign a = 'b' if false else 'c' | upcase %}{{ a }}",
+      "data": {},
+      "result": "C"
+    },
+    {
+      "name": "tags, assign, ternary expression, truthy, falsy filter",
+      "template": "{% assign a = 'b' if true else 'c' | upcase %}{{ a }}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, assign, ternary expression, falsy, truthy filter",
+      "template": "{% assign a = 'b' | upcase if false else 'c' %}{{ a }}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, assign, ternary expression, tail filter",
+      "template": "{% assign a = 'b' if true else 'c' || upcase %}{{ a }}",
+      "data": {},
+      "result": "B"
+    },
+    {
+      "name": "tags, assign, missing assignment operator",
+      "template": "{% assign a 'b' %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, assign, missing expression",
+      "template": "{% assign a = %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, unless, literal true, no alternative",
+      "template": "{% unless true %}a{% endunless %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, unless, literal false",
+      "template": "{% unless false %}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, literal true, alternative",
+      "template": "{% unless true %}a{% else %}b{% endunless %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, unless, literal true, truthy alternative",
+      "template": "{% unless true %}a{% elsif true %}b{% endunless %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, unless, literal true, falsy alternative",
+      "template": "{% unless true %}a{% elsif false %}b{% endunless %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, unless, literal true, falsy alternative, final alternative",
+      "template": "{% unless true %}a{% elsif false %}b{% else %}c{% endunless %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, unless, missing whitespace after tag name",
+      "template": "{% unlesstrue %}a{% endunless %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, unless, no whitespace before tag name",
+      "template": "{%unless false %}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, no whitespace after expression",
+      "template": "{% unless false%}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, extra else block",
+      "template": "{% unless true %}a{% else %}b{% else %}c{% endunless %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, unless, extra elsif block",
+      "template": "{% unless true %}a{% else %}b{% elsif true %}c{% endunless %}",
+      "invalid": true
+    },
+    {
       "name": "tags, if, literal true",
       "template": "{% if true %}a{% endif %}",
       "data": {},
@@ -863,203 +1183,6 @@
     {
       "name": "tags, if, extra elsif block",
       "template": "{% if false %}a{% else %}b{% elsif true %}c{% endif %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, unless, literal true, no alternative",
-      "template": "{% unless true %}a{% endunless %}",
-      "data": {},
-      "result": ""
-    },
-    {
-      "name": "tags, unless, literal false",
-      "template": "{% unless false %}a{% endunless %}",
-      "data": {},
-      "result": "a"
-    },
-    {
-      "name": "tags, unless, literal true, alternative",
-      "template": "{% unless true %}a{% else %}b{% endunless %}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, unless, literal true, truthy alternative",
-      "template": "{% unless true %}a{% elsif true %}b{% endunless %}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, unless, literal true, falsy alternative",
-      "template": "{% unless true %}a{% elsif false %}b{% endunless %}",
-      "data": {},
-      "result": ""
-    },
-    {
-      "name": "tags, unless, literal true, falsy alternative, final alternative",
-      "template": "{% unless true %}a{% elsif false %}b{% else %}c{% endunless %}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, unless, missing whitespace after tag name",
-      "template": "{% unlesstrue %}a{% endunless %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, unless, no whitespace before tag name",
-      "template": "{%unless false %}a{% endunless %}",
-      "data": {},
-      "result": "a"
-    },
-    {
-      "name": "tags, unless, no whitespace after expression",
-      "template": "{% unless false%}a{% endunless %}",
-      "data": {},
-      "result": "a"
-    },
-    {
-      "name": "tags, unless, extra else block",
-      "template": "{% unless true %}a{% else %}b{% else %}c{% endunless %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, unless, extra elsif block",
-      "template": "{% unless true %}a{% else %}b{% elsif true %}c{% endunless %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, assign, string literal",
-      "template": "{% assign a = 'b' %}{{ a }}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, assign, integer literal",
-      "template": "{% assign a = 123 %}{{ a }}",
-      "data": {},
-      "result": "123"
-    },
-    {
-      "name": "tags, assign, float literal",
-      "template": "{% assign a = 1.23 %}{{ a }}",
-      "data": {},
-      "result": "1.23"
-    },
-    {
-      "name": "tags, assign, range literal",
-      "template": "{% assign a = (1..3) %}{{ a | join: '#' }}",
-      "data": {},
-      "result": "1#2#3"
-    },
-    {
-      "name": "tags, assign, simple query",
-      "template": "{% assign a = b %}{{ a }}",
-      "data": {
-        "b": "c"
-      },
-      "result": "c"
-    },
-    {
-      "name": "tags, assign, query, nested object",
-      "template": "{% assign a = b.c %}{{ a }}",
-      "data": {
-        "b": {
-          "c": "d"
-        }
-      },
-      "result": "d"
-    },
-    {
-      "name": "tags, assign, query, nested array element",
-      "template": "{% assign a = b.c[1] %}{{ a }}",
-      "data": {
-        "b": {
-          "c": [
-            1,
-            2,
-            3
-          ]
-        }
-      },
-      "result": "2"
-    },
-    {
-      "name": "tags, assign, string literal containing an end tag delimiter",
-      "template": "{% assign a = 'foo%}bar' %}{{ a }}",
-      "data": {},
-      "result": "foo%}bar"
-    },
-    {
-      "name": "tags, assign, string literal containing a start output delimiter",
-      "template": "{% assign a = 'foo{{bar' %}{{ a }}",
-      "data": {},
-      "result": "foo{{bar"
-    },
-    {
-      "name": "tags, assign, shadow global variable",
-      "template": "{{ a }}{% assign a = 'c' %}{{ a }}",
-      "data": {
-        "a": "b"
-      },
-      "result": "bc"
-    },
-    {
-      "name": "tags, assign, string literal, filtered",
-      "template": "{% assign a = 'b' | upcase %}{{ a }}",
-      "data": {},
-      "result": "B"
-    },
-    {
-      "name": "tags, assign, ternary expression, truthy",
-      "template": "{% assign a = 'b' if true else 'c' %}{{ a }}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, assign, ternary expression, falsy",
-      "template": "{% assign a = 'b' if false else 'c' %}{{ a }}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, assign, ternary expression, truthy filter",
-      "template": "{% assign a = 'b' | upcase if true else 'c' %}{{ a }}",
-      "data": {},
-      "result": "B"
-    },
-    {
-      "name": "tags, assign, ternary expression, falsy filter",
-      "template": "{% assign a = 'b' if false else 'c' | upcase %}{{ a }}",
-      "data": {},
-      "result": "C"
-    },
-    {
-      "name": "tags, assign, ternary expression, truthy, falsy filter",
-      "template": "{% assign a = 'b' if true else 'c' | upcase %}{{ a }}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, assign, ternary expression, falsy, truthy filter",
-      "template": "{% assign a = 'b' | upcase if false else 'c' %}{{ a }}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, assign, ternary expression, tail filter",
-      "template": "{% assign a = 'b' if true else 'c' || upcase %}{{ a }}",
-      "data": {},
-      "result": "B"
-    },
-    {
-      "name": "tags, assign, missing assignment operator",
-      "template": "{% assign a 'b' %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, assign, missing expression",
-      "template": "{% assign a = %}",
       "invalid": true
     }
   ]
