@@ -20,8 +20,18 @@ fn parse_query(path: &str) -> Result<Query, LiquidError> {
 }
 
 #[pyfunction]
+fn parse_jsonpath_query(path: &str) -> Result<Query, LiquidError> {
+    lexer::Lexer::new().parse_jsonpath_query(path)
+}
+
+#[pyfunction]
 fn dump(source: &str) {
     lexer::Lexer::new().dump(source);
+}
+
+#[pyfunction]
+fn dump_query(path: &str) {
+    lexer::Lexer::new().dump_query(path);
 }
 
 #[pyfunction]
@@ -54,7 +64,9 @@ fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(dump, m)?)?;
     m.add_function(wrap_pyfunction!(tokenize, m)?)?;
     m.add_function(wrap_pyfunction!(parse_query, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_jsonpath_query, m)?)?;
     m.add_function(wrap_pyfunction!(unescape_string, m)?)?;
+    m.add_function(wrap_pyfunction!(dump_query, m)?)?;
     m.add_class::<query::Segment>()?;
     m.add_class::<query::Selector>()?;
     m.add_class::<query::ComparisonOperator>()?;
