@@ -7,30 +7,30 @@ use crate::query::Query;
 #[derive(Debug, Clone)]
 pub enum Markup {
     Content {
-        span: (usize, usize),
         text: String,
+        span: (usize, usize),
     },
     Raw {
-        span: (usize, usize),
         wc: (Whitespace, Whitespace, Whitespace, Whitespace),
         text: String,
+        span: (usize, usize),
     },
     Comment {
-        span: (usize, usize),
         wc: (Whitespace, Whitespace),
         hashes: String,
         text: String,
+        span: (usize, usize),
     },
     Output {
-        span: (usize, usize),
         wc: (Whitespace, Whitespace),
         expression: Vec<Token>,
+        span: (usize, usize),
     },
     Tag {
-        span: (usize, usize),
         wc: (Whitespace, Whitespace),
         name: String,
         expression: Option<Vec<Token>>,
+        span: (usize, usize),
     },
     EOI {},
 }
@@ -95,107 +95,107 @@ impl Markup {
 #[derive(Debug, Clone)]
 pub enum Token {
     True_ {
-        index: usize,
+        line_col: (usize, usize),
     },
     False_ {
-        index: usize,
+        line_col: (usize, usize),
     },
     And {
-        index: usize,
+        line_col: (usize, usize),
     },
     Or {
-        index: usize,
+        line_col: (usize, usize),
     },
     In {
-        index: usize,
+        line_col: (usize, usize),
     },
     Not {
-        index: usize,
+        line_col: (usize, usize),
     },
     Contains {
-        index: usize,
+        line_col: (usize, usize),
     },
     Null {
-        index: usize,
+        line_col: (usize, usize),
     },
     If {
-        index: usize,
+        line_col: (usize, usize),
     },
     Else {
-        index: usize,
+        line_col: (usize, usize),
     },
     With {
-        index: usize,
+        line_col: (usize, usize),
     },
     As {
-        index: usize,
+        line_col: (usize, usize),
     },
     For {
-        index: usize,
+        line_col: (usize, usize),
     },
     Eq {
-        index: usize,
+        line_col: (usize, usize),
     },
     Ne {
-        index: usize,
+        line_col: (usize, usize),
     },
     Ge {
-        index: usize,
+        line_col: (usize, usize),
     },
     Gt {
-        index: usize,
+        line_col: (usize, usize),
     },
     Le {
-        index: usize,
+        line_col: (usize, usize),
     },
     Lt {
-        index: usize,
+        line_col: (usize, usize),
     },
     Colon {
-        index: usize,
+        line_col: (usize, usize),
     },
     Pipe {
-        index: usize,
+        line_col: (usize, usize),
     },
     DoublePipe {
-        index: usize,
+        line_col: (usize, usize),
     },
     Comma {
-        index: usize,
+        line_col: (usize, usize),
     },
     LeftParen {
-        index: usize,
+        line_col: (usize, usize),
     },
     RightParen {
-        index: usize,
+        line_col: (usize, usize),
     },
     Assign {
-        index: usize,
+        line_col: (usize, usize),
     },
     StringLiteral {
-        index: usize,
         value: String,
+        line_col: (usize, usize),
     },
     IntegerLiteral {
-        index: usize,
         value: i64,
+        line_col: (usize, usize),
     },
     FloatLiteral {
-        index: usize,
         value: f64,
+        line_col: (usize, usize),
     },
     Word {
-        index: usize,
         value: String,
+        line_col: (usize, usize),
     },
     RangeLiteral {
-        index: usize,
         start: RangeArgument,
         stop: RangeArgument,
+        line_col: (usize, usize),
     },
     Query {
-        index: usize,
         path: Query,
+        line_col: (usize, usize),
     },
 }
 
@@ -254,10 +254,22 @@ impl Token {
 #[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum RangeArgument {
-    StringLiteral { index: usize, value: String },
-    IntegerLiteral { index: usize, value: i64 },
-    FloatLiteral { index: usize, value: f64 },
-    Query { index: usize, path: Query },
+    StringLiteral {
+        value: String,
+        line_col: (usize, usize),
+    },
+    IntegerLiteral {
+        value: i64,
+        line_col: (usize, usize),
+    },
+    FloatLiteral {
+        value: f64,
+        line_col: (usize, usize),
+    },
+    Query {
+        path: Query,
+        line_col: (usize, usize),
+    },
 }
 
 impl fmt::Display for RangeArgument {

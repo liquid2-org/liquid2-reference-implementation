@@ -82,14 +82,14 @@ class _JSONPathEnvironment:
             env=self, segments=tuple(self._parse_segment(s) for s in query.segments)
         )
 
-    def from_symbol(self, s: str) -> JSONPathQuery:
+    def from_symbol(self, s: str, line_col: tuple[int, int]) -> JSONPathQuery:
         return JSONPathQuery(
             env=self,
             segments=(
                 JSONPathChildSegment(
                     env=self,
-                    span=(0, 0),
-                    selectors=(NameSelector(env=self, span=(0, 0), name=s),),
+                    line_col=line_col,
+                    selectors=(NameSelector(env=self, line_col=line_col, name=s),),
                 ),
             ),
         )
@@ -104,16 +104,16 @@ class _JSONPathEnvironment:
 
     def _parse_segment(self, segment: _Segment) -> JSONPathSegment:
         match segment:
-            case _Segment.Child(selectors):
+            case _Segment.Child(selectors, line_col):
                 return JSONPathChildSegment(
                     env=self,
-                    span=(0, 0),
+                    line_col=line_col,
                     selectors=tuple(self._parse_selector(s) for s in selectors),
                 )
-            case _Segment.Recursive(selectors):
+            case _Segment.Recursive(selectors, line_col):
                 return JSONPathRecursiveDescentSegment(
                     env=self,
-                    span=(0, 0),
+                    line_col=line_col,
                     selectors=tuple(self._parse_selector(s) for s in selectors),
                 )
             case _:
@@ -121,28 +121,28 @@ class _JSONPathEnvironment:
 
     def _parse_selector(self, selector: _Selector) -> JSONPathSelector:
         match selector:
-            case _Selector.Name(name):
-                return NameSelector(env=self, span=(0, 0), name=name)
-            case _Selector.Index(index):
-                return IndexSelector(env=self, span=(0, 0), index=index)
-            case _Selector.Slice(start, stop, step):
+            case _Selector.Name(name, line_col):
+                return NameSelector(env=self, line_col=line_col, name=name)
+            case _Selector.Index(index, line_col):
+                return IndexSelector(env=self, line_col=line_col, index=index)
+            case _Selector.Slice(start, stop, step, line_col):
                 return SliceSelector(
-                    env=self, span=(0, 0), start=start, stop=stop, step=step
+                    env=self, line_col=line_col, start=start, stop=stop, step=step
                 )
-            case _Selector.Wild():
-                return WildcardSelector(env=self, span=(0, 0))
-            case _Selector.Filter(expression):
+            case _Selector.Wild(line_col):
+                return WildcardSelector(env=self, line_col=line_col)
+            case _Selector.Filter(expression, line_col):
                 return Filter(
                     env=self,
-                    span=(0, 0),
+                    line_col=line_col,
                     expression=FilterExpression(
-                        span=(0, 0),
+                        line_col=line_col,
                         expression=self._parse_filter_expression(expression),
                     ),
                 )
-            case _Selector.SingularQuery(query):
+            case _Selector.SingularQuery(query, line_col):
                 return SingularQuerySelector(
-                    env=self, span=(0, 0), query=self.compile(query)
+                    env=self, line_col=line_col, query=self.compile(query)
                 )
             case _:
                 raise NotImplementedError(selector.__class__.__name__)
@@ -152,45 +152,45 @@ class _JSONPathEnvironment:
     ) -> Expression:
         expr: Expression
         match expression:
-            case _FilterExpression.True_():
-                expr = BooleanLiteral(span=(0, 0), value=True)
-            case _FilterExpression.False_():
-                expr = BooleanLiteral(span=(0, 0), value=False)
-            case _FilterExpression.Null():
-                expr = NullLiteral(span=(0, 0), value=None)
-            case _FilterExpression.StringLiteral(value):
-                expr = StringLiteral(span=(0, 0), value=value)
-            case _FilterExpression.Int(value):
-                expr = IntegerLiteral(span=(0, 0), value=value)
-            case _FilterExpression.Float(value):
-                expr = FloatLiteral(span=(0, 0), value=value)
-            case _FilterExpression.Not(_expr):
+            case _FilterExpression.True_(line_col):
+                expr = BooleanLiteral(line_col=line_col, value=True)
+            case _FilterExpression.False_(line_col):
+                expr = BooleanLiteral(line_col=line_col, value=False)
+            case _FilterExpression.Null(line_col):
+                expr = NullLiteral(line_col=line_col, value=None)
+            case _FilterExpression.StringLiteral(value, line_col):
+                expr = StringLiteral(line_col=line_col, value=value)
+            case _FilterExpression.Int(value, line_col):
+                expr = IntegerLiteral(line_col=line_col, value=value)
+            case _FilterExpression.Float(value, line_col):
+                expr = FloatLiteral(line_col=line_col, value=value)
+            case _FilterExpression.Not(_expr, line_col):
                 expr = PrefixExpression(
-                    span=(0, 0),
+                    line_col=line_col,
                     operator="!",
                     right=self._parse_filter_expression(_expr),
                 )
-            case _FilterExpression.Logical(left, operator, right):
+            case _FilterExpression.Logical(left, operator, right, line_col):
                 expr = LogicalExpression(
-                    span=(0, 0),
+                    line_col=line_col,
                     left=self._parse_filter_expression(left),
                     operator=str(operator),
                     right=self._parse_filter_expression(right),
                 )
-            case _FilterExpression.Comparison(left, operator, right):
+            case _FilterExpression.Comparison(left, operator, right, line_col):
                 expr = ComparisonExpression(
-                    span=(0, 0),
+                    line_col=line_col,
                     left=self._parse_filter_expression(left),
                     operator=str(operator),
                     right=self._parse_filter_expression(right),
                 )
-            case _FilterExpression.RelativeQuery(query):
-                expr = RelativeFilterQuery(span=(0, 0), query=self.compile(query))
-            case _FilterExpression.RootQuery(query):
-                expr = RootFilterQuery(span=(0, 0), query=self.compile(query))
-            case _FilterExpression.Function(name, args):
+            case _FilterExpression.RelativeQuery(query, line_col):
+                expr = RelativeFilterQuery(line_col=line_col, query=self.compile(query))
+            case _FilterExpression.RootQuery(query, line_col):
+                expr = RootFilterQuery(line_col=line_col, query=self.compile(query))
+            case _FilterExpression.Function(name, args, line_col):
                 expr = FunctionExtension(
-                    span=(0, 0),
+                    line_col=line_col,
                     name=name,
                     args=[self._parse_filter_expression(arg) for arg in args],
                 )

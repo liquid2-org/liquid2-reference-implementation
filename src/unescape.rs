@@ -4,7 +4,7 @@ use crate::errors::LiquidError;
 
 // TODO: pass span or line/col to errors
 
-pub fn unescape(value: &str, span: (usize, usize)) -> Result<String, LiquidError> {
+pub fn unescape(value: &str, span: &(usize, usize)) -> Result<String, LiquidError> {
     let bytes = value.as_bytes();
     let length = bytes.len();
     let mut rv: Vec<u8> = Vec::new();
@@ -43,7 +43,7 @@ pub fn unescape(value: &str, span: (usize, usize)) -> Result<String, LiquidError
 fn decode_hex_char(
     bytes: &[u8],
     index: usize,
-    span: (usize, usize),
+    span: &(usize, usize),
 ) -> Result<(u32, usize), LiquidError> {
     let length = bytes.len();
     let mut index = index;
@@ -79,13 +79,13 @@ fn decode_hex_char(
     Ok((code_point, index + 3))
 }
 
-fn parse_hex_digits(digits: &[u8], span: (usize, usize)) -> Result<u32, LiquidError> {
+fn parse_hex_digits(digits: &[u8], span: &(usize, usize)) -> Result<u32, LiquidError> {
     let s = str::from_utf8(digits).unwrap();
     u32::from_str_radix(s, 16)
         .map_err(|_| LiquidError::syntax("invalid escape sequence".to_owned()))
 }
 
-fn encode_code_point(code_point: u32, span: (usize, usize)) -> Result<Vec<u8>, LiquidError> {
+fn encode_code_point(code_point: u32, span: &(usize, usize)) -> Result<Vec<u8>, LiquidError> {
     if code_point < 0x1F {
         Err(LiquidError::syntax("invalid character".to_owned()))
     } else {

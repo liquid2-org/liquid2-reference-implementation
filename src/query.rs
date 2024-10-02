@@ -39,12 +39,12 @@ impl Query {
             return None;
         }
 
-        if let Some(Segment::Child { selectors }) = self.segments.get(0) {
+        if let Some(Segment::Child { selectors, .. }) = self.segments.get(0) {
             if selectors.len() != 1 {
                 return None;
             }
 
-            if let Some(Selector::Name { name }) = selectors.get(0) {
+            if let Some(Selector::Name { name, .. }) = selectors.get(0) {
                 Some(name.to_owned())
             } else {
                 None
@@ -72,8 +72,14 @@ impl fmt::Display for Query {
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum Segment {
-    Child { selectors: Vec<Selector> },
-    Recursive { selectors: Vec<Selector> },
+    Child {
+        selectors: Vec<Selector>,
+        line_col: (usize, usize),
+    },
+    Recursive {
+        selectors: Vec<Selector>,
+        line_col: (usize, usize),
+    },
     Eoi {}, // Is this needed?
 }
 
@@ -112,23 +118,29 @@ impl fmt::Display for Segment {
 pub enum Selector {
     Name {
         name: String,
+        line_col: (usize, usize),
     },
     Index {
         index: i64,
+        line_col: (usize, usize),
     },
     Slice {
         start: Option<i64>,
         stop: Option<i64>,
         step: Option<i64>,
+        line_col: (usize, usize),
     },
-    Wild {},
+    Wild {
+        line_col: (usize, usize),
+    },
     Filter {
         expression: Box<FilterExpression>,
+        line_col: (usize, usize),
     },
     SingularQuery {
         query: Box<Query>,
+        line_col: (usize, usize),
     },
-    // TODO: RootSingularQuery vs RelativeSingularQuery
 }
 
 impl fmt::Display for Selector {
@@ -155,7 +167,7 @@ impl fmt::Display for Selector {
             }
             Selector::Wild { .. } => f.write_char('*'),
             Selector::Filter { expression, .. } => write!(f, "?{expression}"),
-            Selector::SingularQuery { query } => write!(f, "{query}"),
+            Selector::SingularQuery { query, .. } => write!(f, "{query}"),
         }
     }
 }
@@ -163,40 +175,55 @@ impl fmt::Display for Selector {
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum FilterExpression {
-    True_ {},
-    False_ {},
-    Null {},
+    True_ {
+        line_col: (usize, usize),
+    },
+    False_ {
+        line_col: (usize, usize),
+    },
+    Null {
+        line_col: (usize, usize),
+    },
     StringLiteral {
         value: String,
+        line_col: (usize, usize),
     },
     Int {
         value: i64,
+        line_col: (usize, usize),
     },
     Float {
         value: f64,
+        line_col: (usize, usize),
     },
     Not {
         expression: Box<FilterExpression>,
+        line_col: (usize, usize),
     },
     Logical {
         left: Box<FilterExpression>,
         operator: LogicalOperator,
         right: Box<FilterExpression>,
+        line_col: (usize, usize),
     },
     Comparison {
         left: Box<FilterExpression>,
         operator: ComparisonOperator,
         right: Box<FilterExpression>,
+        line_col: (usize, usize),
     },
     RelativeQuery {
         query: Box<Query>,
+        line_col: (usize, usize),
     },
     RootQuery {
         query: Box<Query>,
+        line_col: (usize, usize),
     },
     Function {
         name: String,
         args: Vec<FilterExpression>,
+        line_col: (usize, usize),
     },
 }
 

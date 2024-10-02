@@ -362,21 +362,21 @@ def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
             return FalseLiteral(token=token)
         case Token.Null():
             return Null(token=token)
-        case Token.Word(_, value):
+        case Token.Word(value):
             if value == "empty":
                 return Empty(token=token)
             if value == "blank":
                 return Blank(token=token)
             return Query(token, compile(parse_query(value)))
-        case Token.RangeLiteral(_, start, stop):
+        case Token.RangeLiteral(start, stop):
             return RangeLiteral(token, parse_primitive(start), parse_primitive(stop))
-        case Token.StringLiteral(_, value) | RangeArgument.StringLiteral(_, value):
+        case Token.StringLiteral(value) | RangeArgument.StringLiteral(value):
             return StringLiteral(token, value)
-        case Token.IntegerLiteral(_, value) | RangeArgument.IntegerLiteral(_, value):
+        case Token.IntegerLiteral(value) | RangeArgument.IntegerLiteral(value):
             return IntegerLiteral(token, value)
-        case Token.FloatLiteral(_, value) | RangeArgument.FloatLiteral(_, value):
+        case Token.FloatLiteral(value) | RangeArgument.FloatLiteral(value):
             return FloatLiteral(token, value)
-        case Token.Query(_, path) | RangeArgument.Query(_, path):
+        case Token.Query(path) | RangeArgument.Query(path):
             return Query(token, compile(path))
         case _:
             raise LiquidSyntaxError(
@@ -546,7 +546,7 @@ class Filter:
                 while True:
                     token = stream.current()
                     match token:
-                        case Token.Word(_, value):
+                        case Token.Word(value):
                             if isinstance(
                                 stream.current(), (Token.Assign, Token.Colon)
                             ):
@@ -564,7 +564,7 @@ class Filter:
                                         Query(token, compile(parse_query(value)))
                                     )
                                 )
-                        case Token.Query(_, path):
+                        case Token.Query(path):
                             filter_arguments.append(
                                 PositionalArgument(Query(token, compile(path)))
                             )
@@ -696,22 +696,22 @@ def parse_boolean_primitive(  # noqa: PLR0912
             left = FalseLiteral(token=token)
         case Token.Null():
             left = Null(token=token)
-        case Token.Word(_, value):
+        case Token.Word(value):
             if value == "empty":
                 left = Empty(token=token)
             elif value == "blank":
                 left = Blank(token=token)
             else:
                 left = Query(token, compile(parse_query(value)))
-        case Token.RangeLiteral(_, start, stop):
+        case Token.RangeLiteral(start, stop):
             left = RangeLiteral(token, parse_primitive(start), parse_primitive(stop))
-        case Token.StringLiteral(_, value):
+        case Token.StringLiteral(value):
             left = StringLiteral(token, value)
-        case Token.IntegerLiteral(_, value):
+        case Token.IntegerLiteral(value):
             left = IntegerLiteral(token, value)
-        case Token.FloatLiteral(_, value):
+        case Token.FloatLiteral(value):
             left = FloatLiteral(token, value)
-        case Token.Query(_, path):
+        case Token.Query(path):
             left = Query(token, compile(path))
         case Token.Not():
             left = LogicalNotExpression.parse(stream)
@@ -1211,7 +1211,7 @@ class LoopExpression(Expression):
         while True:
             arg_token = next(stream, None)
             match arg_token:
-                case Token.Word(_, value):
+                case Token.Word(value):
                     match value:
                         case "reversed":
                             reversed_ = True
@@ -1255,9 +1255,9 @@ class LoopExpression(Expression):
 def parse_identifier(token: TokenT | None) -> str:
     """Parse _token_ as an identifier."""
     match token:
-        case Token.Word(_, value):
+        case Token.Word(value):
             return value
-        case Token.Query(_, path):
+        case Token.Query(path):
             word = path.as_word()
             if word is None:
                 raise LiquidSyntaxError(

@@ -44,16 +44,16 @@ class Parser:
                 case Markup.Content():
                     nodes.append(content.parse(stream, left_trim=left_trim))
                     left_trim = default_trim
-                case Markup.Comment(_, wc):
+                case Markup.Comment(wc):
                     left_trim = wc[-1]
                     nodes.append(comment.parse(stream))
-                case Markup.Raw(_, wc):
+                case Markup.Raw(wc):
                     left_trim = wc[-1]
                     nodes.append(raw.parse(stream))
-                case Markup.Output(_, wc):
+                case Markup.Output(wc):
                     left_trim = wc[-1]
                     nodes.append(output.parse(stream))
-                case Markup.Tag(_, wc, name):
+                case Markup.Tag(wc, name):
                     left_trim = wc[-1]
                     stream.trim_carry = left_trim
                     try:
@@ -88,16 +88,16 @@ class Parser:
                 case Markup.Content():
                     nodes.append(content.parse(stream, left_trim=left_trim))
                     left_trim = default_trim
-                case Markup.Comment(_, wc):
+                case Markup.Comment(wc):
                     left_trim = wc[-1]
                     nodes.append(comment.parse(stream))
-                case Markup.Raw(_, wc):
+                case Markup.Raw(wc):
                     left_trim = wc[-1]
                     nodes.append(raw.parse(stream))
-                case Markup.Output(_, wc):
+                case Markup.Output(wc):
                     left_trim = wc[-1]
                     nodes.append(output.parse(stream))
-                case Markup.Tag(_, wc, name):
+                case Markup.Tag(wc, name):
                     left_trim = wc[-1]
 
                     if name in end:

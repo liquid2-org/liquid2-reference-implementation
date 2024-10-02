@@ -18,17 +18,17 @@ if TYPE_CHECKING:
 class JSONPathSegment(ABC):
     """Base class for all JSONPath segments."""
 
-    __slots__ = ("env", "span", "selectors")
+    __slots__ = ("env", "line_col", "selectors")
 
     def __init__(
         self,
         *,
         env: _JSONPathEnvironment,
-        span: tuple[int, int],
+        line_col: tuple[int, int],
         selectors: tuple[JSONPathSelector, ...],
     ) -> None:
         self.env = env
-        self.span = span
+        self.line_col = line_col
         self.selectors = selectors
 
     @abstractmethod
@@ -52,11 +52,11 @@ class JSONPathChildSegment(JSONPathSegment):
         return (
             isinstance(__value, JSONPathChildSegment)
             and self.selectors == __value.selectors
-            and self.span == __value.span
+            and self.line_col == __value.line_col
         )
 
     def __hash__(self) -> int:
-        return hash((self.selectors, self.span))
+        return hash((self.selectors, self.line_col))
 
 
 class JSONPathRecursiveDescentSegment(JSONPathSegment):
@@ -72,7 +72,7 @@ class JSONPathRecursiveDescentSegment(JSONPathSegment):
     def _visit(self, node: JSONPathNode, depth: int = 1) -> Iterable[JSONPathNode]:
         """Depth-first, pre-order node traversal."""
         if depth > self.env.max_recursion_depth:
-            raise JSONPathRecursionError("recursion limit exceeded", span=self.span)
+            raise JSONPathRecursionError("recursion limit exceeded", span=self.line_col)
 
         yield node
 
@@ -94,8 +94,8 @@ class JSONPathRecursiveDescentSegment(JSONPathSegment):
         return (
             isinstance(__value, JSONPathRecursiveDescentSegment)
             and self.selectors == __value.selectors
-            and self.span == __value.span
+            and self.line_col == __value.line_col
         )
 
     def __hash__(self) -> int:
-        return hash(("..", self.selectors, self.span))
+        return hash(("..", self.selectors, self.line_col))

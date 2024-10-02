@@ -36,7 +36,7 @@ fn dump_query(path: &str) {
 
 #[pyfunction]
 fn unescape_string(s: &str) -> Result<String, LiquidError> {
-    unescape::unescape(s, (0, 0))
+    unescape::unescape(s, &(0, 0))
 }
 
 #[pymodule]
