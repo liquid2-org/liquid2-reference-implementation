@@ -33,6 +33,7 @@ from .expressions import TrueLiteral
 from .expressions import is_truthy
 from .expressions import parse_identifier
 from .expressions import parse_primitive
+from .expressions import parse_string_or_identifier
 
 # TODO: export more expressions
 from .filters.array import compact
@@ -76,6 +77,7 @@ from .output import Output
 from .tags.assign_tag import AssignTag
 from .tags.capture_tag import CaptureTag
 from .tags.case_tag import CaseTag
+from .tags.cycle_tag import CycleTag
 from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
@@ -98,6 +100,7 @@ __all__ = (
     "Comment",
     "Content",
     "Continue",
+    "CycleTag",
     "Empty",
     "EqExpression",
     "FalseLiteral",
@@ -129,6 +132,7 @@ __all__ = (
     "ForTag",
     "parse_identifier",
     "parse_primitive",
+    "parse_string_or_identifier",
 )
 
 
@@ -185,3 +189,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.tags["continue"] = ContinueTag(env)
     env.tags["capture"] = CaptureTag(env)
     env.tags["case"] = CaseTag(env)
+    env.tags["cycle"] = CycleTag(env)

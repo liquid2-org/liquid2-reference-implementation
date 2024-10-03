@@ -77,7 +77,7 @@ class IfNode(Node):
 class IfTag(Tag):
     """The standard _if_ tag."""
 
-    block = False
+    block = True
     node_class = IfNode
     end_block = frozenset(["endif", "elsif", "else"])
 

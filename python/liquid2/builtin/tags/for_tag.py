@@ -130,7 +130,7 @@ class ForNode(Node):
 class ForTag(Tag):
     """The standard _for_ tag."""
 
-    block = False
+    block = True
     node_class = ForNode
     end_block = frozenset(["endfor", "else"])
 

@@ -70,7 +70,7 @@ class CaseNode(Node):
 class CaseTag(Tag):
     """The standard _case_ tag."""
 
-    block = False
+    block = True
     node_class = CaseNode
     end_block = frozenset(["endcase", "when", "else"])
 

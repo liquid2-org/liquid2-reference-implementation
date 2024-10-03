@@ -1,4 +1,4 @@
-"""The built in, standard implementation of the _assign_ tag."""
+"""The standard _assign_ tag."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class AssignNode(Node):
-    """The built in, standard implementation of the _assign_ node."""
+    """The standard _assign_ tag."""
 
     __slots__ = ("name", "expression")
 
@@ -29,9 +29,6 @@ class AssignNode(Node):
         super().__init__(token)
         self.name = name
         self.expression = expression
-
-    def __str__(self) -> str:
-        return f"{self.name} = {self.expression}"
 
     def render_to_output(self, context: RenderContext, _buffer: TextIO) -> int:
         """Render the node to the output buffer."""

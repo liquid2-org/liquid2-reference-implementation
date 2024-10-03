@@ -1321,6 +1321,72 @@
       "invalid": true
     },
     {
+      "name": "tags, cycle, string literals",
+      "template": "{% cycle 'a', 'b' %}{% cycle 'a', 'b' %}{% cycle 'a', 'b' %}",
+      "data": {},
+      "result": "aba"
+    },
+    {
+      "name": "tags, cycle, integer literals",
+      "template": "{% cycle 1, 2 %}{% cycle 1, 2 %}{% cycle 1, 2 %}",
+      "data": {},
+      "result": "121"
+    },
+    {
+      "name": "tags, cycle, bool literals",
+      "template": "{% cycle true, false %}{% cycle true, false %}{% cycle true, false %}",
+      "data": {},
+      "result": "truefalsetrue"
+    },
+    {
+      "name": "tags, cycle, queries",
+      "template": "{% cycle a, b %}{% cycle a, b %}{% cycle a, b %}",
+      "data": {
+        "a": "c",
+        "b": "d"
+      },
+      "result": "cdc"
+    },
+    {
+      "name": "tags, cycle, differing items",
+      "template": "{% cycle 'a', 'b' %}{% cycle 'a', 'b', 'c' %}{% cycle 'a', 'b' %}",
+      "data": {},
+      "result": "aab"
+    },
+    {
+      "name": "tags, cycle, named",
+      "template": "{% cycle foo: 'a', 'b' %}{% cycle foo: 'a', 'b' %}{% cycle foo: 'a', 'b' %}",
+      "data": {},
+      "result": "aba"
+    },
+    {
+      "name": "tags, cycle, named, differing items",
+      "template": "{% cycle foo: 'a', 'b' %}{% cycle foo: 'a', 'b', 'c' %}{% cycle foo: 'a', 'b' %}",
+      "data": {},
+      "result": "aab"
+    },
+    {
+      "name": "tags, cycle, differing names, same items",
+      "template": "{% cycle foo: 'a', 'b' %}{% cycle bar: 'a', 'b' %}{% cycle foo: 'a', 'b' %}",
+      "data": {},
+      "result": "aab"
+    },
+    {
+      "name": "tags, cycle, name is a path",
+      "template": "{% cycle foo.bar: 'a', 'b' %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, cycle, no items",
+      "template": "{% cycle %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, cycle, name, no items",
+      "template": "{% cycle foo: %}",
+      "invalid": true
+    },
+    {
       "name": "tags, capture, content with global variables",
       "template": "{% capture a %}Hello, {{ b }}!{% endcapture %}{{ a }}",
       "data": {

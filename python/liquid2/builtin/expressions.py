@@ -42,11 +42,11 @@ class Null(Expression):
     def __eq__(self, other: object) -> bool:
         return other is None or isinstance(other, Null)
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return "NIL()"
-
     def __str__(self) -> str:  # pragma: no cover
         return ""
+
+    def __hash__(self) -> int:
+        return hash(self.__class__)
 
     def evaluate(self, _: RenderContext) -> None:
         return None
@@ -63,11 +63,11 @@ class Empty(Expression):
             return True
         return isinstance(other, (list, dict, str)) and not other
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return "Empty()"
-
     def __str__(self) -> str:  # pragma: no cover
         return "empty"
+
+    def __hash__(self) -> int:
+        return hash(self.__class__)
 
     def evaluate(self, _: RenderContext) -> Empty:
         return self
@@ -86,11 +86,11 @@ class Blank(Expression):
             return True
         return isinstance(other, Blank)
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return "Blank()"
-
     def __str__(self) -> str:  # pragma: no cover
         return "blank"
+
+    def __hash__(self) -> int:
+        return hash(self.__class__)
 
     def evaluate(self, _: RenderContext) -> Blank:
         return self
@@ -105,11 +105,11 @@ class Continue(Expression):
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Continue)
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return "Continue()"
-
     def __str__(self) -> str:  # pragma: no cover
         return "continue"
+
+    def __hash__(self) -> int:
+        return hash(self.__class__)
 
     def evaluate(self, _: RenderContext) -> int:
         return 0
@@ -156,8 +156,8 @@ class TrueLiteral(Literal[bool]):
     def __eq__(self, other: object) -> bool:
         return isinstance(other, TrueLiteral) and self.value == other.value
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"TrueLiteral(value={self.value})"
+    def __hash__(self) -> int:
+        return hash(self.value)
 
 
 class FalseLiteral(Literal[bool]):
@@ -169,8 +169,8 @@ class FalseLiteral(Literal[bool]):
     def __eq__(self, other: object) -> bool:
         return isinstance(other, TrueLiteral) and self.value == other.value
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"FalseLiteral(value={self.value})"
+    def __hash__(self) -> int:
+        return hash(self.value)
 
 
 class StringLiteral(Literal[str]):
@@ -184,9 +184,6 @@ class StringLiteral(Literal[str]):
 
     def __hash__(self) -> int:
         return hash(self.value)
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"StringLiteral(value='{self.value}')"
 
     def __sizeof__(self) -> int:
         return sys.getsizeof(self.value)
@@ -209,9 +206,6 @@ class IntegerLiteral(Literal[int]):
     def __hash__(self) -> int:
         return hash(self.value)
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"IntegerLiteral(value={self.value})"
-
 
 class FloatLiteral(Literal[float]):
     __slots__ = ()
@@ -222,8 +216,8 @@ class FloatLiteral(Literal[float]):
     def __eq__(self, other: object) -> bool:
         return isinstance(other, FloatLiteral) and self.value == other.value
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"FloatLiteral(value={self.value})"
+    def __hash__(self) -> int:
+        return hash(self.value)
 
 
 class RangeLiteral(Expression):
@@ -1265,6 +1259,27 @@ class LoopExpression(Expression):
 def parse_identifier(token: TokenT | None) -> str:
     """Parse _token_ as an identifier."""
     match token:
+        case Token.Word(value):
+            return value
+        case Token.Query(path):
+            word = path.as_word()
+            if word is None:
+                raise LiquidSyntaxError(
+                    "expected an identifier, found a path", token=token
+                )
+            return word
+        case _:
+            raise LiquidSyntaxError(
+                f"expected an identifier, found {token.__class__.__name__}",
+                token=token,
+            )
+
+
+def parse_string_or_identifier(token: TokenT | None) -> str:
+    """Parse _token_ as an identifier or a string literal."""
+    match token:
+        case Token.StringLiteral(value):
+            return value
         case Token.Word(value):
             return value
         case Token.Query(path):

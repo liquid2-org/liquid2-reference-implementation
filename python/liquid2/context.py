@@ -6,6 +6,7 @@ import datetime
 from contextlib import contextmanager
 from functools import partial
 from io import StringIO
+from itertools import cycle
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -197,6 +198,13 @@ class RenderContext:
     def markup(self, s: str) -> str | Markup:
         """Return a _safe_ string if auto escape is enabled."""
         return Markup(s) if self.auto_escape else s
+
+    def cycle(self, cycle_hash: int, length: int) -> int:
+        """Return the index of the next item in the named cycle."""
+        namespace = self.tag_namespace["cycles"]
+        if cycle_hash not in namespace:
+            namespace[cycle_hash] = cycle(range(length))
+        return next(namespace[cycle_hash])  # type: ignore
 
 
 class BuiltIn(Mapping[str, object]):
