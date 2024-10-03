@@ -51,6 +51,10 @@ class TokenStream(peekable):  # type: ignore
         except IndexError:
             return None
 
+    def next(self) -> TokenT | None:
+        """Return the next token and advance the iterator."""
+        return next(self, None)
+
     def peek(self) -> TokenT | None:  # type: ignore
         """Return the item at self[1] without advancing the iterator."""
         try:
@@ -132,3 +136,21 @@ class TokenStream(peekable):  # type: ignore
         if isinstance(peeked, Markup.Tag):
             return peeked.name in tag_names
         return False
+
+    def into_inner(self) -> TokenStream:
+        """Return a new stream over the current token's expression, consuming the token.
+
+        Raises:
+            LiquidSyntaxError: if the current token is not a tag
+        """
+        token = self.next()
+
+        if not isinstance(token, Markup.Tag):
+            raise LiquidSyntaxError(
+                f"expected a tag, found {token.__class__.__name__}", token=token
+            )
+
+        if not token.expression:
+            raise LiquidSyntaxError("expected a expression", token=token)
+
+        return TokenStream(token.expression)

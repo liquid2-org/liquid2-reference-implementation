@@ -10,6 +10,7 @@ from .expressions import Blank
 from .expressions import BooleanExpression
 from .expressions import Continue
 from .expressions import Empty
+from .expressions import EqExpression
 from .expressions import FalseLiteral
 from .expressions import Filter
 from .expressions import FilteredExpression
@@ -31,6 +32,7 @@ from .expressions import TernaryFilteredExpression
 from .expressions import TrueLiteral
 from .expressions import is_truthy
 from .expressions import parse_identifier
+from .expressions import parse_primitive
 
 # TODO: export more expressions
 from .filters.array import compact
@@ -73,6 +75,7 @@ from .filters.string import url_encode
 from .output import Output
 from .tags.assign_tag import AssignTag
 from .tags.capture_tag import CaptureTag
+from .tags.case_tag import CaseTag
 from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
@@ -89,12 +92,14 @@ __all__ = (
     "Boolean",
     "BooleanExpression",
     "BreakTag",
+    "CaseTag",
     "CaptureTag",
     "ContinueTag",
     "Comment",
     "Content",
     "Continue",
     "Empty",
+    "EqExpression",
     "FalseLiteral",
     "Filter",
     "FilteredExpression",
@@ -123,6 +128,7 @@ __all__ = (
     "UnlessTag",
     "ForTag",
     "parse_identifier",
+    "parse_primitive",
 )
 
 
@@ -178,3 +184,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.tags["break"] = BreakTag(env)
     env.tags["continue"] = ContinueTag(env)
     env.tags["capture"] = CaptureTag(env)
+    env.tags["case"] = CaseTag(env)

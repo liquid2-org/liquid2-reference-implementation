@@ -497,6 +497,141 @@
       "result": "a1-2 a2-2 b3-4 b4-4 b5-4 b6-4 "
     },
     {
+      "name": "tags, case, query, first when",
+      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {
+        "a": "b"
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, case, query, last when",
+      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {
+        "a": "d"
+      },
+      "result": "e"
+    },
+    {
+      "name": "tags, case, query, both whens",
+      "template": "{% case a %}{% when 'b' %}c{% when 'b' %}d{% endcase %}",
+      "data": {
+        "a": "b"
+      },
+      "result": "cd"
+    },
+    {
+      "name": "tags, case, query, no match",
+      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {
+        "a": "x"
+      },
+      "result": ""
+    },
+    {
+      "name": "tags, case, string literal",
+      "template": "{% case 'a' %}{% when 'a' %}b{% when 'c' %}d{% endcase %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, case, or",
+      "template": "{% case 'b' %}{% when 'a' or 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, comma separated or",
+      "template": "{% case 'b' %}{% when 'a', 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, or, multiple",
+      "template": "{% case 'b' %}{% when 'a' or 'b' or 'x' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, multiple comma separated or",
+      "template": "{% case 'b' %}{% when 'a', 'b', 'x' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, mixed comma and or separated",
+      "template": "{% case 'b' %}{% when 'a' or 'b', 'x' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, default",
+      "template": "{% case 'a' %}{% when 'b' %}c{% when 'd' %}e{% else %}f{% endcase %}",
+      "data": {},
+      "result": "f"
+    },
+    {
+      "name": "tags, case, default, not rendered",
+      "template": "{% case 'a' %}{% when 'b' %}c{% when 'a' %}e{% else %}f{% endcase %}",
+      "data": {},
+      "result": "e"
+    },
+    {
+      "name": "tags, case, default, no whens",
+      "template": "{% case 'a' %}{% else %}f{% endcase %}",
+      "data": {},
+      "result": "f"
+    },
+    {
+      "name": "tags, case, no whens or default",
+      "template": "{% case 'a' %}{% endcase %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, case, whitespace after case",
+      "template": "{% case 'a' %}\n  {% when 'a' %}b{% endcase %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, case, content after case",
+      "template": "{% case 'a' %}hello{% when 'b' %}c{% endcase %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, case, missing when expression",
+      "template": "{% case 'a' %}{% when %}b{% endcase %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, case, switch on array",
+      "template": "{% case a %}{% when b %}c{% endcase %}",
+      "data": {
+        "a": [
+          1,
+          2,
+          3
+        ],
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, case, multiple else blocks",
+      "template": "{% case a %}{% when b %}c{% else %}d{% else %}{% endcase %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, case, when after else",
+      "template": "{% case a %}{% when b %}c{% else %}d{% when 'e' %}f{% endcase %}",
+      "invalid": true
+    },
+    {
       "name": "tags, assign, string literal",
       "template": "{% assign a = 'b' %}{{ a }}",
       "data": {},
@@ -1212,6 +1347,11 @@
       "template": "{% capture a %}{% endcapture %}",
       "data": {},
       "result": ""
+    },
+    {
+      "name": "tags, capture, extra tokens",
+      "template": "{% capture a b %}{% endcapture %}",
+      "invalid": true
     }
   ]
 }

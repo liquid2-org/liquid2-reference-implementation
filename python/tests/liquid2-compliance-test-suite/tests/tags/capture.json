@@ -23,6 +23,11 @@
       "template": "{% capture a %}{% endcapture %}",
       "data": {},
       "result": ""
+    },
+    {
+      "name": "extra tokens",
+      "template": "{% capture a b %}{% endcapture %}",
+      "invalid": true
     }
   ]
 }

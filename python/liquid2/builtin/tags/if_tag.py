@@ -38,18 +38,6 @@ class IfNode(Node):
         self.alternatives = alternatives
         self.alternative = alternative
 
-    def __str__(self) -> str:
-        buf = [
-            f"if {self.condition} {{ {self.consequence} }}",
-        ]
-
-        for alt in self.alternatives:
-            buf.append(f"elsif {alt}")
-
-        if self.alternative:
-            buf.append(f"else {{ {self.alternative} }}")
-        return " ".join(buf)
-
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         if self.condition.evaluate(context):
