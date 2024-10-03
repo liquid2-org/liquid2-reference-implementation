@@ -79,6 +79,7 @@ from .tags.capture_tag import CaptureTag
 from .tags.case_tag import CaseTag
 from .tags.cycle_tag import CycleTag
 from .tags.decrement_tag import DecrementTag
+from .tags.echo_tag import EchoTag
 from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
@@ -104,6 +105,7 @@ __all__ = (
     "Continue",
     "CycleTag",
     "DecrementTag",
+    "EchoTag",
     "Empty",
     "EqExpression",
     "FalseLiteral",
@@ -196,3 +198,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.tags["cycle"] = CycleTag(env)
     env.tags["decrement"] = DecrementTag(env)
     env.tags["increment"] = IncrementTag(env)
+    env.tags["echo"] = EchoTag(env)

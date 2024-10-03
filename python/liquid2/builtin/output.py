@@ -1,4 +1,4 @@
-"""The built in, standard implementation of the output statement."""
+"""The standard output statement."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class OutputNode(Node):
-    """The built in, standard implementation of the output statement."""
+    """The standard output statement."""
 
     __slots__ = ("expression",)
 

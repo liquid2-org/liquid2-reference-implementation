@@ -186,12 +186,13 @@ impl Lexer {
                 "for" => Token::For { line_col },
                 _ => unreachable!(),
             },
-            Rule::multiline_double_quoted
-            | Rule::multiline_single_quoted
-            | Rule::single_quoted
-            | Rule::double_quoted => Token::StringLiteral {
+            Rule::multiline_double_quoted | Rule::double_quoted => Token::StringLiteral {
                 line_col,
-                value: pair.as_str().to_owned(),
+                value: unescape(pair.as_str(), &line_col)?,
+            },
+            Rule::multiline_single_quoted | Rule::single_quoted => Token::StringLiteral {
+                line_col,
+                value: unescape(&pair.as_str().replace("\\'", "'"), &line_col)?,
             },
             Rule::number => self.parse_number(pair)?,
             Rule::range => self.parse_range(pair)?,
