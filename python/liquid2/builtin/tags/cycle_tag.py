@@ -1,4 +1,4 @@
-"""The standard _cycle_tag_."""
+"""The standard _cycle_ tag."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class CycleNode(Node):
-    """The standard _cycle_tag_."""
+    """The standard _cycle_ tag."""
 
     __slots__ = ("name", "items", "cycle_hash")
 
@@ -58,7 +58,7 @@ class CycleNode(Node):
 
 
 class CycleTag(Tag):
-    """The standard _cycle_tag_."""
+    """The standard _cycle_ tag."""
 
     block = False
     node_class = CycleNode

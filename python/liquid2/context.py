@@ -206,6 +206,18 @@ class RenderContext:
             namespace[cycle_hash] = cycle(range(length))
         return next(namespace[cycle_hash])  # type: ignore
 
+    def increment(self, name: str) -> int:
+        """Increment the named counter and return its value."""
+        val: int = self.counters.get(name, 0)
+        self.counters[name] = val + 1
+        return val
+
+    def decrement(self, name: str) -> int:
+        """Decrement the named counter and return its value."""
+        val: int = self.counters.get(name, 0) - 1
+        self.counters[name] = val
+        return val
+
 
 class BuiltIn(Mapping[str, object]):
     """Mapping-like object for resolving built-in, dynamic objects."""

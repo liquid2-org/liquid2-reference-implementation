@@ -497,338 +497,6 @@
       "result": "a1-2 a2-2 b3-4 b4-4 b5-4 b6-4 "
     },
     {
-      "name": "tags, case, query, first when",
-      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
-      "data": {
-        "a": "b"
-      },
-      "result": "c"
-    },
-    {
-      "name": "tags, case, query, last when",
-      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
-      "data": {
-        "a": "d"
-      },
-      "result": "e"
-    },
-    {
-      "name": "tags, case, query, both whens",
-      "template": "{% case a %}{% when 'b' %}c{% when 'b' %}d{% endcase %}",
-      "data": {
-        "a": "b"
-      },
-      "result": "cd"
-    },
-    {
-      "name": "tags, case, query, no match",
-      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
-      "data": {
-        "a": "x"
-      },
-      "result": ""
-    },
-    {
-      "name": "tags, case, string literal",
-      "template": "{% case 'a' %}{% when 'a' %}b{% when 'c' %}d{% endcase %}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, case, or",
-      "template": "{% case 'b' %}{% when 'a' or 'b' %}c{% when 'd' %}e{% endcase %}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, case, comma separated or",
-      "template": "{% case 'b' %}{% when 'a', 'b' %}c{% when 'd' %}e{% endcase %}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, case, or, multiple",
-      "template": "{% case 'b' %}{% when 'a' or 'b' or 'x' %}c{% when 'd' %}e{% endcase %}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, case, multiple comma separated or",
-      "template": "{% case 'b' %}{% when 'a', 'b', 'x' %}c{% when 'd' %}e{% endcase %}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, case, mixed comma and or separated",
-      "template": "{% case 'b' %}{% when 'a' or 'b', 'x' %}c{% when 'd' %}e{% endcase %}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, case, default",
-      "template": "{% case 'a' %}{% when 'b' %}c{% when 'd' %}e{% else %}f{% endcase %}",
-      "data": {},
-      "result": "f"
-    },
-    {
-      "name": "tags, case, default, not rendered",
-      "template": "{% case 'a' %}{% when 'b' %}c{% when 'a' %}e{% else %}f{% endcase %}",
-      "data": {},
-      "result": "e"
-    },
-    {
-      "name": "tags, case, default, no whens",
-      "template": "{% case 'a' %}{% else %}f{% endcase %}",
-      "data": {},
-      "result": "f"
-    },
-    {
-      "name": "tags, case, no whens or default",
-      "template": "{% case 'a' %}{% endcase %}",
-      "data": {},
-      "result": ""
-    },
-    {
-      "name": "tags, case, whitespace after case",
-      "template": "{% case 'a' %}\n  {% when 'a' %}b{% endcase %}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, case, content after case",
-      "template": "{% case 'a' %}hello{% when 'b' %}c{% endcase %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, case, missing when expression",
-      "template": "{% case 'a' %}{% when %}b{% endcase %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, case, switch on array",
-      "template": "{% case a %}{% when b %}c{% endcase %}",
-      "data": {
-        "a": [
-          1,
-          2,
-          3
-        ],
-        "b": [
-          1,
-          2,
-          3
-        ]
-      },
-      "result": "c"
-    },
-    {
-      "name": "tags, case, multiple else blocks",
-      "template": "{% case a %}{% when b %}c{% else %}d{% else %}{% endcase %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, case, when after else",
-      "template": "{% case a %}{% when b %}c{% else %}d{% when 'e' %}f{% endcase %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, assign, string literal",
-      "template": "{% assign a = 'b' %}{{ a }}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, assign, integer literal",
-      "template": "{% assign a = 123 %}{{ a }}",
-      "data": {},
-      "result": "123"
-    },
-    {
-      "name": "tags, assign, float literal",
-      "template": "{% assign a = 1.23 %}{{ a }}",
-      "data": {},
-      "result": "1.23"
-    },
-    {
-      "name": "tags, assign, range literal",
-      "template": "{% assign a = (1..3) %}{{ a | join: '#' }}",
-      "data": {},
-      "result": "1#2#3"
-    },
-    {
-      "name": "tags, assign, simple query",
-      "template": "{% assign a = b %}{{ a }}",
-      "data": {
-        "b": "c"
-      },
-      "result": "c"
-    },
-    {
-      "name": "tags, assign, query, nested object",
-      "template": "{% assign a = b.c %}{{ a }}",
-      "data": {
-        "b": {
-          "c": "d"
-        }
-      },
-      "result": "d"
-    },
-    {
-      "name": "tags, assign, query, nested array element",
-      "template": "{% assign a = b.c[1] %}{{ a }}",
-      "data": {
-        "b": {
-          "c": [
-            1,
-            2,
-            3
-          ]
-        }
-      },
-      "result": "2"
-    },
-    {
-      "name": "tags, assign, string literal containing an end tag delimiter",
-      "template": "{% assign a = 'foo%}bar' %}{{ a }}",
-      "data": {},
-      "result": "foo%}bar"
-    },
-    {
-      "name": "tags, assign, string literal containing a start output delimiter",
-      "template": "{% assign a = 'foo{{bar' %}{{ a }}",
-      "data": {},
-      "result": "foo{{bar"
-    },
-    {
-      "name": "tags, assign, shadow global variable",
-      "template": "{{ a }}{% assign a = 'c' %}{{ a }}",
-      "data": {
-        "a": "b"
-      },
-      "result": "bc"
-    },
-    {
-      "name": "tags, assign, string literal, filtered",
-      "template": "{% assign a = 'b' | upcase %}{{ a }}",
-      "data": {},
-      "result": "B"
-    },
-    {
-      "name": "tags, assign, ternary expression, truthy",
-      "template": "{% assign a = 'b' if true else 'c' %}{{ a }}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, assign, ternary expression, falsy",
-      "template": "{% assign a = 'b' if false else 'c' %}{{ a }}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, assign, ternary expression, truthy filter",
-      "template": "{% assign a = 'b' | upcase if true else 'c' %}{{ a }}",
-      "data": {},
-      "result": "B"
-    },
-    {
-      "name": "tags, assign, ternary expression, falsy filter",
-      "template": "{% assign a = 'b' if false else 'c' | upcase %}{{ a }}",
-      "data": {},
-      "result": "C"
-    },
-    {
-      "name": "tags, assign, ternary expression, truthy, falsy filter",
-      "template": "{% assign a = 'b' if true else 'c' | upcase %}{{ a }}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, assign, ternary expression, falsy, truthy filter",
-      "template": "{% assign a = 'b' | upcase if false else 'c' %}{{ a }}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, assign, ternary expression, tail filter",
-      "template": "{% assign a = 'b' if true else 'c' || upcase %}{{ a }}",
-      "data": {},
-      "result": "B"
-    },
-    {
-      "name": "tags, assign, missing assignment operator",
-      "template": "{% assign a 'b' %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, assign, missing expression",
-      "template": "{% assign a = %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, unless, literal true, no alternative",
-      "template": "{% unless true %}a{% endunless %}",
-      "data": {},
-      "result": ""
-    },
-    {
-      "name": "tags, unless, literal false",
-      "template": "{% unless false %}a{% endunless %}",
-      "data": {},
-      "result": "a"
-    },
-    {
-      "name": "tags, unless, literal true, alternative",
-      "template": "{% unless true %}a{% else %}b{% endunless %}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, unless, literal true, truthy alternative",
-      "template": "{% unless true %}a{% elsif true %}b{% endunless %}",
-      "data": {},
-      "result": "b"
-    },
-    {
-      "name": "tags, unless, literal true, falsy alternative",
-      "template": "{% unless true %}a{% elsif false %}b{% endunless %}",
-      "data": {},
-      "result": ""
-    },
-    {
-      "name": "tags, unless, literal true, falsy alternative, final alternative",
-      "template": "{% unless true %}a{% elsif false %}b{% else %}c{% endunless %}",
-      "data": {},
-      "result": "c"
-    },
-    {
-      "name": "tags, unless, missing whitespace after tag name",
-      "template": "{% unlesstrue %}a{% endunless %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, unless, no whitespace before tag name",
-      "template": "{%unless false %}a{% endunless %}",
-      "data": {},
-      "result": "a"
-    },
-    {
-      "name": "tags, unless, no whitespace after expression",
-      "template": "{% unless false%}a{% endunless %}",
-      "data": {},
-      "result": "a"
-    },
-    {
-      "name": "tags, unless, extra else block",
-      "template": "{% unless true %}a{% else %}b{% else %}c{% endunless %}",
-      "invalid": true
-    },
-    {
-      "name": "tags, unless, extra elsif block",
-      "template": "{% unless true %}a{% else %}b{% elsif true %}c{% endunless %}",
-      "invalid": true
-    },
-    {
       "name": "tags, if, literal true",
       "template": "{% if true %}a{% endif %}",
       "data": {},
@@ -1321,6 +989,102 @@
       "invalid": true
     },
     {
+      "name": "tags, unless, literal true, no alternative",
+      "template": "{% unless true %}a{% endunless %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, unless, literal false",
+      "template": "{% unless false %}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, literal true, alternative",
+      "template": "{% unless true %}a{% else %}b{% endunless %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, unless, literal true, truthy alternative",
+      "template": "{% unless true %}a{% elsif true %}b{% endunless %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, unless, literal true, falsy alternative",
+      "template": "{% unless true %}a{% elsif false %}b{% endunless %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, unless, literal true, falsy alternative, final alternative",
+      "template": "{% unless true %}a{% elsif false %}b{% else %}c{% endunless %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, unless, missing whitespace after tag name",
+      "template": "{% unlesstrue %}a{% endunless %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, unless, no whitespace before tag name",
+      "template": "{%unless false %}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, no whitespace after expression",
+      "template": "{% unless false%}a{% endunless %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, unless, extra else block",
+      "template": "{% unless true %}a{% else %}b{% else %}c{% endunless %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, unless, extra elsif block",
+      "template": "{% unless true %}a{% else %}b{% elsif true %}c{% endunless %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, capture, content with global variables",
+      "template": "{% capture a %}Hello, {{ b }}!{% endcapture %}{{ a }}",
+      "data": {
+        "b": "you"
+      },
+      "result": "Hello, you!"
+    },
+    {
+      "name": "tags, capture, into identifier containing a hyphen",
+      "template": "{% capture a-b %}Hello, {{ c }}!{% endcapture %}{{ a-b }}",
+      "data": {
+        "c": "you"
+      },
+      "result": "Hello, you!"
+    },
+    {
+      "name": "tags, capture, empty block",
+      "template": "{% capture a %}{% endcapture %}{{ a }}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, capture, empty block, end of input",
+      "template": "{% capture a %}{% endcapture %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, capture, extra tokens",
+      "template": "{% capture a b %}{% endcapture %}",
+      "invalid": true
+    },
+    {
       "name": "tags, cycle, string literals",
       "template": "{% cycle 'a', 'b' %}{% cycle 'a', 'b' %}{% cycle 'a', 'b' %}",
       "data": {},
@@ -1387,36 +1151,348 @@
       "invalid": true
     },
     {
-      "name": "tags, capture, content with global variables",
-      "template": "{% capture a %}Hello, {{ b }}!{% endcapture %}{{ a }}",
-      "data": {
-        "b": "you"
-      },
-      "result": "Hello, you!"
+      "name": "tags, increment, named counter",
+      "template": "{% increment a %} {% increment a %}",
+      "data": {},
+      "result": "0 1"
     },
     {
-      "name": "tags, capture, into identifier containing a hyphen",
-      "template": "{% capture a-b %}Hello, {{ c }}!{% endcapture %}{{ a-b }}",
-      "data": {
-        "c": "you"
-      },
-      "result": "Hello, you!"
+      "name": "tags, increment, multiple",
+      "template": "{% increment a %} {% increment b %} {% increment a %} {% increment b %}",
+      "data": {},
+      "result": "0 0 1 1"
     },
     {
-      "name": "tags, capture, empty block",
-      "template": "{% capture a %}{% endcapture %}{{ a }}",
+      "name": "tags, increment, output",
+      "template": "{% increment a %} {% increment a %} {{ a }}",
+      "data": {},
+      "result": "0 1 2"
+    },
+    {
+      "name": "tags, increment, global name already exists",
+      "template": "{{ a }} {% increment a %} {% increment a %} {{a}}",
+      "data": {
+        "a": 10
+      },
+      "result": "10 0 1 10"
+    },
+    {
+      "name": "tags, increment, local name already exists",
+      "template": "{% assign a = 10 %}{{ a }} {% increment a %} {% increment a %} {{a}}",
+      "data": {},
+      "result": "10 0 1 10"
+    },
+    {
+      "name": "tags, increment, and decrement",
+      "template": "{% increment a %} {% increment a %} {% decrement a %} {% decrement a %} {% increment a %}",
+      "data": {},
+      "result": "0 1 1 0 0"
+    },
+    {
+      "name": "tags, assign, string literal",
+      "template": "{% assign a = 'b' %}{{ a }}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, assign, integer literal",
+      "template": "{% assign a = 123 %}{{ a }}",
+      "data": {},
+      "result": "123"
+    },
+    {
+      "name": "tags, assign, float literal",
+      "template": "{% assign a = 1.23 %}{{ a }}",
+      "data": {},
+      "result": "1.23"
+    },
+    {
+      "name": "tags, assign, range literal",
+      "template": "{% assign a = (1..3) %}{{ a | join: '#' }}",
+      "data": {},
+      "result": "1#2#3"
+    },
+    {
+      "name": "tags, assign, simple query",
+      "template": "{% assign a = b %}{{ a }}",
+      "data": {
+        "b": "c"
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, assign, query, nested object",
+      "template": "{% assign a = b.c %}{{ a }}",
+      "data": {
+        "b": {
+          "c": "d"
+        }
+      },
+      "result": "d"
+    },
+    {
+      "name": "tags, assign, query, nested array element",
+      "template": "{% assign a = b.c[1] %}{{ a }}",
+      "data": {
+        "b": {
+          "c": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "result": "2"
+    },
+    {
+      "name": "tags, assign, string literal containing an end tag delimiter",
+      "template": "{% assign a = 'foo%}bar' %}{{ a }}",
+      "data": {},
+      "result": "foo%}bar"
+    },
+    {
+      "name": "tags, assign, string literal containing a start output delimiter",
+      "template": "{% assign a = 'foo{{bar' %}{{ a }}",
+      "data": {},
+      "result": "foo{{bar"
+    },
+    {
+      "name": "tags, assign, shadow global variable",
+      "template": "{{ a }}{% assign a = 'c' %}{{ a }}",
+      "data": {
+        "a": "b"
+      },
+      "result": "bc"
+    },
+    {
+      "name": "tags, assign, string literal, filtered",
+      "template": "{% assign a = 'b' | upcase %}{{ a }}",
+      "data": {},
+      "result": "B"
+    },
+    {
+      "name": "tags, assign, ternary expression, truthy",
+      "template": "{% assign a = 'b' if true else 'c' %}{{ a }}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, assign, ternary expression, falsy",
+      "template": "{% assign a = 'b' if false else 'c' %}{{ a }}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, assign, ternary expression, truthy filter",
+      "template": "{% assign a = 'b' | upcase if true else 'c' %}{{ a }}",
+      "data": {},
+      "result": "B"
+    },
+    {
+      "name": "tags, assign, ternary expression, falsy filter",
+      "template": "{% assign a = 'b' if false else 'c' | upcase %}{{ a }}",
+      "data": {},
+      "result": "C"
+    },
+    {
+      "name": "tags, assign, ternary expression, truthy, falsy filter",
+      "template": "{% assign a = 'b' if true else 'c' | upcase %}{{ a }}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, assign, ternary expression, falsy, truthy filter",
+      "template": "{% assign a = 'b' | upcase if false else 'c' %}{{ a }}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, assign, ternary expression, tail filter",
+      "template": "{% assign a = 'b' if true else 'c' || upcase %}{{ a }}",
+      "data": {},
+      "result": "B"
+    },
+    {
+      "name": "tags, assign, missing assignment operator",
+      "template": "{% assign a 'b' %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, assign, missing expression",
+      "template": "{% assign a = %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, decrement, named counter",
+      "template": "{% decrement a %} {% decrement a %}",
+      "data": {},
+      "result": "-1 -2"
+    },
+    {
+      "name": "tags, decrement, multiple",
+      "template": "{% decrement a %} {% decrement b %} {% decrement a %} {% decrement b %}",
+      "data": {},
+      "result": "-1 -1 -2 -2"
+    },
+    {
+      "name": "tags, decrement, output",
+      "template": "{% decrement a %} {% decrement a %} {{ a }}",
+      "data": {},
+      "result": "-1 -2 -2"
+    },
+    {
+      "name": "tags, decrement, global name already exists",
+      "template": "{{ a }} {% decrement a %} {% decrement a %} {{a}}",
+      "data": {
+        "a": 10
+      },
+      "result": "10 -1 -2 10"
+    },
+    {
+      "name": "tags, decrement, local name already exists",
+      "template": "{% assign a = 10 %}{{ a }} {% decrement a %} {% decrement a %} {{a}}",
+      "data": {},
+      "result": "10 -1 -2 10"
+    },
+    {
+      "name": "tags, decrement, and increment",
+      "template": "{% decrement a %} {% decrement a %} {% increment a %} {% increment a %} {% decrement a %}",
+      "data": {},
+      "result": "-1 -2 -2 -1 -1"
+    },
+    {
+      "name": "tags, case, query, first when",
+      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {
+        "a": "b"
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, case, query, last when",
+      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {
+        "a": "d"
+      },
+      "result": "e"
+    },
+    {
+      "name": "tags, case, query, both whens",
+      "template": "{% case a %}{% when 'b' %}c{% when 'b' %}d{% endcase %}",
+      "data": {
+        "a": "b"
+      },
+      "result": "cd"
+    },
+    {
+      "name": "tags, case, query, no match",
+      "template": "{% case a %}{% when 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {
+        "a": "x"
+      },
+      "result": ""
+    },
+    {
+      "name": "tags, case, string literal",
+      "template": "{% case 'a' %}{% when 'a' %}b{% when 'c' %}d{% endcase %}",
+      "data": {},
+      "result": "b"
+    },
+    {
+      "name": "tags, case, or",
+      "template": "{% case 'b' %}{% when 'a' or 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, comma separated or",
+      "template": "{% case 'b' %}{% when 'a', 'b' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, or, multiple",
+      "template": "{% case 'b' %}{% when 'a' or 'b' or 'x' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, multiple comma separated or",
+      "template": "{% case 'b' %}{% when 'a', 'b', 'x' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, mixed comma and or separated",
+      "template": "{% case 'b' %}{% when 'a' or 'b', 'x' %}c{% when 'd' %}e{% endcase %}",
+      "data": {},
+      "result": "c"
+    },
+    {
+      "name": "tags, case, default",
+      "template": "{% case 'a' %}{% when 'b' %}c{% when 'd' %}e{% else %}f{% endcase %}",
+      "data": {},
+      "result": "f"
+    },
+    {
+      "name": "tags, case, default, not rendered",
+      "template": "{% case 'a' %}{% when 'b' %}c{% when 'a' %}e{% else %}f{% endcase %}",
+      "data": {},
+      "result": "e"
+    },
+    {
+      "name": "tags, case, default, no whens",
+      "template": "{% case 'a' %}{% else %}f{% endcase %}",
+      "data": {},
+      "result": "f"
+    },
+    {
+      "name": "tags, case, no whens or default",
+      "template": "{% case 'a' %}{% endcase %}",
       "data": {},
       "result": ""
     },
     {
-      "name": "tags, capture, empty block, end of input",
-      "template": "{% capture a %}{% endcapture %}",
+      "name": "tags, case, whitespace after case",
+      "template": "{% case 'a' %}\n  {% when 'a' %}b{% endcase %}",
       "data": {},
-      "result": ""
+      "result": "b"
     },
     {
-      "name": "tags, capture, extra tokens",
-      "template": "{% capture a b %}{% endcapture %}",
+      "name": "tags, case, content after case",
+      "template": "{% case 'a' %}hello{% when 'b' %}c{% endcase %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, case, missing when expression",
+      "template": "{% case 'a' %}{% when %}b{% endcase %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, case, switch on array",
+      "template": "{% case a %}{% when b %}c{% endcase %}",
+      "data": {
+        "a": [
+          1,
+          2,
+          3
+        ],
+        "b": [
+          1,
+          2,
+          3
+        ]
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, case, multiple else blocks",
+      "template": "{% case a %}{% when b %}c{% else %}d{% else %}{% endcase %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, case, when after else",
+      "template": "{% case a %}{% when b %}c{% else %}d{% when 'e' %}f{% endcase %}",
       "invalid": true
     }
   ]

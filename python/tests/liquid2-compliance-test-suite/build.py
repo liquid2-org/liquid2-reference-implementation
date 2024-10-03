@@ -42,11 +42,12 @@ def load_tests(path: Path) -> list[dict[str, Any]]:
 
     sys.stderr.write(f"Loading {relative_path} with prefix '{prefix}'{os.linesep}")
 
+    # TODO: check for duplicate test names
+
     with open(path, encoding="utf8") as fd:
         tests = json.load(fd)
 
     validate(instance=tests, schema=SCHEMA)
-    # TODO: check for duplicate test names
     return [add_prefix(prefix, test) for test in tests["tests"]]
 
 

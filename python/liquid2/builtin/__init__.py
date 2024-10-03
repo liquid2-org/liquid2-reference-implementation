@@ -78,10 +78,12 @@ from .tags.assign_tag import AssignTag
 from .tags.capture_tag import CaptureTag
 from .tags.case_tag import CaseTag
 from .tags.cycle_tag import CycleTag
+from .tags.decrement_tag import DecrementTag
 from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
 from .tags.if_tag import IfTag
+from .tags.increment_tag import IncrementTag
 from .tags.raw_tag import RawTag
 from .tags.unless_tag import UnlessTag
 
@@ -101,6 +103,7 @@ __all__ = (
     "Content",
     "Continue",
     "CycleTag",
+    "DecrementTag",
     "Empty",
     "EqExpression",
     "FalseLiteral",
@@ -109,6 +112,7 @@ __all__ = (
     "FilteredExpression",
     "FloatLiteral",
     "IfTag",
+    "IncrementTag",
     "IntegerLiteral",
     "is_truthy",
     "KeywordArgument",
@@ -136,7 +140,7 @@ __all__ = (
 )
 
 
-def register_standard_tags_and_filters(env: Environment) -> None:
+def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR0915
     """Register standard tags and filters with an environment."""
     env.filters["join"] = join
     env.filters["first"] = first
@@ -190,3 +194,5 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.tags["capture"] = CaptureTag(env)
     env.tags["case"] = CaseTag(env)
     env.tags["cycle"] = CycleTag(env)
+    env.tags["decrement"] = DecrementTag(env)
+    env.tags["increment"] = IncrementTag(env)
