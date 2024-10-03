@@ -104,6 +104,14 @@ class TokenStream(peekable):  # type: ignore
                 f"expected a '{tag_name}' tag, found {token.name}", token=token
             )
 
+    def expect_eos(self) -> None:
+        """Raise a syntax error if we're not at the end of the stream."""
+        token = self.current()
+        if token is not None and not isinstance(token, Markup.EOI):
+            raise LiquidSyntaxError(
+                f"unexpected {token.__class__.__name__}", token=token
+            )
+
     def is_tag(self, tag_name: str) -> bool:
         """Return _True_ if the current token is a tag named _tag_name_."""
         token = self.current()

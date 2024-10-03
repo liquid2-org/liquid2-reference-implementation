@@ -72,6 +72,7 @@ from .filters.string import url_decode
 from .filters.string import url_encode
 from .output import Output
 from .tags.assign_tag import AssignTag
+from .tags.capture_tag import CaptureTag
 from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
@@ -88,6 +89,7 @@ __all__ = (
     "Boolean",
     "BooleanExpression",
     "BreakTag",
+    "CaptureTag",
     "ContinueTag",
     "Comment",
     "Content",
@@ -175,3 +177,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:
     env.tags["for"] = ForTag(env)
     env.tags["break"] = BreakTag(env)
     env.tags["continue"] = ContinueTag(env)
+    env.tags["capture"] = CaptureTag(env)

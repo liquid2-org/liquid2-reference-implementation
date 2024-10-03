@@ -47,7 +47,7 @@ class AssignNode(Node):
 
 
 class AssignTag(Tag):
-    """The standard _raw_ tag."""
+    """The standard _assign_ tag."""
 
     block = False
     node_class = AssignNode
@@ -57,11 +57,11 @@ class AssignTag(Tag):
         token = stream.current()
         assert isinstance(token, Markup.Tag)
 
-        stream = TokenStream(token.expression)
-        name = parse_identifier(next(stream, None))
-        stream.expect(Token.Assign)
-        next(stream)
+        expr_stream = TokenStream(token.expression)
+        name = parse_identifier(next(expr_stream, None))
+        expr_stream.expect(Token.Assign)
+        next(expr_stream)
 
         return self.node_class(
-            token, name=name, expression=FilteredExpression.parse(stream)
+            token, name=name, expression=FilteredExpression.parse(expr_stream)
         )

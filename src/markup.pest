@@ -131,8 +131,14 @@ multiline_unescaped = _{
   | '\u{E000}'..'\u{10FFFF}'
 }
 
-// NOTE: borrowing name_char from JSONPath
-word = { name_first ~ name_char* ~ !("." | "[") }
+word       =  { word_first ~ word_char* ~ !("." | "[") }
+word_first = _{
+    ASCII_ALPHA
+  | "_"
+  | '\u{80}'..'\u{D7FF}'
+  | '\u{E000}'..'\u{10FFFF}'
+}
+word_char  = _{ word_first | "-" | ASCII_DIGIT }
 
 // Entry point for JSONPath query testing
 _jsonpath = { SOI ~ (jsonpath_query | implicit_root_query) ~ EOI }
@@ -332,7 +338,8 @@ name_first = _{
   | '\u{E000}'..'\u{10FFFF}'
 }
 
-name_char = _{ name_first | ASCII_DIGIT }
+// XXX: names can contain hyphens
+name_char = _{ name_first | "-" | ASCII_DIGIT }
 
 descendant_segment = {
     ".." ~ (bracketed_selection | wildcard_selector | member_name_shorthand)

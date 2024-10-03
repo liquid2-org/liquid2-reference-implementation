@@ -5,11 +5,15 @@ from __future__ import annotations
 import datetime
 from contextlib import contextmanager
 from functools import partial
+from io import StringIO
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
 from typing import Mapping
+from typing import TextIO
+
+from markupsafe import Markup
 
 from .exceptions import ContextDepthError
 from .exceptions import NoSuchFilterFunc
@@ -184,6 +188,15 @@ class RenderContext:
             return self.loops[-1]
         except IndexError:
             return self.env.undefined("parentloop", token=token)
+
+    def get_output_buffer(self, parent_buffer: TextIO | None) -> StringIO:
+        """Return a new output buffer respecting any limits set on the environment."""
+        # TODO
+        return StringIO()
+
+    def markup(self, s: str) -> str | Markup:
+        """Return a _safe_ string if auto escape is enabled."""
+        return Markup(s) if self.auto_escape else s
 
 
 class BuiltIn(Mapping[str, object]):
