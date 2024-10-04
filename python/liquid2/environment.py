@@ -14,6 +14,7 @@ from _liquid2 import LiquidTypeError as _LiquidTypeError
 from _liquid2 import Whitespace
 from _liquid2 import tokenize
 
+from .builtin import DictLoader
 from .builtin import register_standard_tags_and_filters
 from .exceptions import LiquidError
 from .exceptions import LiquidSyntaxError
@@ -26,6 +27,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from .ast import Node
+    from .context import RenderContext
+    from .loader import BaseLoader
     from .tag import Tag
 
 
@@ -37,7 +40,15 @@ class Environment:
     trim = Whitespace.Plus
     undefined: Type[Undefined] = Undefined
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        loader: BaseLoader | None = None,
+        global_context_data: Mapping[str, object] | None = None,
+    ) -> None:
+        self.loader = loader or DictLoader({})
+        self.global_context_data = global_context_data or {}
+
         self.filters: dict[str, Callable[..., object]] = {}
         self.tags: dict[str, Tag] = {}
         register_standard_tags_and_filters(self)
@@ -45,8 +56,6 @@ class Environment:
         self.parser = Parser(self)
 
         # TODO: raise if trim is set to "Default"
-        # TODO: environment globals
-        # TODO: loaders, loaders that handle caching
         # TODO: limits
         # TODO: template_class
 
@@ -66,6 +75,7 @@ class Environment:
     def from_string(
         self,
         source: str,
+        *,
         name: str = "<string>",
         path: str | Path | None = None,
         global_context_data: Mapping[str, object] | None = None,
@@ -80,3 +90,61 @@ class Environment:
             global_data=global_context_data,
             overlay_data=overlay_context_data,
         )
+
+    def get_template(
+        self,
+        name: str,
+        *,
+        global_context_data: Mapping[str, object] | None = None,
+        context: RenderContext | None = None,
+        **kwargs: object,
+    ) -> Template:
+        """Load and parse a template using the configured loader.
+
+        Args:
+            name: The template's name. The loader is responsible for interpreting
+                the name. It could be the name of a file or some other identifier.
+            global_context_data: A mapping of render context variables attached to the
+                resulting template.
+            context: An optional render context that can be used to narrow the template
+                source search space.
+            kwargs: Arbitrary arguments that can be used to narrow the template source
+                search space.
+
+        Raises:
+            TemplateNotFound: If a template with the given name can not be found.
+        """
+        return self.loader.load(
+            env=self,
+            name=name,
+            global_context_data=self.make_globals(global_context_data),
+            context=context,
+            **kwargs,  # type: ignore
+        )
+
+    async def get_template_async(
+        self,
+        name: str,
+        *,
+        global_context_data: Mapping[str, object] | None = None,
+        context: RenderContext | None = None,
+        **kwargs: object,
+    ) -> Template:
+        """An async version of `get_template()`."""
+        return await self.loader.load_async(
+            env=self,
+            name=name,
+            global_context_data=self.make_globals(global_context_data),
+            context=context,
+            **kwargs,  # type: ignore
+        )
+
+    def make_globals(
+        self,
+        globals: Mapping[str, object] | None = None,  # noqa: A002
+    ) -> dict[str, object]:
+        """Combine environment globals with template globals."""
+        if globals:
+            # Template globals take priority over environment globals.
+            return {**self.global_context_data, **globals}
+        return dict(self.global_context_data)

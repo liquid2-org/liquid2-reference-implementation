@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from .ast import Node
     from .environment import Environment
+    from .loader import UpToDate
 
 
 class Template:
@@ -30,6 +31,7 @@ class Template:
         "path",
         "global_data",
         "overlay_data",
+        "uptodate",
     )
 
     def __init__(
@@ -48,6 +50,7 @@ class Template:
         self.path = path
         self.global_data = global_data or {}
         self.overlay_data = overlay_data or {}
+        self.uptodate: UpToDate = None
 
     def render(self, *args: Any, **kwargs: Any) -> str:
         """Render this template with _args_ and _kwargs_."""

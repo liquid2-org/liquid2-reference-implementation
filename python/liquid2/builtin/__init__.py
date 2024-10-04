@@ -34,8 +34,6 @@ from .expressions import is_truthy
 from .expressions import parse_identifier
 from .expressions import parse_primitive
 from .expressions import parse_string_or_identifier
-
-# TODO: export more expressions
 from .filters.array import compact
 from .filters.array import concat
 from .filters.array import first
@@ -73,6 +71,7 @@ from .filters.string import truncatewords
 from .filters.string import upcase
 from .filters.string import url_decode
 from .filters.string import url_encode
+from .loaders.dict_loader import DictLoader
 from .output import Output
 from .tags.assign_tag import AssignTag
 from .tags.capture_tag import CaptureTag
@@ -105,6 +104,7 @@ __all__ = (
     "Continue",
     "CycleTag",
     "DecrementTag",
+    "DictLoader",
     "EchoTag",
     "Empty",
     "EqExpression",
