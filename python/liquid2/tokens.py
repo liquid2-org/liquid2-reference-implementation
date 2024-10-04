@@ -10,6 +10,7 @@ from typing import Type
 from more_itertools import peekable
 
 from liquid2 import Markup
+from liquid2 import Token
 from liquid2 import Whitespace
 
 from .exceptions import LiquidSyntaxError
@@ -121,6 +122,20 @@ class TokenStream(peekable):  # type: ignore
         token = self.current()
         if isinstance(token, Markup.Tag):
             return token.name == tag_name
+        return False
+
+    def is_word(self, value: str) -> bool:
+        """Return _True_ if the current token is a word with value equal to _value_."""
+        token = self.current()
+        if isinstance(token, Token.Word):
+            return token.value == value
+        return False
+
+    def peek_word(self, value: str) -> bool:
+        """Return _True_ if the next token is a word with value equal to _value_."""
+        token = self.peek()
+        if isinstance(token, Token.Word):
+            return token.value == value
         return False
 
     def is_one_of(self, tag_names: Container[str]) -> bool:

@@ -32,6 +32,7 @@ from .expressions import TernaryFilteredExpression
 from .expressions import TrueLiteral
 from .expressions import is_truthy
 from .expressions import parse_identifier
+from .expressions import parse_keyword_arguments
 from .expressions import parse_primitive
 from .expressions import parse_string_or_identifier
 from .filters.array import compact
@@ -83,6 +84,7 @@ from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
 from .tags.if_tag import IfTag
+from .tags.include_tag import IncludeTag
 from .tags.increment_tag import IncrementTag
 from .tags.raw_tag import RawTag
 from .tags.unless_tag import UnlessTag
@@ -114,6 +116,7 @@ __all__ = (
     "FilteredExpression",
     "FloatLiteral",
     "IfTag",
+    "IncludeTag",
     "IncrementTag",
     "IntegerLiteral",
     "is_truthy",
@@ -139,6 +142,7 @@ __all__ = (
     "parse_identifier",
     "parse_primitive",
     "parse_string_or_identifier",
+    "parse_keyword_arguments",
 )
 
 
@@ -199,3 +203,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.tags["decrement"] = DecrementTag(env)
     env.tags["increment"] = IncrementTag(env)
     env.tags["echo"] = EchoTag(env)
+    env.tags["include"] = IncludeTag(env)

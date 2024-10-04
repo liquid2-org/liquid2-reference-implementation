@@ -1296,6 +1296,43 @@ def parse_string_or_identifier(token: TokenT | None) -> str:
             )
 
 
+def parse_keyword_arguments(tokens: TokenStream) -> list[KeywordArgument]:
+    """Parse _tokens_ into a list or keyword arguments."""
+    args: list[KeywordArgument] = []
+
+    while True:
+        token = tokens.next()
+        match token:
+            case Token.Comma():
+                # XXX: Leading and/or trailing commas are OK.
+                continue
+            case Token.Word(value=name):
+                tokens.expect_one_of(Token.Colon, Token.Assign)
+                tokens.next()  # Move past ":" or "="
+                value = parse_primitive(tokens.next())
+                args.append(KeywordArgument(name, value))
+            case Token.Query(path=path):
+                word = path.as_word()
+                if word is None:
+                    raise LiquidSyntaxError(
+                        "expected an identifier, found a path", token=token
+                    )
+                tokens.expect_one_of(Token.Colon, Token.Assign)
+                tokens.next()  # Move past ":" or "="
+                value = parse_primitive(tokens.next())
+                args.append(KeywordArgument(word, value))
+            case None:
+                break
+            case _:
+                raise LiquidSyntaxError(
+                    "expected a list of keyword arguments, "
+                    f"found {token.__class__.__name__}",
+                    token=token,
+                )
+
+    return args
+
+
 def is_truthy(obj: object) -> bool:
     """Return _True_ if _obj_ is considered Liquid truthy."""
     if hasattr(obj, "__liquid__"):

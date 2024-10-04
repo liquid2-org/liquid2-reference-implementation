@@ -5,6 +5,7 @@ from _liquid2 import Markup
 from _liquid2 import Token
 from _liquid2 import Whitespace
 from .ast import Node
+from .builtin import DictLoader
 from .context import RenderContext
 from .environment import Environment
 from .template import Template
@@ -13,16 +14,17 @@ from .undefined import StrictUndefined
 from .undefined import Undefined
 
 __all__ = [
+    "DictLoader",
     "Environment",
+    "Markup",
     "Node",
     "RenderContext",
-    "Tag",
-    "Template",
     "StrictDefaultUndefined",
     "StrictUndefined",
-    "Undefined",
-    "Markup",
+    "Tag",
+    "Template",
     "Token",
+    "Undefined",
     "Whitespace",
 ]
 

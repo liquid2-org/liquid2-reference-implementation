@@ -26,11 +26,11 @@
         "data": {
           "$ref": "#/$defs/data"
         },
+        "templates": {
+          "$ref": "#/$defs/templates"
+        },
         "result": {
           "$ref": "#/$defs/test_case_result"
-        },
-        "results": {
-          "$ref": "#/$defs/test_case_results"
         },
         "invalid": {
           "$ref": "#/$defs/invalid"
@@ -68,6 +68,13 @@
     },
     "data": {
       "description": "Render context data"
+    },
+    "templates": {
+      "type": "object",
+      "description": "Snippets or partial templates that can be included or rendered.",
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "invalid": {
       "type": "boolean",

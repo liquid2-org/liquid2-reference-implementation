@@ -69,21 +69,49 @@ class Template:
         *args: Any,
         partial: bool = False,
         **kwargs: Any,
-    ) -> None:
+    ) -> int:
         """Render this template using an existing render context and output buffer."""
-        # TODO: partial?
         namespace = dict(*args, **kwargs)
+        character_count = 0
 
         with context.extend(namespace):
             for node in self.nodes:
                 try:
-                    node.render(context, buf)
+                    character_count += node.render(context, buf)
+                # TODO: StopRender
                 except LiquidInterrupt as err:
                     if not partial:
                         raise LiquidSyntaxError(
                             f"unexpected '{err}'", token=node.token
                         ) from err
                     raise
+
+        return character_count
+
+    async def render_with_context_async(
+        self,
+        context: RenderContext,
+        buf: TextIO,
+        *args: Any,
+        partial: bool = False,
+        **kwargs: Any,
+    ) -> int:
+        """Render this template using an existing render context and output buffer."""
+        namespace = dict(*args, **kwargs)
+        character_count = 0
+
+        with context.extend(namespace):
+            for node in self.nodes:
+                try:
+                    character_count += await node.render_async(context, buf)
+                except LiquidInterrupt as err:
+                    if not partial:
+                        raise LiquidSyntaxError(
+                            f"unexpected '{err}'", token=node.token
+                        ) from err
+                    raise
+
+        return character_count
 
     def make_globals(self, render_args: Mapping[str, object]) -> Mapping[str, object]:
         """Return a mapping including render arguments and template globals."""

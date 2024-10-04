@@ -8,6 +8,7 @@ from dataclasses import field
 from typing import Any
 
 import pytest
+from liquid2 import DictLoader
 from liquid2 import Environment
 from liquid2.exceptions import LiquidError
 
@@ -19,6 +20,7 @@ class Case:
     name: str
     template: str
     data: dict[str, Any] = field(default_factory=dict)
+    templates: dict[str, str] | None = None
     result: str | None = None
     invalid: bool | None = None
     tags: list[str] = field(default_factory=list)
@@ -41,18 +43,15 @@ def invalid_cases() -> list[Case]:
     return [case for case in cases() if case.invalid]
 
 
-@pytest.fixture
-def env() -> Environment:
-    return Environment()
-
-
 @pytest.mark.parametrize("case", valid_cases(), ids=operator.attrgetter("name"))
-def test_compliance(env: Environment, case: Case) -> None:
+def test_compliance(case: Case) -> None:
+    env = Environment(loader=DictLoader(case.templates or {}))
     assert env.from_string(case.template).render(**case.data) == case.result
 
 
 @pytest.mark.parametrize("case", valid_cases(), ids=operator.attrgetter("name"))
-def test_compliance_async(env: Environment, case: Case) -> None:
+def test_compliance_async(case: Case) -> None:
+    env = Environment(loader=DictLoader(case.templates or {}))
     template = env.from_string(case.template)
 
     async def coro() -> str:
@@ -62,13 +61,16 @@ def test_compliance_async(env: Environment, case: Case) -> None:
 
 
 @pytest.mark.parametrize("case", invalid_cases(), ids=operator.attrgetter("name"))
-def test_invalid_compliance(env: Environment, case: Case) -> None:
+def test_invalid_compliance(case: Case) -> None:
+    env = Environment(loader=DictLoader(case.templates or {}))
     with pytest.raises(LiquidError):
         env.from_string(case.template).render(**case.data)
 
 
 @pytest.mark.parametrize("case", invalid_cases(), ids=operator.attrgetter("name"))
-def test_invalid_compliance_async(env: Environment, case: Case) -> None:
+def test_invalid_compliance_async(case: Case) -> None:
+    env = Environment(loader=DictLoader(case.templates or {}))
+
     async def coro() -> str:
         template = env.from_string(case.template)
         return template.render(**case.data)
