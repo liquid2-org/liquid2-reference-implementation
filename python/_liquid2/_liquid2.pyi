@@ -57,6 +57,15 @@ class Markup:
         @property
         def span(self) -> tuple[int, int]: ...
 
+    class Lines:
+        __match_args__ = ("wc", "statements", "span")
+        @property
+        def wc(self) -> tuple[Whitespace, Whitespace]: ...
+        @property
+        def statements(self) -> list[list[Token]]: ...
+        @property
+        def span(self) -> tuple[int, int]: ...
+
     class EOI:
         pass
 
@@ -273,6 +282,7 @@ TokenT: TypeAlias = (
     | Markup.Comment
     | Markup.Output
     | Markup.Tag
+    | Markup.Lines
     | Token.True_
     | Token.False_
     | Token.And

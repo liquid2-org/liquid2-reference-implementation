@@ -32,6 +32,11 @@ pub enum Markup {
         expression: Option<Vec<Token>>,
         span: (usize, usize),
     },
+    Lines {
+        wc: (Whitespace, Whitespace),
+        statements: Vec<Vec<Token>>,
+        span: (usize, usize),
+    },
     EOI {},
 }
 
@@ -67,21 +72,40 @@ impl fmt::Display for Markup {
                     if expr.is_empty() {
                         write!(f, "{{%{} {} {}%}}", wc.0, name, wc.1)
                     } else {
-                        // TODO: Smarter join. No space after some symbols
-                        let expr_ = expr
-                            .into_iter()
-                            .map(|e| e.to_string())
-                            .collect::<Vec<String>>()
-                            .join(" ");
-                        write!(f, "{{%{} {} {} {}%}}", wc.0, name, expr_, wc.1)
+                        write!(
+                            f,
+                            "{{%{} {} {} {}%}}",
+                            wc.0,
+                            name,
+                            tokens_string(expr),
+                            wc.1
+                        )
                     }
                 } else {
                     write!(f, "{{%{} {} {}%}}", wc.0, name, wc.1)
                 }
             }
+            Markup::Lines { wc, statements, .. } => {
+                let lines = statements
+                    .into_iter()
+                    .map(|s| tokens_string(s))
+                    .collect::<Vec<String>>()
+                    .join("\n");
+
+                write!(f, "{{%{}\n{} {}%}}", wc.0, lines, wc.1)
+            }
             Markup::EOI {} => Ok(()),
         }
     }
+}
+
+fn tokens_string(tokens: &Vec<Token>) -> String {
+    // TODO: Smarter join. No space after some symbols
+    tokens
+        .into_iter()
+        .map(|e| e.to_string())
+        .collect::<Vec<String>>()
+        .join(" ")
 }
 
 #[pymethods]

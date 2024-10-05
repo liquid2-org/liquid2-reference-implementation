@@ -121,6 +121,15 @@
         "a": "{{ a }} {{ forloop.parentloop.index0 }}, "
       },
       "result": "1 , 2 , 1 , 2 , "
+    },
+    {
+      "name": "include",
+      "template": "{% render 'a' %}",
+      "templates": {
+        "a": "{% include 'b' %}",
+        "b": "c"
+      },
+      "invalid": true
     }
   ]
 }

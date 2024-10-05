@@ -116,6 +116,16 @@
         "a": "{{ b }}{% assign b = 'x' %}{{ b }}"
       },
       "result": "ccx"
+    },
+    {
+      "name": "render",
+      "template": "{% include 'a' %}",
+      "data": {},
+      "templates": {
+        "a": "{% render 'b' %}",
+        "b": "c"
+      },
+      "result": "c"
     }
   ]
 }

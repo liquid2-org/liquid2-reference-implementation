@@ -718,6 +718,16 @@
       "result": "ccx"
     },
     {
+      "name": "tags, include, render",
+      "template": "{% include 'a' %}",
+      "data": {},
+      "templates": {
+        "a": "{% render 'b' %}",
+        "b": "c"
+      },
+      "result": "c"
+    },
+    {
       "name": "tags, increment, named counter",
       "template": "{% increment a %} {% increment a %}",
       "data": {},
@@ -1598,6 +1608,15 @@
         "a": "{{ a }} {{ forloop.parentloop.index0 }}, "
       },
       "result": "1 , 2 , 1 , 2 , "
+    },
+    {
+      "name": "tags, render, include",
+      "template": "{% render 'a' %}",
+      "templates": {
+        "a": "{% include 'b' %}",
+        "b": "c"
+      },
+      "invalid": true
     },
     {
       "name": "tags, assign, string literal",

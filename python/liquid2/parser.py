@@ -31,6 +31,7 @@ class Parser:
         content = cast(Content, tags["__CONTENT"])
         output = tags["__OUTPUT"]
         raw = tags["__RAW"]
+        lines = tags["__LINES"]
 
         nodes: list[Node] = []
         stream = TokenStream(tokens)
@@ -62,8 +63,16 @@ class Parser:
                         raise LiquidSyntaxError(
                             f"unknown tag '{name}'", token=stream.current()
                         ) from err
+                case Markup.Lines(wc):
+                    left_trim = wc[-1]
+                    lines.parse(stream)
                 case Markup.EOI() | None:
                     break
+                case _token:
+                    raise LiquidSyntaxError(
+                        "unexpected token '{_token.__class__.__name__}'",
+                        token=_token,
+                    )
 
             next(stream, None)
 
@@ -76,6 +85,7 @@ class Parser:
         content = cast(Content, tags["__CONTENT"])
         output = tags["__OUTPUT"]
         raw = tags["__RAW"]
+        lines = tags["__LINES"]
 
         default_trim = self.env.trim
         left_trim = stream.trim_carry
@@ -110,6 +120,9 @@ class Parser:
                         raise LiquidSyntaxError(
                             f"unknown tag {name}", token=stream.current()
                         ) from err
+                case Markup.Lines(wc):
+                    left_trim = wc[-1]
+                    lines.parse(stream)
                 case Markup.EOI() | None:
                     break
 

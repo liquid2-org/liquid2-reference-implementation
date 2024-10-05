@@ -40,11 +40,12 @@ tag_token = _{
 
 output_expr = _{ (S ~ tag_token)+ }
 
-liquid_tag      = { tag_start ~ "liquid" ~ (s ~ line_statements) ~ tag_end }
-line_statements = { (S ~ line_statement ~ LS ~ "\x0A")* }
-line_statement  = { (LS ~ line_token ~ LS)* }
+liquid_tag      =  { tag_start ~ "liquid" ~ (s ~ line_statements) ~ tag_end }
+line_statements =  { line_statement ~ ("\x0A" ~ line_statement)* }
+line_statement  = _{ (LS ~ line_token ~ LS)* }
 
 // TODO: need a newline sensitive version of `query`
+// TODO: line comments
 line_token = {
     string_literal
   | number
