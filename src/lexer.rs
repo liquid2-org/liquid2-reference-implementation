@@ -156,7 +156,13 @@ impl Lexer {
         let span = pair.as_span();
         let mut it = pair.into_inner();
         let wc_left = Whitespace::from_str(it.next().unwrap().as_str());
-        let statements: Vec<Vec<Token>> = self.parse_line_statements(it.next().unwrap())?;
+
+        let statements = if it.peek().is_some_and(|p| p.as_rule() != Rule::WC) {
+            self.parse_line_statements(it.next().unwrap())?
+        } else {
+            Vec::new()
+        };
+
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
         Ok(Markup::Lines {
             wc: (wc_left, wc_right),
@@ -165,19 +171,25 @@ impl Lexer {
         })
     }
 
-    fn parse_line_statements(&self, pair: Pair<Rule>) -> Result<Vec<Vec<Token>>, LiquidError> {
+    fn parse_line_statements(&self, pair: Pair<Rule>) -> Result<Vec<Markup>, LiquidError> {
         pair.into_inner()
             .map(|line| self.parse_line_statement(line))
             .collect()
     }
 
-    fn parse_line_statement(&self, pair: Pair<Rule>) -> Result<Vec<Token>, LiquidError> {
-        // TODO: expect tag name
-        // TODO: then tokens
-        // TODO: return a Markup.tag or Markup.comment
-        pair.into_inner()
-            .map(|token| self.parse_expr_token(token))
-            .collect()
+    fn parse_line_statement(&self, pair: Pair<Rule>) -> Result<Markup, LiquidError> {
+        let span = pair.as_span();
+        let mut it = pair.into_inner();
+        let name = it.next().unwrap().as_str().to_owned();
+        let tokens: Result<Vec<_>, _> = it.map(|token| self.parse_expr_token(token)).collect();
+        let expression = tokens.and_then(|v| if v.len() == 0 { Ok(None) } else { Ok(Some(v)) })?;
+
+        Ok(Markup::Tag {
+            span: (span.start(), span.end()),
+            name,
+            wc: (Whitespace::Default, Whitespace::Default),
+            expression,
+        })
     }
 
     fn parse_expr_token(&self, pair: Pair<Rule>) -> Result<Token, LiquidError> {

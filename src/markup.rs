@@ -34,7 +34,7 @@ pub enum Markup {
     },
     Lines {
         wc: (Whitespace, Whitespace),
-        statements: Vec<Vec<Token>>,
+        statements: Vec<Markup>,
         span: (usize, usize),
     },
     EOI {},
@@ -88,11 +88,15 @@ impl fmt::Display for Markup {
             Markup::Lines { wc, statements, .. } => {
                 let lines = statements
                     .into_iter()
-                    .map(|s| tokens_string(s))
+                    .map(|t| tag_as_line_statement(t))
                     .collect::<Vec<String>>()
                     .join("\n");
 
-                write!(f, "{{%{}\n{} {}%}}", wc.0, lines, wc.1)
+                if lines.len() == 0 {
+                    write!(f, "{{%{} liquid {}%}}", wc.0, wc.1)
+                } else {
+                    write!(f, "{{%{} liquid {} {}%}}", wc.0, lines, wc.1)
+                }
             }
             Markup::EOI {} => Ok(()),
         }
@@ -106,6 +110,21 @@ fn tokens_string(tokens: &Vec<Token>) -> String {
         .map(|e| e.to_string())
         .collect::<Vec<String>>()
         .join(" ")
+}
+
+fn tag_as_line_statement(tag: &Markup) -> String {
+    match tag {
+        Markup::Tag {
+            name, expression, ..
+        } => {
+            if let Some(expr) = expression {
+                format!("{} {}", name, tokens_string(expr))
+            } else {
+                name.to_owned()
+            }
+        }
+        _ => String::new(),
+    }
 }
 
 #[pymethods]

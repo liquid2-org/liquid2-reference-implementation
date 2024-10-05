@@ -2374,6 +2374,47 @@
       "invalid": true
     },
     {
+      "name": "tags, liquid, string literal, single line",
+      "template": "{% liquid echo 'a' %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, liquid, string literals, multiple lines",
+      "template": "{% liquid echo 'a'\nassign b = 'c'\necho b %}",
+      "data": {},
+      "result": "ac"
+    },
+    {
+      "name": "tags, liquid, multiple lines, leading newline",
+      "template": "{% liquid echo 'a'\nassign b = 'c'\necho b %}",
+      "data": {},
+      "result": "ac"
+    },
+    {
+      "name": "tags, liquid, carriage return and newline terminated statements",
+      "template": "{% liquid echo 'a'\r\nassign b = 'c'\r\necho b %}",
+      "data": {},
+      "result": "ac"
+    },
+    {
+      "name": "tags, liquid, carriage return terminated statements",
+      "template": "{% liquid echo 'a'\rassign b = 'c'\recho b %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, liquid, empty",
+      "template": "{% liquid %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, liquid, only whitespace",
+      "template": "{% liquid\n   \n\n   \t \n\t\n  %}",
+      "data": {},
+      "result": ""
+    },
+    {
       "name": "tags, capture, content with global variables",
       "template": "{% capture a %}Hello, {{ b }}!{% endcapture %}{{ a }}",
       "data": {

@@ -60,12 +60,13 @@ class Parser:
                     try:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:
+                        # TODO: change error message if name is "liquid"
                         raise LiquidSyntaxError(
                             f"unknown tag '{name}'", token=stream.current()
                         ) from err
                 case Markup.Lines(wc):
                     left_trim = wc[-1]
-                    lines.parse(stream)
+                    nodes.append(lines.parse(stream))
                 case Markup.EOI() | None:
                     break
                 case _token:
@@ -117,12 +118,13 @@ class Parser:
                     try:
                         nodes.append(tags[name].parse(stream))
                     except KeyError as err:
+                        # TODO: change error message if name is "liquid"
                         raise LiquidSyntaxError(
                             f"unknown tag {name}", token=stream.current()
                         ) from err
                 case Markup.Lines(wc):
                     left_trim = wc[-1]
-                    lines.parse(stream)
+                    nodes.append(lines.parse(stream))
                 case Markup.EOI() | None:
                     break
 

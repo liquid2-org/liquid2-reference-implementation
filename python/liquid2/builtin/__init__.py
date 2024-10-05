@@ -86,6 +86,7 @@ from .tags.for_tag import ForTag
 from .tags.if_tag import IfTag
 from .tags.include_tag import IncludeTag
 from .tags.increment_tag import IncrementTag
+from .tags.liquid_tag import LiquidTag
 from .tags.raw_tag import RawTag
 from .tags.render_tag import RenderTag
 from .tags.unless_tag import UnlessTag
@@ -123,6 +124,7 @@ __all__ = (
     "is_truthy",
     "KeywordArgument",
     "Literal",
+    "LiquidTag",
     "LogicalAndExpression",
     "LogicalNotExpression",
     "LogicalOrExpression",
@@ -207,3 +209,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.tags["echo"] = EchoTag(env)
     env.tags["include"] = IncludeTag(env)
     env.tags["render"] = RenderTag(env)
+    env.tags["__LINES"] = LiquidTag(env)

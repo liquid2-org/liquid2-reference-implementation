@@ -1,0 +1,45 @@
+{
+  "tests": [
+    {
+      "name": "string literal, single line",
+      "template": "{% liquid echo 'a' %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "string literals, multiple lines",
+      "template": "{% liquid echo 'a'\nassign b = 'c'\necho b %}",
+      "data": {},
+      "result": "ac"
+    },
+    {
+      "name": "multiple lines, leading newline",
+      "template": "{% liquid echo 'a'\nassign b = 'c'\necho b %}",
+      "data": {},
+      "result": "ac"
+    },
+    {
+      "name": "carriage return and newline terminated statements",
+      "template": "{% liquid echo 'a'\r\nassign b = 'c'\r\necho b %}",
+      "data": {},
+      "result": "ac"
+    },
+    {
+      "name": "carriage return terminated statements",
+      "template": "{% liquid echo 'a'\rassign b = 'c'\recho b %}",
+      "invalid": true
+    },
+    {
+      "name": "empty",
+      "template": "{% liquid %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "only whitespace",
+      "template": "{% liquid\n   \n\n   \t \n\t\n  %}",
+      "data": {},
+      "result": ""
+    }
+  ]
+}

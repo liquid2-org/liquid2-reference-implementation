@@ -24,7 +24,9 @@ B  = _{ "\x20" | "\x09" | "\x0A" | "\x0D" }
 S  = _{ B* }
 LS = _{ ("\x20" | "\x09")* }
 s  = _{ B+ }
+ls = _{ ("\x20" | "\x09")+ }
 
+// TODO: Some tokens will require whitespace, some wont.
 tag_expr = _{ (S ~ tag_token ~ S)* }
 
 // TODO: Prioritize words or paths? Parsers will need to call Query.as_word() or Word.as_query()
@@ -40,13 +42,14 @@ tag_token = _{
 
 output_expr = _{ (S ~ tag_token)+ }
 
-liquid_tag      =  { tag_start ~ "liquid" ~ (s ~ line_statements) ~ tag_end }
-line_statements =  { line_statement ~ ("\x0A" ~ line_statement)* }
-line_statement  = _{ (LS ~ line_token ~ LS)* }
+liquid_tag      =  { tag_start ~ "liquid" ~ (s ~ line_statements)? ~ tag_end }
+line_statements =  { line_statement ~ (line_term ~ line_statement)* }
+line_statement  =  { LS ~ tag_name ~ (ls ~ line_token ~ (LS ~ line_token ~ LS)*)? }
+line_term       = _{ "\x0D"? ~ "\x0A" }
 
 // TODO: need a newline sensitive version of `query`
 // TODO: line comments
-line_token = {
+line_token = _{
     string_literal
   | number
   | range

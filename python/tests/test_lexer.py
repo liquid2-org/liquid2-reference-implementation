@@ -145,6 +145,36 @@ TEST_CASES = [
         source="{%- if foo ~%}a{%+ elsif bar +%}b{%~ endif -%}",
         want="{%- if foo ~%}a{%+ elsif bar +%}b{%~ endif -%}",
     ),
+    Case(
+        name="liquid tag",
+        source="{% liquid assign 'x' = 'y' %}",
+        want="{% liquid assign 'x' = 'y' %}",
+    ),
+    Case(
+        name="liquid tag, empty",
+        source="{% liquid %}",
+        want="{% liquid %}",
+    ),
+    Case(
+        name="liquid tag, leading newline",
+        source="{% liquid\nassign 'x' = 'y' %}",
+        want="{% liquid assign 'x' = 'y' %}",
+    ),
+    Case(
+        name="liquid tag, multiple lines",
+        source="{% liquid assign 'x' = 'y'\nfor a in b\necho a\nendfor %}",
+        want="{% liquid assign 'x' = 'y'\nfor a in b\necho a\nendfor %}",
+    ),
+    Case(
+        name="liquid tag, multiple lines",
+        source="{% liquid assign 'x' = 'y'\nfor a in b\necho a\nendfor %}",
+        want="{% liquid assign 'x' = 'y'\nfor a in b\necho a\nendfor %}",
+    ),
+    Case(
+        name="liquid tag, tag without expression",
+        source="{% liquid break %}",
+        want="{% liquid break %}",
+    ),
 ]
 
 
