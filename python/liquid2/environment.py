@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Callable
+from typing import ClassVar
 from typing import Mapping
 from typing import Type
 
@@ -36,9 +37,25 @@ class Environment:
     """Template parsing and rendering configuration."""
 
     auto_escape = False
-    context_depth_limit = 30
     trim = Whitespace.Plus
     undefined: Type[Undefined] = Undefined
+
+    # Maximum number of times a context can be extended or wrapped before raising
+    # a ContextDepthError.
+    context_depth_limit: ClassVar[int] = 30
+
+    # Maximum number of loop iterations allowed before a LoopIterationLimitError is
+    # raised.
+    loop_iteration_limit: ClassVar[int | None] = None
+
+    # Maximum number of bytes (according to sys.getsizeof) allowed in a template's
+    # local namespace before a LocalNamespaceLimitError is raised. We only count the
+    # size of the namespaces values, not the size of keys/names.
+    local_namespace_limit: ClassVar[int | None] = None
+
+    # Maximum number of bytes that can be written to a template's output stream before
+    # raising an OutputStreamLimitError.
+    output_stream_limit: ClassVar[int | None] = None
 
     def __init__(
         self,

@@ -7,7 +7,9 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 from typing import TextIO
 
+from liquid2 import Markup
 from liquid2.context import RenderContext
+from liquid2.exceptions import DisabledTagError
 
 if TYPE_CHECKING:
     from _liquid2 import TokenT
@@ -27,12 +29,14 @@ class Node(ABC):
 
     def render(self, context: RenderContext, buffer: TextIO) -> int:
         """Write this node's content to _buffer_."""
-        # TODO: disabled tags
+        if context.disabled_tags:
+            self.raise_for_disabled(context.disabled_tags)
         return self.render_to_output(context, buffer)
 
     async def render_async(self, context: RenderContext, buffer: TextIO) -> int:
         """Write this node's content to _buffer_."""
-        # TODO: disabled tags
+        if context.disabled_tags:
+            self.raise_for_disabled(context.disabled_tags)
         return await self.render_to_output_async(context, buffer)
 
     @abstractmethod
@@ -48,6 +52,15 @@ class Node(ABC):
     ) -> int:
         """An async version of _render_to_output_."""
         return self.render_to_output(context, buffer)
+
+    def raise_for_disabled(self, disabled_tags: set[str]) -> None:
+        """Raise a `DisabledTagError` if this node has a name in _disabled_tags_."""
+        token = self.token
+        if isinstance(token, Markup.Tag) and token.name in disabled_tags:
+            raise DisabledTagError(
+                f"{token.name} usage is not allowed in this context",
+                token=token,
+            )
 
 
 class BlockNode(Node):

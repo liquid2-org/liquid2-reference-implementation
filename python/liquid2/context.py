@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import datetime
+import sys
 from contextlib import contextmanager
 from functools import partial
+from functools import reduce
 from io import StringIO
 from itertools import cycle
+from operator import mul
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -38,7 +41,7 @@ class RenderContext:
         "globals",
         "disabled_tags",
         "parent",
-        "copy_depth",
+        "_copy_depth",
         "loop_iteration_carry",
         "local_namespace_carry",
         "locals",
@@ -55,7 +58,7 @@ class RenderContext:
         template: Template,
         *,
         global_data: Mapping[str, object] | None = None,
-        disabled_tags: list[str] | None = None,
+        disabled_tags: set[str] | None = None,
         parent: RenderContext | None = None,
         copy_depth: int = 0,
         loop_iteration_carry: int = 1,
@@ -63,9 +66,9 @@ class RenderContext:
     ) -> None:
         self.template = template
         self.globals = global_data or {}
-        self.disabled_tags = disabled_tags or []
+        self.disabled_tags = disabled_tags or set()
         self.parent = parent
-        self.copy_depth = copy_depth
+        self._copy_depth = copy_depth
         self.loop_iteration_carry = loop_iteration_carry
         self.local_namespace_carry = local_namespace_carry
 
@@ -137,6 +140,24 @@ class RenderContext:
 
         return filter_func
 
+    def get_size_of_locals(self) -> int:
+        """Return the "size" or a "score" for the current local namespace.
+
+        This is used by the optional local namespace resource limit. Override
+        `get_size_of_locals` to customize how the limit is calculated. Be sure
+        to consider `self.local_namespace_size_carry` when writing a custom
+        implementation of `get_size_of_locals`.
+
+        The default implementation uses `sys.getsizeof()` on each of the local
+        namespace's values. It is not a reliable measure of size in bytes.
+        """
+        if not self.env.local_namespace_limit:
+            return 0
+        return (
+            sum(sys.getsizeof(obj, default=1) for obj in self.locals.values())
+            + self.local_namespace_carry
+        )
+
     @contextmanager
     def extend(
         self, namespace: Mapping[str, object], template: Template | None = None
@@ -160,6 +181,59 @@ class RenderContext:
             if template:
                 self.template = _template
             self.scope.pop()
+
+    def copy(
+        self,
+        token: TokenT,
+        *,
+        namespace: Mapping[str, object],
+        template: Template | None = None,
+        disabled_tags: set[str] | None = None,
+        carry_loop_iterations: bool = False,
+        block_scope: bool = False,
+    ) -> RenderContext:
+        """Return a copy of this render context with a new scope."""
+        if self._copy_depth > self.env.context_depth_limit:
+            raise ContextDepthError(
+                "maximum context depth reached, possible recursive render",
+                token=token,
+            )
+
+        if carry_loop_iterations:
+            loop_iteration_carry = reduce(
+                mul,
+                (loop.length for loop in self.loops),
+                self.loop_iteration_carry,
+            )
+        else:
+            loop_iteration_carry = 1
+
+        if block_scope:
+            ctx = self.__class__(
+                template or self.template,
+                global_data=ReadOnlyChainMap(namespace, self.scope),
+                disabled_tags=disabled_tags,
+                copy_depth=self._copy_depth + 1,
+                parent=self,
+                loop_iteration_carry=loop_iteration_carry,
+                local_namespace_carry=self.get_size_of_locals(),
+            )
+            # This might need to be generalized so the caller can specify which
+            # tag namespaces need to be copied.
+            ctx.tag_namespace["extends"] = self.tag_namespace["extends"]
+        else:
+            ctx = self.__class__(
+                template or self.template,
+                global_data=ReadOnlyChainMap(namespace, self.globals),
+                disabled_tags=disabled_tags,
+                copy_depth=self._copy_depth + 1,
+                parent=self,
+                loop_iteration_carry=loop_iteration_carry,
+                local_namespace_carry=self.get_size_of_locals(),
+            )
+
+        ctx.template = template or self.template
+        return ctx
 
     def stopindex(self, key: str, index: int | None = None) -> int:
         """Set or return the stop index of a for loop."""

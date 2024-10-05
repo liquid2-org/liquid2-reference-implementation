@@ -87,6 +87,7 @@ from .tags.if_tag import IfTag
 from .tags.include_tag import IncludeTag
 from .tags.increment_tag import IncrementTag
 from .tags.raw_tag import RawTag
+from .tags.render_tag import RenderTag
 from .tags.unless_tag import UnlessTag
 
 if TYPE_CHECKING:
@@ -132,6 +133,7 @@ __all__ = (
     "Query",
     "RangeLiteral",
     "RawTag",
+    "RenderTag",
     "register_standard_tags_and_filters",
     "StringLiteral",
     "SymbolArgument",
@@ -204,3 +206,4 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.tags["increment"] = IncrementTag(env)
     env.tags["echo"] = EchoTag(env)
     env.tags["include"] = IncludeTag(env)
+    env.tags["render"] = RenderTag(env)

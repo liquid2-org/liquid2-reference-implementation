@@ -68,6 +68,7 @@ class Template:
         buf: TextIO,
         *args: Any,
         partial: bool = False,
+        block_scope: bool = False,
         **kwargs: Any,
     ) -> int:
         """Render this template using an existing render context and output buffer."""
@@ -80,7 +81,7 @@ class Template:
                     character_count += node.render(context, buf)
                 # TODO: StopRender
                 except LiquidInterrupt as err:
-                    if not partial:
+                    if not partial or block_scope:
                         raise LiquidSyntaxError(
                             f"unexpected '{err}'", token=node.token
                         ) from err
@@ -94,6 +95,7 @@ class Template:
         buf: TextIO,
         *args: Any,
         partial: bool = False,
+        block_scope: bool = False,
         **kwargs: Any,
     ) -> int:
         """Render this template using an existing render context and output buffer."""
@@ -105,7 +107,7 @@ class Template:
                 try:
                     character_count += await node.render_async(context, buf)
                 except LiquidInterrupt as err:
-                    if not partial:
+                    if not partial or block_scope:
                         raise LiquidSyntaxError(
                             f"unexpected '{err}'", token=node.token
                         ) from err

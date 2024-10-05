@@ -609,8 +609,28 @@
       "result": "bar"
     },
     {
-      "name": "tags, include, bind array",
+      "name": "tags, include, bind array, for",
       "template": "{% include 'a' for b.c %}",
+      "data": {
+        "b": {
+          "c": [
+            {
+              "foo": "bar"
+            },
+            {
+              "foo": "baz"
+            }
+          ]
+        }
+      },
+      "templates": {
+        "a": "{{ a.foo }}"
+      },
+      "result": "barbaz"
+    },
+    {
+      "name": "tags, include, bind array, with",
+      "template": "{% include 'a' with b.c %}",
       "data": {
         "b": {
           "c": [
@@ -1402,6 +1422,182 @@
       "name": "tags, case, when after else",
       "template": "{% case a %}{% when b %}c{% else %}d{% when 'e' %}f{% endcase %}",
       "invalid": true
+    },
+    {
+      "name": "tags, render, string literal",
+      "template": "{% render 'a' %}",
+      "data": {
+        "b": "c"
+      },
+      "templates": {
+        "a": "{{ b }}"
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, render, query",
+      "template": "{% render a %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, render, bind variable",
+      "template": "{% render 'a' with b.c[1] %}",
+      "data": {
+        "b": {
+          "c": [
+            1,
+            {
+              "foo": "bar"
+            },
+            3
+          ]
+        }
+      },
+      "templates": {
+        "a": "{{ a.foo }}"
+      },
+      "result": "bar"
+    },
+    {
+      "name": "tags, render, bind variable with alias",
+      "template": "{% render 'a' with b.c[1] as x %}",
+      "data": {
+        "b": {
+          "c": [
+            1,
+            {
+              "foo": "bar"
+            },
+            3
+          ]
+        }
+      },
+      "templates": {
+        "a": "{{ x.foo }}"
+      },
+      "result": "bar"
+    },
+    {
+      "name": "tags, render, bind array, for",
+      "template": "{% render 'a' for b.c %}",
+      "data": {
+        "b": {
+          "c": [
+            {
+              "foo": "bar"
+            },
+            {
+              "foo": "baz"
+            }
+          ]
+        }
+      },
+      "templates": {
+        "a": "{{ a.foo }}"
+      },
+      "result": "barbaz"
+    },
+    {
+      "name": "tags, render, bind array, with",
+      "template": "{% render 'a' with b.c %}",
+      "data": {
+        "b": {
+          "c": [
+            {
+              "foo": "bar"
+            },
+            {
+              "foo": "baz"
+            }
+          ]
+        }
+      },
+      "templates": {
+        "a": "{{ a[0].foo }}"
+      },
+      "result": "bar"
+    },
+    {
+      "name": "tags, render, keyword arguments, commas",
+      "template": "{% render 'a', b: 'c', d: 'e' %}",
+      "data": {},
+      "templates": {
+        "a": "{{ b }} {{ d }}"
+      },
+      "result": "c e"
+    },
+    {
+      "name": "tags, render, keyword arguments, equals",
+      "template": "{% render 'a', b='c', d='e' %}",
+      "data": {},
+      "templates": {
+        "a": "{{ b }} {{ d }}"
+      },
+      "result": "c e"
+    },
+    {
+      "name": "tags, render, keyword arguments, no leading comma",
+      "template": "{% render 'a' b: 'c', d: 'e' %}",
+      "data": {},
+      "templates": {
+        "a": "{{ b }} {{ d }}"
+      },
+      "result": "c e"
+    },
+    {
+      "name": "tags, render, keyword arguments, range literal",
+      "template": "{% render 'a' b: (1..3) %}",
+      "data": {},
+      "templates": {
+        "a": "{{ b | join: '#' }}"
+      },
+      "result": "1#2#3"
+    },
+    {
+      "name": "tags, render, new scope",
+      "template": "{% assign x = 'y' %}{% render 'a' %}{{ x }}",
+      "data": {},
+      "templates": {
+        "a": "{{ x }}!"
+      },
+      "result": "!y"
+    },
+    {
+      "name": "tags, render, keyword arguments go out of scope",
+      "template": "{% render 'a' b:'c' %}{{ b }}",
+      "data": {},
+      "templates": {
+        "a": "{{ b }}"
+      },
+      "result": "c"
+    },
+    {
+      "name": "tags, render, forloop drop",
+      "template": "{% render 'a' for b %}",
+      "data": {
+        "b": [
+          1,
+          2
+        ]
+      },
+      "templates": {
+        "a": "{{ a }} {{ forloop.first }} {{ forloop.last }} {{ forloop.index0 }}, "
+      },
+      "result": "1 true false 0, 2 false true 1, "
+    },
+    {
+      "name": "tags, render, forloop drop, no parentloop",
+      "template": "{% for x in (1..2) %}{% render 'a' for b %}{% endfor %}",
+      "data": {
+        "b": [
+          1,
+          2
+        ]
+      },
+      "templates": {
+        "a": "{{ a }} {{ forloop.parentloop.index0 }}, "
+      },
+      "result": "1 , 2 , 1 , 2 , "
     },
     {
       "name": "tags, assign, string literal",
