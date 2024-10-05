@@ -40,6 +40,52 @@
       "template": "{% liquid\n   \n\n   \t \n\t\n  %}",
       "data": {},
       "result": ""
+    },
+    {
+      "name": "comment",
+      "template": "{% liquid # some comment %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "comment, leading newline",
+      "template": "{% liquid\n# some comment %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "comments",
+      "template": "{% liquid\n# some comment\n# other comment %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "comments and tags",
+      "template": "{% liquid\n# some comment\necho 'a'\n# other comment %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "comment does not consume whitespace control",
+      "template": "{% liquid\n# some comment -%}\n\na",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "block",
+      "template": "{% if true %}{% liquid echo 'a' %}{% endif %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "can't close outer block",
+      "template": "{% if true %}{% liquid endif' %}",
+      "invalid": true
+    },
+    {
+      "name": "liquid in liquid",
+      "template": "{% liquid liquid echo 'a' %}",
+      "invalid": true
     }
   ]
 }

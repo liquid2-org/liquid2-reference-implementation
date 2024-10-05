@@ -50,7 +50,7 @@ class LiquidTag(Tag):
 
     def parse(self, stream: TokenStream) -> Node:
         """Parse tokens from _stream_ into an AST node."""
-        token = next(stream)
+        token = stream.current()
         assert isinstance(token, Markup.Lines)
         block = self.env.parser.parse_block(TokenStream(token.statements), end=())
         return self.node_class(token, BlockNode(token, block))

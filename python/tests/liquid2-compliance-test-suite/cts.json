@@ -2415,6 +2415,53 @@
       "result": ""
     },
     {
+      "name": "tags, liquid, comment",
+      "template": "{% liquid # some comment %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, liquid, comment, leading newline",
+      "template": "{% liquid\n# some comment %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, liquid, comments",
+      "template": "{% liquid\n# some comment\n# other comment %}",
+      "data": {},
+      "result": ""
+    },
+    {
+      "name": "tags, liquid, comments and tags",
+      "template": "{% liquid\n# some comment\necho 'a'\n# other comment %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, liquid, comment does not consume whitespace control",
+      "template": "{% liquid\n# some comment -%}\n\na",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, liquid, block",
+      "template": "{% if true %}{% liquid echo 'a' %}{% endif %}",
+      "data": {},
+      "result": "a"
+    },
+    {
+      "name": "tags, liquid, can't close outer block",
+      "template": "{% if true %}{% liquid endif' %}",
+      "invalid": true
+    },
+    {
+      "name": "tags, liquid, liquid in liquid",
+      "template": "{% liquid liquid echo 'a' %}",
+      "data": {},
+      "result": "a"
+    },
+    {
       "name": "tags, capture, content with global variables",
       "template": "{% capture a %}Hello, {{ b }}!{% endcapture %}{{ a }}",
       "data": {

@@ -179,17 +179,30 @@ impl Lexer {
 
     fn parse_line_statement(&self, pair: Pair<Rule>) -> Result<Markup, LiquidError> {
         let span = pair.as_span();
-        let mut it = pair.into_inner();
-        let name = it.next().unwrap().as_str().to_owned();
-        let tokens: Result<Vec<_>, _> = it.map(|token| self.parse_expr_token(token)).collect();
-        let expression = tokens.and_then(|v| if v.len() == 0 { Ok(None) } else { Ok(Some(v)) })?;
+        match pair.as_rule() {
+            Rule::line_tag => {
+                let mut it = pair.into_inner();
+                let name = it.next().unwrap().as_str().to_owned();
+                let tokens: Result<Vec<_>, _> =
+                    it.map(|token| self.parse_expr_token(token)).collect();
+                let expression =
+                    tokens.and_then(|v| if v.len() == 0 { Ok(None) } else { Ok(Some(v)) })?;
 
-        Ok(Markup::Tag {
-            span: (span.start(), span.end()),
-            name,
-            wc: (Whitespace::Default, Whitespace::Default),
-            expression,
-        })
+                Ok(Markup::Tag {
+                    span: (span.start(), span.end()),
+                    name,
+                    wc: (Whitespace::Default, Whitespace::Default),
+                    expression,
+                })
+            }
+            Rule::line_comment => Ok(Markup::Comment {
+                wc: (Whitespace::Default, Whitespace::Default),
+                hashes: "#".to_owned(),
+                text: pair.into_inner().next().unwrap().as_str().to_owned(),
+                span: (span.start(), span.end()),
+            }),
+            _ => unreachable!("{:#?}", pair),
+        }
     }
 
     fn parse_expr_token(&self, pair: Pair<Rule>) -> Result<Token, LiquidError> {
