@@ -89,6 +89,7 @@ class RenderContext:
         self.tag_namespace: dict[str, Any] = {
             "cycles": {},
             "stopindex": {},
+            "extends": {},
         }
 
         # As stack of forloop objects. Used for populating forloop.parentloop.

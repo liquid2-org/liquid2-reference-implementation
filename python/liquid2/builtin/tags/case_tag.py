@@ -10,6 +10,7 @@ from liquid2 import Node
 from liquid2 import Token
 from liquid2.ast import BlockNode
 from liquid2.ast import ConditionalBlockNode
+from liquid2.ast import MetaNode
 from liquid2.builtin import BooleanExpression
 from liquid2.builtin import EqExpression
 from liquid2.builtin import LogicalOrExpression
@@ -65,6 +66,26 @@ class CaseNode(Node):
             count += await self.default.render_async(context, buffer)
 
         return count
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        _children = [
+            MetaNode(
+                token=self.token,
+                node=alt,
+                expression=alt.expression,
+            )
+            for alt in self.whens
+        ]
+        if self.default:
+            _children.append(
+                MetaNode(
+                    token=self.default.token,
+                    node=self.default,
+                    expression=None,
+                )
+            )
+        return _children
 
 
 class CaseTag(Tag):

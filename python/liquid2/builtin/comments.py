@@ -11,6 +11,7 @@ from liquid2.tag import Tag
 
 if TYPE_CHECKING:
     from liquid2 import TokenT
+    from liquid2.ast import MetaNode
     from liquid2.context import RenderContext
     from liquid2.tokens import TokenStream
 
@@ -30,6 +31,10 @@ class CommentNode(Node):
     def render_to_output(self, _context: RenderContext, _buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         return 0
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return []
 
 
 class Comment(Tag):

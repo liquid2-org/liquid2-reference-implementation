@@ -7,6 +7,7 @@ from typing import TextIO
 
 from liquid2 import Markup
 from liquid2 import Node
+from liquid2.ast import MetaNode
 from liquid2.builtin import parse_string_or_identifier
 from liquid2.exceptions import LiquidSyntaxError
 from liquid2.tag import Tag
@@ -29,6 +30,10 @@ class DecrementNode(Node):
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         return buffer.write(str(context.decrement(self.name)))
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return [MetaNode(token=self.token, template_scope=[self.name])]
 
 
 class DecrementTag(Tag):

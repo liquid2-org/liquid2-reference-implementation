@@ -9,6 +9,8 @@ from typing import TextIO
 from liquid2 import Markup
 from liquid2 import Node
 from liquid2 import Token
+from liquid2.ast import MetaNode
+from liquid2.builtin import Literal
 from liquid2.builtin import parse_keyword_arguments
 from liquid2.builtin import parse_primitive
 from liquid2.builtin import parse_string_or_identifier
@@ -157,6 +159,35 @@ class RenderNode(Node):
             )
 
         return character_count
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        block_scope: list[str] = [arg.name for arg in self.args]
+        _children = [
+            MetaNode(
+                token=self.token,
+                node=None,
+                block_scope=block_scope,
+                load_mode="render",
+                load_context={"tag": "render"},
+            )
+        ]
+
+        if self.var:
+            if self.alias:
+                block_scope.append(self.alias)
+                block_scope.append(str(self.name).split(".", 1)[0])
+            _children.append(
+                MetaNode(
+                    token=self.token,
+                    expression=self.var,
+                )
+            )
+
+        # TODO: use arg.token
+        for arg in self.args:
+            _children.append(MetaNode(token=self.token, expression=arg.value))
+        return _children
 
 
 class RenderTag(Tag):

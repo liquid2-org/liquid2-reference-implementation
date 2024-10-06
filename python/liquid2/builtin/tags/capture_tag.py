@@ -8,6 +8,7 @@ from typing import TextIO
 from liquid2 import Markup
 from liquid2 import Node
 from liquid2.ast import BlockNode
+from liquid2.ast import MetaNode
 from liquid2.builtin import parse_identifier
 from liquid2.context import RenderContext
 from liquid2.tag import Tag
@@ -28,9 +29,6 @@ class CaptureNode(Node):
         self.name = name
         self.block = block
 
-    def __str__(self) -> str:
-        return f"{self.name} = {self.block}"
-
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         buf = context.get_output_buffer(buffer)
@@ -47,11 +45,23 @@ class CaptureNode(Node):
         context.assign(self.name, context.markup(buf.getvalue()))
         return 0
 
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return [
+            MetaNode(
+                token=self.token,
+                node=self.block,
+                template_scope=[
+                    self.name,
+                ],
+            )
+        ]
+
 
 class CaptureTag(Tag):
     """The standard _capture_ tag."""
 
-    block = False
+    block = True
     node_class = CaptureNode
     end_block = frozenset(["endcapture"])
 

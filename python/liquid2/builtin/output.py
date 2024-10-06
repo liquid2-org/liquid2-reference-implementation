@@ -7,6 +7,7 @@ from typing import TextIO
 
 from liquid2 import Markup
 from liquid2 import Node
+from liquid2.ast import MetaNode
 from liquid2.builtin import FilteredExpression
 from liquid2.context import RenderContext
 from liquid2.stringify import to_liquid_string
@@ -50,6 +51,10 @@ class OutputNode(Node):
                 auto_escape=context.auto_escape,
             )
         )
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return [MetaNode(token=self.token, expression=self.expression)]
 
 
 class Output(Tag):

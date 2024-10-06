@@ -9,6 +9,7 @@ from liquid2 import Markup
 from liquid2 import Node
 from liquid2.ast import BlockNode
 from liquid2.ast import ConditionalBlockNode
+from liquid2.ast import MetaNode
 from liquid2.builtin import BooleanExpression
 from liquid2.context import RenderContext
 from liquid2.tag import Tag
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 class IfNode(Node):
     """The standard _if_ tag."""
 
-    __slots__ = ("condition", "consequence", "alternatives", "alternative")
+    __slots__ = ("condition", "consequence", "alternatives", "default")
 
     def __init__(
         self,
@@ -30,13 +31,13 @@ class IfNode(Node):
         condition: BooleanExpression,
         consequence: BlockNode,
         alternatives: list[ConditionalBlockNode],
-        alternative: BlockNode | None,
+        default: BlockNode | None,
     ) -> None:
         super().__init__(token)
         self.condition = condition
         self.consequence = consequence
         self.alternatives = alternatives
-        self.alternative = alternative
+        self.default = default
 
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
@@ -47,8 +48,8 @@ class IfNode(Node):
             if alternative.expression.evaluate(context):
                 return sum(node.render(context, buffer) for node in alternative.nodes)
 
-        if self.alternative:
-            return self.alternative.render(context, buffer)
+        if self.default:
+            return self.default.render(context, buffer)
 
         return 0
 
@@ -68,10 +69,42 @@ class IfNode(Node):
                     ]
                 )
 
-        if self.alternative:
-            return await self.alternative.render_async(context, buffer)
+        if self.default:
+            return await self.default.render_async(context, buffer)
 
         return 0
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        _children = [
+            MetaNode(
+                token=self.token,
+                node=self.consequence,
+                expression=self.condition,
+            )
+        ]
+
+        _children.extend(
+            [
+                MetaNode(
+                    token=self.token,
+                    node=alt,
+                    expression=alt.expression,
+                )
+                for alt in self.alternatives
+            ]
+        )
+
+        if self.default:
+            _children.append(
+                MetaNode(
+                    token=self.default.token,
+                    node=self.default,
+                    expression=None,
+                )
+            )
+
+        return _children
 
 
 class IfTag(Tag):

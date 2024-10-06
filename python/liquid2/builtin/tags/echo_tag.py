@@ -7,6 +7,7 @@ from typing import TextIO
 
 from liquid2 import Markup
 from liquid2 import Node
+from liquid2.ast import MetaNode
 from liquid2.builtin import FilteredExpression
 from liquid2.context import RenderContext
 from liquid2.stringify import to_liquid_string
@@ -28,9 +29,6 @@ class EchoNode(Node):
         super().__init__(token)
         self.expression = expression
 
-    def __str__(self) -> str:
-        return f"`{self.expression}`"
-
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         return buffer.write(
@@ -50,6 +48,10 @@ class EchoNode(Node):
                 auto_escape=context.auto_escape,
             )
         )
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return [MetaNode(token=self.token, expression=self.expression)]
 
 
 class EchoTag(Tag):

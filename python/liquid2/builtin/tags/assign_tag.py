@@ -8,6 +8,7 @@ from typing import TextIO
 from liquid2 import Markup
 from liquid2 import Node
 from liquid2 import Token
+from liquid2.ast import MetaNode
 from liquid2.builtin import FilteredExpression
 from liquid2.builtin import parse_identifier
 from liquid2.context import RenderContext
@@ -41,6 +42,18 @@ class AssignNode(Node):
         """Render the node to the output buffer."""
         context.assign(self.name, await self.expression.evaluate_async(context))
         return 0
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return [
+            MetaNode(
+                token=self.token,
+                expression=self.expression,
+                template_scope=[
+                    self.name,
+                ],
+            )
+        ]
 
 
 class AssignTag(Tag):
