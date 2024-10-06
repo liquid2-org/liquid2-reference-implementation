@@ -38,7 +38,6 @@ class Environment:
 
     auto_escape = False
     trim = Whitespace.Plus
-    undefined: Type[Undefined] = Undefined
 
     # Maximum number of times a context can be extended or wrapped before raising
     # a ContextDepthError.
@@ -62,9 +61,11 @@ class Environment:
         *,
         loader: BaseLoader | None = None,
         global_context_data: Mapping[str, object] | None = None,
+        undefined: Type[Undefined] = Undefined,
     ) -> None:
         self.loader = loader or DictLoader({})
         self.global_context_data = global_context_data or {}
+        self.undefined = undefined
 
         self.filters: dict[str, Callable[..., object]] = {}
         self.tags: dict[str, Tag] = {}

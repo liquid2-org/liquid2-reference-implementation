@@ -100,13 +100,13 @@ class TokenStream(peekable):  # type: ignore
         token = self.current()
         if not isinstance(token, Markup.Tag):
             raise LiquidSyntaxError(
-                f"expected a '{tag_name}' tag, found {token.__class__.__name__}",
+                f"expected tag '{tag_name}', found {token.__class__.__name__}",
                 token=token,
             )
 
         if token.name != tag_name:
             raise LiquidSyntaxError(
-                f"expected a '{tag_name}' tag, found {token.name}", token=token
+                f"expected tag '{tag_name}', found {token.name}", token=token
             )
 
     def expect_eos(self) -> None:

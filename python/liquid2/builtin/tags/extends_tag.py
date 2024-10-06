@@ -161,7 +161,7 @@ class BlockNode(Node):
 
         return stack_item.block.block.render(ctx, buffer)
 
-    async def render__to_output_async(
+    async def render_to_output_async(
         self, context: RenderContext, buffer: TextIO
     ) -> int:
         """Render the node to the output buffer."""
@@ -233,10 +233,10 @@ class BlockTag(Tag):
 
         tokens = TokenStream(token.expression)
         block_name = parse_string_or_identifier(tokens.next())
-        required = isinstance(stream.next(), Token.Required)
+        required = isinstance(tokens.next(), Token.Required)
         tokens.expect_eos()
 
-        block_token = stream.current()
+        block_token = stream.next()
         assert block_token is not None  # TODO:
         block = TemplateBlock(
             block_token, self.env.parser.parse_block(stream, end=self.end_block)

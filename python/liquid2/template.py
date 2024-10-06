@@ -63,6 +63,16 @@ class Template:
         self.render_with_context(context, buf)
         return buf.getvalue()
 
+    async def render_async(self, *args: Any, **kwargs: Any) -> str:
+        """Render this template with _args_ and _kwargs_."""
+        buf = StringIO()  # TODO: limited buffer
+        context = RenderContext(
+            self,
+            global_data=self.make_globals(dict(*args, **kwargs)),
+        )
+        await self.render_with_context_async(context, buf)
+        return buf.getvalue()
+
     def render_with_context(
         self,
         context: RenderContext,
