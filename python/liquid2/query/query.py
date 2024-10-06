@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Iterable
+from typing import Iterator
 
+from .filter_expressions import Expression
+from .filter_expressions import FilterQuery
 from .node import JSONPathNode
 from .node import JSONPathNodeList
 from .segments import JSONPathRecursiveDescentSegment
+from .selectors import Filter
 from .selectors import IndexSelector
 from .selectors import NameSelector
+from .selectors import SingularQuerySelector
 
 if TYPE_CHECKING:
     from .environment import JSONValue
@@ -137,3 +142,25 @@ class JSONPathQuery:
     def empty(self) -> bool:
         """Return `True` if this query has no segments."""
         return not bool(self.segments)
+
+    def children(self) -> list[JSONPathQuery]:
+        """Return a list of child queries from this query.
+
+        Child queries are those found in filter selectors and singular query selectors.
+        """
+        children: list[JSONPathQuery] = []
+
+        for segment in self.segments:
+            for selector in segment.selectors:
+                if isinstance(selector, SingularQuerySelector):
+                    children.append(selector.query)
+                elif isinstance(selector, Filter):
+                    children.extend(self._find_filter_queries(selector.expression))
+
+        return children
+
+    def _find_filter_queries(self, root: Expression) -> Iterator[JSONPathQuery]:
+        for child in root.children():
+            if isinstance(child, FilterQuery):
+                yield child.query
+            self._find_filter_queries(child)

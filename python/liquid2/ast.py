@@ -68,6 +68,7 @@ class Node(ABC):
     @abstractmethod
     def children(self) -> list[MetaNode]:
         """Return a list of child nodes and/or expressions associated with this node."""
+        # TODO: cache children?
 
 
 class BlockNode(Node):

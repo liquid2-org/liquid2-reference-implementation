@@ -301,8 +301,7 @@ class Query(Expression):
         return context.get(self.path, token=self.token)
 
     def children(self) -> list[Expression]:
-        # TODO: singular query selectors and root queries and relative queries
-        return []
+        return [Query(token=self.token, path=q) for q in self.path.children()]
 
 
 Primitive = Literal[Any] | RangeLiteral | Query | Null

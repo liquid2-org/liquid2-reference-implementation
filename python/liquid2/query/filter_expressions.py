@@ -42,6 +42,10 @@ class Expression(ABC):
             The result of evaluating the expression.
         """
 
+    @abstractmethod
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+
 
 class FilterExpression(Expression):
     """An expression that evaluates to `true` or `false`."""
@@ -63,6 +67,10 @@ class FilterExpression(Expression):
     def evaluate(self, context: FilterContext) -> bool:
         """Evaluate the filter expression in the given _context_."""
         return _is_truthy(self.expression.evaluate(context))
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.expression]
 
 
 LITERAL_T = TypeVar("LITERAL_T")
@@ -89,6 +97,10 @@ class FilterExpressionLiteral(Expression, Generic[LITERAL_T]):
     def evaluate(self, _: FilterContext) -> LITERAL_T:
         """Return the value associated with this literal."""
         return self.value
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return []
 
 
 class BooleanLiteral(FilterExpressionLiteral[bool]):
@@ -153,6 +165,10 @@ class PrefixExpression(Expression):
             return not _is_truthy(self.right.evaluate(context))
         raise JSONPathTypeError(f"unknown operator {self.operator} {self.right}")
 
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.right]
+
 
 class LogicalExpression(Expression):
     """A pair of expressions and a logical operator."""
@@ -188,6 +204,10 @@ class LogicalExpression(Expression):
         return _compare(
             self.left.evaluate(context), self.operator, self.right.evaluate(context)
         )
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.left, self.right]
 
 
 class ComparisonExpression(Expression):
@@ -230,6 +250,10 @@ class ComparisonExpression(Expression):
 
         return _compare(left, self.operator, right)
 
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.left, self.right]
+
 
 class FilterQuery(Expression, ABC):
     """Base class for all query selectors."""
@@ -242,6 +266,10 @@ class FilterQuery(Expression, ABC):
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, FilterQuery) and str(self) == str(other)
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return []
 
 
 class RelativeFilterQuery(FilterQuery):
@@ -332,6 +360,10 @@ class FunctionExtension(Expression):
                 _args.append(arg)
 
         return _args
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return list(self.args)
 
 
 class FilterContext:
