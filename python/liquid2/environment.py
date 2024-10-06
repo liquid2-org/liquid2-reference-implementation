@@ -56,6 +56,8 @@ class Environment:
     # raising an OutputStreamLimitError.
     output_stream_limit: ClassVar[int | None] = None
 
+    template_class = Template
+
     def __init__(
         self,
         *,
@@ -100,7 +102,7 @@ class Environment:
         overlay_context_data: Mapping[str, object] | None = None,
     ) -> Template:
         """Create a template from a string."""
-        return Template(
+        return self.template_class(
             self,
             self.parse(source),
             name=name,

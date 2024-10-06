@@ -12,6 +12,8 @@ from .context import RenderContext
 from .exceptions import LiquidInterrupt
 from .exceptions import LiquidSyntaxError
 from .exceptions import StopRender
+from .static_analysis import TemplateAnalysis
+from .static_analysis import _TemplateCounter
 from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
@@ -135,4 +137,61 @@ class Template:
             render_args,
             self.global_data,
             self.overlay_data,
+        )
+
+    def analyze(
+        self,
+        *,
+        follow_partials: bool = True,
+        raise_for_failures: bool = True,
+    ) -> TemplateAnalysis:
+        """Statically analyze this template and any included/rendered templates.
+
+        Args:
+            follow_partials: If `True`, we will try to load partial templates and
+                analyze those templates too.
+            raise_for_failures: If `True`, will raise an exception if an
+                `ast.Node` or `expression.Expression` does not define a `children()`
+                method, or if a partial template can not be loaded. When `False`, no
+                exception is raised and a mapping of failed nodes and expressions is
+                available as the `failed_visits` property. A mapping of unloadable
+                partial templates is stored in the `unloadable_partials` property.
+        """
+        refs = _TemplateCounter(
+            self,
+            follow_partials=follow_partials,
+            raise_for_failures=raise_for_failures,
+        ).analyze()
+
+        return TemplateAnalysis(
+            variables=dict(refs.variables),
+            local_variables=dict(refs.template_locals),
+            global_variables=dict(refs.template_globals),
+            failed_visits=dict(refs.failed_visits),
+            unloadable_partials=dict(refs.unloadable_partials),
+            filters=dict(refs.filters),
+            tags=dict(refs.tags),
+        )
+
+    async def analyze_async(
+        self,
+        *,
+        follow_partials: bool = True,
+        raise_for_failures: bool = True,
+    ) -> TemplateAnalysis:
+        """An async version of `analyze`."""
+        refs = await _TemplateCounter(
+            self,
+            follow_partials=follow_partials,
+            raise_for_failures=raise_for_failures,
+        ).analyze_async()
+
+        return TemplateAnalysis(
+            variables=dict(refs.variables),
+            local_variables=dict(refs.template_locals),
+            global_variables=dict(refs.template_globals),
+            failed_visits=dict(refs.failed_visits),
+            unloadable_partials=dict(refs.unloadable_partials),
+            filters=dict(refs.filters),
+            tags=dict(refs.tags),
         )

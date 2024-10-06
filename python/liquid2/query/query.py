@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .environment import JSONValue
     from .environment import _JSONPathEnvironment
     from .segments import JSONPathSegment
+    from .selectors import JSONPathSelector
 
 
 class JSONPathQuery:
@@ -164,3 +165,17 @@ class JSONPathQuery:
             if isinstance(child, FilterQuery):
                 yield child.query
             self._find_filter_queries(child)
+
+    def head(self) -> JSONPathSelector | None:
+        """Return the first selector from this query."""
+        try:
+            return self.segments[0].selectors[0]
+        except IndexError:
+            return None
+
+    def tail(self) -> JSONPathSelector | None:
+        """Return the last selector from this query."""
+        try:
+            return self.segments[-1].selectors[-1]
+        except IndexError:
+            return None
