@@ -95,6 +95,7 @@ reserved_word = {
   | "with"
   | "as"
   | "for"
+  | "required"
 }
 
 // NOTE: borrowing int from JSONPath

@@ -11,11 +11,14 @@ from typing import Mapping
 from typing import Sequence
 from typing import TextIO
 
-from markupsafe import Markup
+from markupsafe import Markup as Markupsafe
 
+from liquid2 import Markup
+from liquid2 import Token
 from liquid2.ast import BlockNode as TemplateBlock
 from liquid2.ast import MetaNode
 from liquid2.ast import Node
+from liquid2.builtin import parse_string_or_identifier
 from liquid2.exceptions import RequiredBlockError
 from liquid2.exceptions import StopRender
 from liquid2.exceptions import TemplateInheritanceError
@@ -38,7 +41,7 @@ class ExtendsNode(Node):
         super().__init__(token)
         self.name = name
 
-    def render(self, context: RenderContext, buffer: TextIO) -> int:
+    def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         base_template = build_block_stacks(
             context,
@@ -51,9 +54,20 @@ class ExtendsNode(Node):
         context.tag_namespace["extends"].clear()
         raise StopRender
 
-    async def render_async(self, context: RenderContext, buffer: TextIO) -> int:
+    async def render_to_output_async(
+        self, context: RenderContext, buffer: TextIO
+    ) -> int:
         """Render the node to the output buffer."""
-        raise NotImplementedError
+        base_template = await build_block_stacks_async(
+            context,
+            context.template,
+            self.name,
+            "extends",
+        )
+
+        await base_template.render_with_context_async(context, buffer)
+        context.tag_namespace["extends"].clear()
+        raise StopRender
 
     def children(self) -> list[MetaNode]:
         """Return a list of child nodes and/or expressions associated with this node."""
@@ -72,8 +86,14 @@ class ExtendsTag(Tag):
 
     def parse(self, stream: TokenStream) -> Node:
         """Parse tokens from _stream_ into an AST node."""
-        # TODO
-        raise NotImplementedError
+        token = stream.current()
+        assert isinstance(token, Markup.Tag)
+
+        tokens = TokenStream(token.expression)
+        name = parse_string_or_identifier(tokens.next())
+        tokens.expect_eos()
+
+        return self.node_class(token=token, name=name)
 
 
 class BlockNode(Node):
@@ -89,7 +109,7 @@ class BlockNode(Node):
         self.block = block
         self.required = required
 
-    def render(self, context: RenderContext, buffer: TextIO) -> int:
+    def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         # We should be in a base template. Render the block at the top of the "stack".
         block_stack: Sequence[_BlockStackItem] = context.tag_namespace.get(
@@ -138,9 +158,12 @@ class BlockNode(Node):
             carry_loop_iterations=True,
             block_scope=True,
         )
+
         return stack_item.block.block.render(ctx, buffer)
 
-    async def render_async(self, context: RenderContext, buffer: TextIO) -> int:
+    async def render__to_output_async(
+        self, context: RenderContext, buffer: TextIO
+    ) -> int:
         """Render the node to the output buffer."""
         # We should be in a base template. Render the block at the top of the "stack".
         block_stack: Sequence[_BlockStackItem] = context.tag_namespace.get(
@@ -201,11 +224,43 @@ class BlockTag(Tag):
 
     block = True
     node_class = BlockNode
+    end_block = frozenset(["endblock"])
 
     def parse(self, stream: TokenStream) -> Node:
         """Parse tokens from _stream_ into an AST node."""
-        # TODO
-        raise NotImplementedError
+        token = stream.current()
+        assert isinstance(token, Markup.Tag)
+
+        tokens = TokenStream(token.expression)
+        block_name = parse_string_or_identifier(tokens.next())
+        required = isinstance(stream.next(), Token.Required)
+        tokens.expect_eos()
+
+        block_token = stream.current()
+        assert block_token is not None  # TODO:
+        block = TemplateBlock(
+            block_token, self.env.parser.parse_block(stream, end=self.end_block)
+        )
+
+        stream.expect_tag("endblock")
+        end_block_token = stream.current()
+        assert isinstance(end_block_token, Markup.Tag)
+
+        if end_block_token.expression is not None:
+            tokens = TokenStream(end_block_token.expression)
+            if tokens.current() is not None:
+                end_block_name = parse_string_or_identifier(tokens.current())
+                if end_block_name != block_name:
+                    raise TemplateInheritanceError(
+                        f"expected endblock for '{block_name}, found '{end_block_name}'",
+                        token=end_block_token,
+                    )
+                tokens.next()
+            tokens.expect_eos()
+
+        return self.node_class(
+            token=token, name=block_name, block=block, required=required
+        )
 
 
 @dataclass
@@ -264,7 +319,7 @@ class BlockDrop(Mapping[str, object]):
             self.parent.block.block.render(self.context, buf)
 
         if self.context.auto_escape:
-            return Markup(buf.getvalue())
+            return Markupsafe(buf.getvalue())
         return buf.getvalue()
 
     def __len__(self) -> int:  # pragma: no cover
@@ -290,9 +345,6 @@ def build_block_stacks(
         parent_name: The name of the immediate parent template as a string.
         tag: The name of the `extends` tag, if it is overridden.
     """
-    if "extends" not in context.tag_namespace:
-        context.tag_namespace["extends"] = defaultdict(list)
-
     # Guard against recursive `extends`.
     seen: set[str] = set()
 

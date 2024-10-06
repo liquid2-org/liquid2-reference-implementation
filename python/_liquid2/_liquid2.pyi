@@ -125,6 +125,11 @@ class Token:
         @property
         def line_col(self) -> tuple[int, int]: ...
 
+    class Required:
+        __match_args__ = ("line_col",)
+        @property
+        def line_col(self) -> tuple[int, int]: ...
+
     class As:
         __match_args__ = ("line_col",)
         @property
@@ -294,6 +299,7 @@ TokenT: TypeAlias = (
     | Token.If
     | Token.Else
     | Token.With
+    | Token.Required
     | Token.As
     | Token.For
     | Token.Eq

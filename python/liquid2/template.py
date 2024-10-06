@@ -11,6 +11,7 @@ from typing import TextIO
 from .context import RenderContext
 from .exceptions import LiquidInterrupt
 from .exceptions import LiquidSyntaxError
+from .exceptions import StopRender
 from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
@@ -79,7 +80,8 @@ class Template:
             for node in self.nodes:
                 try:
                     character_count += node.render(context, buf)
-                # TODO: StopRender
+                except StopRender:
+                    break
                 except LiquidInterrupt as err:
                     if not partial or block_scope:
                         raise LiquidSyntaxError(
@@ -106,6 +108,8 @@ class Template:
             for node in self.nodes:
                 try:
                     character_count += await node.render_async(context, buf)
+                except StopRender:
+                    break
                 except LiquidInterrupt as err:
                     if not partial or block_scope:
                         raise LiquidSyntaxError(

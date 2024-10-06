@@ -80,6 +80,8 @@ from .tags.case_tag import CaseTag
 from .tags.cycle_tag import CycleTag
 from .tags.decrement_tag import DecrementTag
 from .tags.echo_tag import EchoTag
+from .tags.extends_tag import BlockTag
+from .tags.extends_tag import ExtendsTag
 from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
@@ -147,6 +149,8 @@ __all__ = (
     "parse_primitive",
     "parse_string_or_identifier",
     "parse_keyword_arguments",
+    "ExtendsTag",
+    "BlockTag",
 )
 
 
@@ -210,3 +214,5 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.tags["include"] = IncludeTag(env)
     env.tags["render"] = RenderTag(env)
     env.tags["__LINES"] = LiquidTag(env)
+    env.tags["block"] = BlockTag(env)
+    env.tags["extends"] = ExtendsTag(env)

@@ -2458,8 +2458,7 @@
     {
       "name": "tags, liquid, liquid in liquid",
       "template": "{% liquid liquid echo 'a' %}",
-      "data": {},
-      "result": "a"
+      "invalid": true
     },
     {
       "name": "tags, capture, content with global variables",
@@ -2493,6 +2492,50 @@
       "name": "tags, capture, extra tokens",
       "template": "{% capture a b %}{% endcapture %}",
       "invalid": true
+    },
+    {
+      "name": "tags, extends, no blocks",
+      "template": "{% extends 'a' %} this should not be rendered",
+      "data": {
+        "you": "world"
+      },
+      "templates": {
+        "a": "Hello, {{ you }}!"
+      },
+      "result": "Hello, world!"
+    },
+    {
+      "name": "tags, extends, no parent block",
+      "template": "{% extends 'a' %}{% block b %}this should not be rendered{% endblock %}",
+      "data": {
+        "you": "world"
+      },
+      "templates": {
+        "a": "Hello, {{ you }}!"
+      },
+      "result": "Hello, world!"
+    },
+    {
+      "name": "tags, extends, no child block",
+      "template": "{% extends 'a' %} this should not be rendered",
+      "data": {
+        "you": "world"
+      },
+      "templates": {
+        "a": "Hello, {% block b %}{{ you }}!{% endblock %}"
+      },
+      "result": "Hello, world!"
+    },
+    {
+      "name": "tags, extends, override parent block",
+      "template": "{% extends 'a' %}{% block b %}sue{% endblock %}",
+      "data": {
+        "you": "world"
+      },
+      "templates": {
+        "a": "Hello, {% block b %}{{ you }}{% endblock %}!"
+      },
+      "result": "Hello, sue!"
     }
   ]
 }

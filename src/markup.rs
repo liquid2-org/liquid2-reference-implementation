@@ -170,6 +170,9 @@ pub enum Token {
     With {
         line_col: (usize, usize),
     },
+    Required {
+        line_col: (usize, usize),
+    },
     As {
         line_col: (usize, usize),
     },
@@ -256,6 +259,7 @@ impl fmt::Display for Token {
             Token::If { .. } => f.write_str("if"),
             Token::Else { .. } => f.write_str("else"),
             Token::With { .. } => f.write_str("with"),
+            Token::Required { .. } => f.write_str("required"),
             Token::As { .. } => f.write_str("as"),
             Token::For { .. } => f.write_str("for"),
             Token::Eq { .. } => f.write_str("=="),

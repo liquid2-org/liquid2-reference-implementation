@@ -1,0 +1,40 @@
+{
+  "tests": [
+    {
+      "name": "no blocks",
+      "template": "{% extends 'a' %} this should not be rendered",
+      "data": { "you": "world" },
+      "templates": {
+        "a": "Hello, {{ you }}!"
+      },
+      "result": "Hello, world!"
+    },
+    {
+      "name": "no parent block",
+      "template": "{% extends 'a' %}{% block b %}this should not be rendered{% endblock %}",
+      "data": { "you": "world" },
+      "templates": {
+        "a": "Hello, {{ you }}!"
+      },
+      "result": "Hello, world!"
+    },
+    {
+      "name": "no child block",
+      "template": "{% extends 'a' %} this should not be rendered",
+      "data": { "you": "world" },
+      "templates": {
+        "a": "Hello, {% block b %}{{ you }}!{% endblock %}"
+      },
+      "result": "Hello, world!"
+    },
+    {
+      "name": "override parent block",
+      "template": "{% extends 'a' %}{% block b %}sue{% endblock %}",
+      "data": { "you": "world" },
+      "templates": {
+        "a": "Hello, {% block b %}{{ you }}{% endblock %}!"
+      },
+      "result": "Hello, sue!"
+    }
+  ]
+}

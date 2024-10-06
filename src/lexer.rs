@@ -236,6 +236,7 @@ impl Lexer {
                 "if" => Token::If { line_col },
                 "else" => Token::Else { line_col },
                 "with" => Token::With { line_col },
+                "required" => Token::Required { line_col },
                 "as" => Token::As { line_col },
                 "for" => Token::For { line_col },
                 _ => unreachable!(),

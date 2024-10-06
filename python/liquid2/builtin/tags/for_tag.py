@@ -284,6 +284,10 @@ class BreakNode(Node):
         """Render the node to the output buffer."""
         raise BreakLoop("break")
 
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return []
+
 
 class ContinueNode(Node):
     """Parse tree node for the standard _continue_ tag."""
@@ -294,6 +298,10 @@ class ContinueNode(Node):
     def render_to_output(self, _context: RenderContext, _buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         raise ContinueLoop("continue")
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return []
 
 
 class BreakTag(Tag):
