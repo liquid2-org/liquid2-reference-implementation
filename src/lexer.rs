@@ -206,57 +206,58 @@ impl Lexer {
     }
 
     fn parse_expr_token(&self, pair: Pair<Rule>) -> Result<Token, LiquidError> {
-        let line_col = pair.line_col();
+        let span = self.as_span(&pair);
+
         Ok(match pair.as_rule() {
             Rule::symbol => match pair.as_str() {
-                "==" => Token::Eq { line_col },
-                "!=" | "<>" => Token::Ne { line_col },
-                ">=" => Token::Ge { line_col },
-                "<=" => Token::Le { line_col },
-                ">" => Token::Gt { line_col },
-                "<" => Token::Lt { line_col },
-                ":" => Token::Colon { line_col },
-                "||" => Token::DoublePipe { line_col },
-                "|" => Token::Pipe { line_col },
-                "," => Token::Comma { line_col },
-                "(" => Token::LeftParen { line_col },
-                ")" => Token::RightParen { line_col },
-                "=" => Token::Assign { line_col },
+                "==" => Token::Eq { span },
+                "!=" | "<>" => Token::Ne { span },
+                ">=" => Token::Ge { span },
+                "<=" => Token::Le { span },
+                ">" => Token::Gt { span },
+                "<" => Token::Lt { span },
+                ":" => Token::Colon { span },
+                "||" => Token::DoublePipe { span },
+                "|" => Token::Pipe { span },
+                "," => Token::Comma { span },
+                "(" => Token::LeftParen { span },
+                ")" => Token::RightParen { span },
+                "=" => Token::Assign { span },
                 _ => unreachable!(),
             },
             Rule::reserved_word => match pair.as_str() {
-                "true" => Token::True_ { line_col },
-                "false" => Token::False_ { line_col },
-                "and" => Token::And { line_col },
-                "or" => Token::Or { line_col },
-                "in" => Token::In { line_col },
-                "not" => Token::Not { line_col },
-                "contains" => Token::Contains { line_col },
-                "null" | "nil" => Token::Null { line_col },
-                "if" => Token::If { line_col },
-                "else" => Token::Else { line_col },
-                "with" => Token::With { line_col },
-                "required" => Token::Required { line_col },
-                "as" => Token::As { line_col },
-                "for" => Token::For { line_col },
+                "true" => Token::True_ { span },
+                "false" => Token::False_ { span },
+                "and" => Token::And { span },
+                "or" => Token::Or { span },
+                "in" => Token::In { span },
+                "not" => Token::Not { span },
+                "contains" => Token::Contains { span },
+                "null" | "nil" => Token::Null { span },
+                "if" => Token::If { span },
+                "else" => Token::Else { span },
+                "with" => Token::With { span },
+                "required" => Token::Required { span },
+                "as" => Token::As { span },
+                "for" => Token::For { span },
                 _ => unreachable!(),
             },
             Rule::multiline_double_quoted | Rule::double_quoted => Token::StringLiteral {
-                line_col,
-                value: unescape(pair.as_str(), &line_col)?,
+                span,
+                value: unescape(pair.as_str(), &span)?,
             },
             Rule::multiline_single_quoted | Rule::single_quoted => Token::StringLiteral {
-                line_col,
-                value: unescape(&pair.as_str().replace("\\'", "'"), &line_col)?,
+                span,
+                value: unescape(&pair.as_str().replace("\\'", "'"), &span)?,
             },
             Rule::number => self.parse_number(pair)?,
             Rule::range => self.parse_range(pair)?,
             Rule::query => Token::Query {
-                line_col,
+                span,
                 path: self.query_parser.parse(pair.into_inner())?,
             },
             Rule::word => Token::Word {
-                line_col,
+                span,
                 value: pair.as_str().to_owned(),
             },
             _ => unreachable!("{:#?}", pair),
@@ -264,10 +265,10 @@ impl Lexer {
     }
 
     fn parse_number(&self, expr: Pair<Rule>) -> Result<Token, LiquidError> {
-        let line_col = expr.line_col();
+        let span = self.as_span(&expr);
 
         if expr.as_str() == "-0" {
-            return Ok(Token::IntegerLiteral { line_col, value: 0 });
+            return Ok(Token::IntegerLiteral { span, value: 0 });
         }
 
         let mut it = expr.into_inner();
@@ -301,14 +302,14 @@ impl Lexer {
 
         if is_float {
             Ok(Token::FloatLiteral {
-                line_col,
+                span,
                 value: n
                     .parse::<f64>()
                     .map_err(|_| LiquidError::syntax(String::from("invalid float literal")))?,
             })
         } else {
             Ok(Token::IntegerLiteral {
-                line_col,
+                span,
                 value: n
                     .parse::<f64>()
                     .map_err(|_| LiquidError::syntax(String::from("invalid integer literal")))?
@@ -318,44 +319,42 @@ impl Lexer {
     }
 
     fn parse_range(&self, expr: Pair<Rule>) -> Result<Token, LiquidError> {
-        let line_col = expr.line_col();
+        let span = self.as_span(&expr);
         let mut it = expr.into_inner();
         let start = self.parse_range_argument(it.next().unwrap())?;
         let stop = self.parse_range_argument(it.next().unwrap())?;
-        Ok(Token::RangeLiteral {
-            line_col,
-            start,
-            stop,
-        })
+        Ok(Token::RangeLiteral { span, start, stop })
     }
 
     fn parse_range_argument(&self, pair: Pair<Rule>) -> Result<RangeArgument, LiquidError> {
+        let span = self.as_span(&pair);
         match pair.as_rule() {
             Rule::number => match self.parse_number(pair)? {
-                Token::FloatLiteral { line_col, value } => {
-                    Ok(RangeArgument::FloatLiteral { line_col, value })
+                Token::FloatLiteral { span, value } => {
+                    Ok(RangeArgument::FloatLiteral { span, value })
                 }
-                Token::IntegerLiteral { line_col, value } => {
-                    Ok(RangeArgument::IntegerLiteral { line_col, value })
+                Token::IntegerLiteral { span, value } => {
+                    Ok(RangeArgument::IntegerLiteral { span, value })
                 }
                 _ => unreachable!(),
             },
-            Rule::query => {
-                let line_col = pair.line_col();
-                Ok(RangeArgument::Query {
-                    line_col,
-                    path: self.query_parser.parse(pair.into_inner())?,
-                })
-            }
+            Rule::query => Ok(RangeArgument::Query {
+                span,
+                path: self.query_parser.parse(pair.into_inner())?,
+            }),
             Rule::string_literal | Rule::multiline_string_literal => {
-                let line_col = pair.line_col();
                 Ok(RangeArgument::StringLiteral {
-                    line_col,
+                    span,
                     value: pair.as_str().to_owned(),
                 })
             }
             _ => unreachable!("{:#?}", pair),
         }
+    }
+
+    fn as_span(&self, pair: &Pair<Rule>) -> (usize, usize) {
+        let _span = pair.as_span();
+        return (_span.start(), _span.end());
     }
 }
 
@@ -383,20 +382,20 @@ impl QueryParser {
     }
 
     fn parse_segment(&self, segment: Pair<Rule>) -> Result<Segment, LiquidError> {
-        let line_col = segment.line_col();
+        let span = self.as_span(&segment);
         Ok(match segment.as_rule() {
             Rule::child_segment | Rule::implicit_root_segment => Segment::Child {
                 selectors: self.parse_segment_inner(segment.into_inner().next().unwrap())?,
-                line_col,
+                span,
             },
             Rule::descendant_segment => Segment::Recursive {
                 selectors: self.parse_segment_inner(segment.into_inner().next().unwrap())?,
-                line_col,
+                span,
             },
             Rule::name_segment | Rule::index_segment | Rule::implicit_root_name_segment => {
                 Segment::Child {
                     selectors: vec![self.parse_selector(segment.into_inner().next().unwrap())?],
-                    line_col,
+                    span,
                 }
             }
             Rule::EOI => Segment::Eoi {},
@@ -405,6 +404,7 @@ impl QueryParser {
     }
 
     fn parse_segment_inner(&self, segment: Pair<Rule>) -> Result<Vec<Selector>, LiquidError> {
+        let span = self.as_span(&segment);
         Ok(match segment.as_rule() {
             Rule::bracketed_selection => {
                 let seg: Result<Vec<_>, _> = segment
@@ -413,40 +413,39 @@ impl QueryParser {
                     .collect();
                 seg?
             }
-            Rule::wildcard_selector => vec![Selector::Wild {
-                line_col: segment.line_col(),
-            }],
+            Rule::wildcard_selector => vec![Selector::Wild { span }],
             Rule::member_name_shorthand => vec![Selector::Name {
                 // for child_segment
                 name: segment.as_str().to_owned(),
-                line_col: segment.line_col(),
+                span,
             }],
             _ => unreachable!(),
         })
     }
 
     fn parse_selector(&self, selector: Pair<Rule>) -> Result<Selector, LiquidError> {
-        let line_col = selector.line_col();
+        let span = self.as_span(&selector);
+        // TODO: pass span to parse_*_selector?
         Ok(match selector.as_rule() {
             Rule::double_quoted => Selector::Name {
-                name: unescape(selector.as_str(), &line_col)?,
-                line_col,
+                name: unescape(selector.as_str(), &span)?,
+                span,
             },
             Rule::single_quoted => Selector::Name {
-                name: unescape(&selector.as_str().replace("\\'", "'"), &line_col)?,
-                line_col,
+                name: unescape(&selector.as_str().replace("\\'", "'"), &span)?,
+                span,
             },
-            Rule::wildcard_selector => Selector::Wild { line_col },
+            Rule::wildcard_selector => Selector::Wild { span },
             Rule::slice_selector => self.parse_slice_selector(selector)?,
             Rule::index_selector => Selector::Index {
                 index: self.parse_i_json_int(selector.as_str())?,
-                line_col,
+                span,
             },
             Rule::filter_selector => self.parse_filter_selector(selector)?,
             Rule::member_name_shorthand => Selector::Name {
                 // for name_segment
                 name: selector.as_str().to_owned(),
-                line_col,
+                span,
             },
             Rule::singular_query_selector => self.parse_singular_query_selector(selector)?,
             _ => unreachable!("{:#?}", selector),
@@ -457,7 +456,7 @@ impl QueryParser {
         let mut start: Option<i64> = None;
         let mut stop: Option<i64> = None;
         let mut step: Option<i64> = None;
-        let line_col = selector.line_col();
+        let span = self.as_span(&selector);
 
         for i in selector.into_inner() {
             match i.as_rule() {
@@ -472,22 +471,22 @@ impl QueryParser {
             start,
             stop,
             step,
-            line_col,
+            span,
         })
     }
 
     fn parse_filter_selector(&self, selector: Pair<Rule>) -> Result<Selector, LiquidError> {
-        let line_col = selector.line_col();
+        let span = self.as_span(&selector);
         Ok(Selector::Filter {
             expression: Box::new(
                 self.parse_logical_or_expression(selector.into_inner().next().unwrap(), true)?,
             ),
-            line_col,
+            span,
         })
     }
 
     fn parse_singular_query_selector(&self, selector: Pair<Rule>) -> Result<Selector, LiquidError> {
-        let line_col = selector.line_col();
+        let span = self.as_span(&selector);
         let segments: Result<Vec<_>, _> = selector
             .into_inner()
             .map(|segment| self.parse_segment(segment))
@@ -497,7 +496,7 @@ impl QueryParser {
             query: Box::new(Query {
                 segments: segments?,
             }),
-            line_col,
+            span,
         })
     }
 
@@ -514,7 +513,7 @@ impl QueryParser {
         }
 
         for and_expr in it {
-            let line_col = and_expr.line_col();
+            let span = self.as_span(&and_expr);
             let right = self.parse_logical_and_expression(and_expr, assert_compared)?;
             if assert_compared {
                 self.assert_compared(&right)?;
@@ -523,7 +522,7 @@ impl QueryParser {
                 left: Box::new(or_expr),
                 operator: LogicalOperator::Or,
                 right: Box::new(right),
-                line_col,
+                span,
             };
         }
 
@@ -535,7 +534,7 @@ impl QueryParser {
         expr: Pair<Rule>,
         assert_compared: bool,
     ) -> Result<FilterExpression, LiquidError> {
-        let line_col = expr.line_col();
+        let span = self.as_span(&expr);
         let mut it = expr.into_inner();
         let mut and_expr = self.parse_basic_expression(it.next().unwrap())?;
 
@@ -554,7 +553,7 @@ impl QueryParser {
                 left: Box::new(and_expr),
                 operator: LogicalOperator::And,
                 right: Box::new(right),
-                line_col: line_col,
+                span: span,
             };
         }
 
@@ -576,7 +575,7 @@ impl QueryParser {
         match p.as_rule() {
             Rule::logical_not_op => Ok(FilterExpression::Not {
                 expression: Box::new(self.parse_logical_or_expression(it.next().unwrap(), true)?),
-                line_col: p.line_col(),
+                span: self.as_span(&p),
             }),
             Rule::logical_or_expr => self.parse_logical_or_expression(p, true),
             _ => unreachable!(),
@@ -589,7 +588,7 @@ impl QueryParser {
     ) -> Result<FilterExpression, LiquidError> {
         let mut it = expr.into_inner();
         let pair = it.next().unwrap();
-        let line_col = pair.line_col();
+        let span = self.as_span(&pair);
         let left = self.parse_comparable(pair)?;
 
         let operator = match it.next().unwrap().as_str() {
@@ -610,25 +609,26 @@ impl QueryParser {
             left: Box::new(left),
             operator,
             right: Box::new(right),
-            line_col,
+            span,
         })
     }
 
     fn parse_comparable(&self, expr: Pair<Rule>) -> Result<FilterExpression, LiquidError> {
-        let line_col = expr.line_col();
+        let span = self.as_span(&expr);
+        // TODO: pass span to parse_*?
         Ok(match expr.as_rule() {
             Rule::number => self.parse_number(expr)?,
             Rule::double_quoted => FilterExpression::StringLiteral {
-                value: unescape(expr.as_str(), &line_col)?,
-                line_col,
+                value: unescape(expr.as_str(), &span)?,
+                span,
             },
             Rule::single_quoted => FilterExpression::StringLiteral {
-                value: unescape(&expr.as_str().replace("\\'", "'"), &line_col)?,
-                line_col,
+                value: unescape(&expr.as_str().replace("\\'", "'"), &span)?,
+                span,
             },
-            Rule::true_literal => FilterExpression::True_ { line_col },
-            Rule::false_literal => FilterExpression::False_ { line_col },
-            Rule::null => FilterExpression::Null { line_col },
+            Rule::true_literal => FilterExpression::True_ { span },
+            Rule::false_literal => FilterExpression::False_ { span },
+            Rule::null => FilterExpression::Null { span },
             Rule::rel_singular_query => {
                 let segments: Result<Vec<_>, _> = expr
                     .into_inner()
@@ -639,7 +639,7 @@ impl QueryParser {
                     query: Box::new(Query {
                         segments: segments?,
                     }),
-                    line_col,
+                    span,
                 }
             }
             Rule::abs_singular_query => {
@@ -652,7 +652,7 @@ impl QueryParser {
                     query: Box::new(Query {
                         segments: segments?,
                     }),
-                    line_col,
+                    span,
                 }
             }
             Rule::function_expr => self.parse_function_expression(expr)?,
@@ -661,9 +661,9 @@ impl QueryParser {
     }
 
     fn parse_number(&self, expr: Pair<Rule>) -> Result<FilterExpression, LiquidError> {
-        let line_col = expr.line_col();
+        let span = self.as_span(&expr);
         if expr.as_str() == "-0" {
-            return Ok(FilterExpression::Int { value: 0, line_col });
+            return Ok(FilterExpression::Int { value: 0, span });
         }
 
         // TODO: change pest grammar to indicate positive or negative exponent?
@@ -701,7 +701,7 @@ impl QueryParser {
                 value: n
                     .parse::<f64>()
                     .map_err(|_| LiquidError::syntax(String::from("invalid float literal")))?,
-                line_col,
+                span,
             })
         } else {
             Ok(FilterExpression::Int {
@@ -709,7 +709,7 @@ impl QueryParser {
                     .parse::<f64>()
                     .map_err(|_| LiquidError::syntax(String::from("invalid integer literal")))?
                     as i64,
-                line_col,
+                span,
             })
         }
     }
@@ -720,7 +720,7 @@ impl QueryParser {
         Ok(match pair.as_rule() {
             Rule::logical_not_op => FilterExpression::Not {
                 expression: Box::new(self.parse_test_expression_inner(it.next().unwrap())?),
-                line_col: pair.line_col(),
+                span: self.as_span(&pair),
             },
             _ => self.parse_test_expression_inner(pair)?,
         })
@@ -730,7 +730,7 @@ impl QueryParser {
         &self,
         expr: Pair<Rule>,
     ) -> Result<FilterExpression, LiquidError> {
-        let line_col = expr.line_col();
+        let span = self.as_span(&expr);
         Ok(match expr.as_rule() {
             Rule::rel_query => {
                 let segments: Result<Vec<_>, _> = expr
@@ -742,7 +742,7 @@ impl QueryParser {
                     query: Box::new(Query {
                         segments: segments?,
                     }),
-                    line_col,
+                    span,
                 }
             }
             Rule::root_query => {
@@ -755,7 +755,7 @@ impl QueryParser {
                     query: Box::new(Query {
                         segments: segments?,
                     }),
-                    line_col,
+                    span,
                 }
             }
             Rule::function_expr => self.parse_function_expression(expr)?,
@@ -766,32 +766,32 @@ impl QueryParser {
     fn parse_function_expression(&self, expr: Pair<Rule>) -> Result<FilterExpression, LiquidError> {
         let mut it = expr.into_inner();
         let pair = it.next().unwrap();
-        let line_col = pair.line_col();
+        let span = self.as_span(&pair);
         let name = pair.as_str();
         let args: Result<Vec<_>, _> = it.map(|ex| self.parse_function_argument(ex)).collect();
 
         Ok(FilterExpression::Function {
             name: name.to_string(),
             args: self.assert_well_typed(name, args?)?,
-            line_col,
+            span,
         })
     }
 
     fn parse_function_argument(&self, expr: Pair<Rule>) -> Result<FilterExpression, LiquidError> {
-        let line_col = expr.line_col();
+        let span = self.as_span(&expr);
         Ok(match expr.as_rule() {
             Rule::number => self.parse_number(expr)?,
             Rule::double_quoted => FilterExpression::StringLiteral {
-                value: unescape(expr.as_str(), &line_col)?,
-                line_col,
+                value: unescape(expr.as_str(), &span)?,
+                span,
             },
             Rule::single_quoted => FilterExpression::StringLiteral {
-                value: unescape(&expr.as_str().replace("\\'", "'"), &line_col)?,
-                line_col,
+                value: unescape(&expr.as_str().replace("\\'", "'"), &span)?,
+                span,
             },
-            Rule::true_literal => FilterExpression::True_ { line_col },
-            Rule::false_literal => FilterExpression::False_ { line_col },
-            Rule::null => FilterExpression::Null { line_col },
+            Rule::true_literal => FilterExpression::True_ { span },
+            Rule::false_literal => FilterExpression::False_ { span },
+            Rule::null => FilterExpression::Null { span },
             Rule::rel_query => {
                 let segments: Result<Vec<_>, _> = expr
                     .into_inner()
@@ -802,7 +802,7 @@ impl QueryParser {
                     query: Box::new(Query {
                         segments: segments?,
                     }),
-                    line_col,
+                    span,
                 }
             }
             Rule::root_query => {
@@ -815,7 +815,7 @@ impl QueryParser {
                     query: Box::new(Query {
                         segments: segments?,
                     }),
-                    line_col,
+                    span,
                 }
             }
             Rule::logical_or_expr => self.parse_logical_or_expression(expr, false)?,
@@ -998,6 +998,11 @@ impl QueryParser {
             }
             _ => false,
         }
+    }
+
+    fn as_span(&self, pair: &Pair<Rule>) -> (usize, usize) {
+        let _span = pair.as_span();
+        return (_span.start(), _span.end());
     }
 }
 
