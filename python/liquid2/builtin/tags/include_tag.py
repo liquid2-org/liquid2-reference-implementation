@@ -10,6 +10,7 @@ from liquid2 import Markup
 from liquid2 import Node
 from liquid2 import Token
 from liquid2.ast import MetaNode
+from liquid2.builtin import Identifier
 from liquid2.builtin import Literal
 from liquid2.builtin import parse_keyword_arguments
 from liquid2.builtin import parse_primitive
@@ -40,7 +41,7 @@ class IncludeNode(Node):
         *,
         loop: bool,
         var: Expression | None,
-        alias: str | None,
+        alias: Identifier | None,
         args: list[KeywordArgument] | None,
     ) -> None:
         super().__init__(token)
@@ -122,7 +123,9 @@ class IncludeNode(Node):
 
     def children(self) -> list[MetaNode]:
         """Return a list of child nodes and/or expressions associated with this node."""
-        block_scope: list[str] = [arg.name for arg in self.args]
+        block_scope: list[Identifier] = [
+            Identifier(arg.name, token=arg.token) for arg in self.args
+        ]
 
         _children = [
             MetaNode(
@@ -139,7 +142,11 @@ class IncludeNode(Node):
             if self.alias:
                 block_scope.append(self.alias)
             elif isinstance(self.name, Literal):
-                block_scope.append(str(self.name.value).split(".", 1)[0])
+                block_scope.append(
+                    Identifier(
+                        str(self.name.value).split(".", 1)[0], token=self.name.token
+                    )
+                )
             _children.append(
                 MetaNode(
                     token=self.token,
@@ -147,9 +154,8 @@ class IncludeNode(Node):
                 )
             )
 
-        # TODO: use arg.token
         for arg in self.args:
-            _children.append(MetaNode(token=self.token, expression=arg.value))
+            _children.append(MetaNode(token=arg.token, expression=arg.value))
         return _children
 
 
@@ -178,7 +184,7 @@ class IncludeTag(Tag):
 
         loop = False
         var: Expression | None = None
-        alias: str | None = None
+        alias: Identifier | None = None
 
         if isinstance(tokens.current(), Token.For) and not isinstance(
             tokens.peek(), (Token.Colon, Token.Comma)

@@ -16,6 +16,7 @@ from liquid2.tokens import TokenStream
 
 if TYPE_CHECKING:
     from liquid2 import TokenT
+    from liquid2.builtin import Identifier
     from liquid2.context import RenderContext
 
 
@@ -24,7 +25,7 @@ class CaptureNode(Node):
 
     __slots__ = ("name", "block")
 
-    def __init__(self, token: TokenT, name: str, block: BlockNode) -> None:
+    def __init__(self, token: TokenT, *, name: Identifier, block: BlockNode) -> None:
         super().__init__(token)
         self.name = name
         self.block = block
@@ -51,9 +52,7 @@ class CaptureNode(Node):
             MetaNode(
                 token=self.token,
                 node=self.block,
-                template_scope=[
-                    self.name,
-                ],
+                template_scope=[self.name],
             )
         ]
 
@@ -71,7 +70,7 @@ class CaptureTag(Tag):
         assert isinstance(token, Markup.Tag)
 
         expr_stream = TokenStream(token.expression)
-        name = parse_identifier(next(expr_stream, None))
+        name = parse_identifier(expr_stream.next())
         expr_stream.expect_eos()
 
         block_token = stream.current()
@@ -80,5 +79,7 @@ class CaptureTag(Tag):
         stream.expect_tag("endcapture")
 
         return self.node_class(
-            token, name=name, block=BlockNode(token=block_token, nodes=nodes)
+            token,
+            name=name,
+            block=BlockNode(token=block_token, nodes=nodes),
         )

@@ -26,24 +26,26 @@ def env() -> Environment:  # noqa: D103
 class MockSpan:
     """A mock span containing the location of a variable, tag or filter."""
 
-    __slots__ = ("template_name", "span")
+    __slots__ = ("template_name", "start", "end")
 
     def __init__(self, start: int, end: int, template_name: str = "<string>") -> None:
         self.template_name = template_name
-        self.span = (start, end)
+        self.start = start
+        self.end = end
 
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, (Span, MockSpan))
             and self.template_name == other.template_name
-            and self.span == other.span
+            and self.start == other.start
+            and self.end == other.end
         )
 
     def __hash__(self) -> int:
-        return hash((self.template_name, self.span))
+        return hash((self.template_name, self.start, self.end))
 
     def __str__(self) -> str:
-        return f"{self.template_name}[{self.span[0]}:{self.span[1]}]"
+        return f"{self.template_name}[{self.start}:{self.end}]"
 
 
 _Span = MockSpan
@@ -55,13 +57,14 @@ def _assert(
     *,
     local_refs: MockRefs,
     global_refs: MockRefs,
+    all_refs: MockRefs | None = None,
     failed_visits: MockRefs | None = None,
     unloadable: MockRefs | None = None,
     raise_for_failures: bool = True,
     filters: MockRefs | None = None,
     tags: MockRefs | None = None,
 ) -> None:
-    all_refs = {**global_refs, **local_refs}
+    all_refs = {**global_refs} if all_refs is None else all_refs
 
     async def coro() -> TemplateAnalysis:
         return await template.analyze_async(raise_for_failures=raise_for_failures)
@@ -134,6 +137,16 @@ def test_bracketed_query_notation(env: Environment) -> None:
     )
 
 
+def test_quoted_name_notation(env: Environment) -> None:
+    source = r"{{ some['foo.bar'] }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={"some['foo.bar']": _Span(3, 18)},
+    )
+
+
 def test_nested_queries(env: Environment) -> None:
     source = r"{{ x[y.z].title }}"
 
@@ -142,6 +155,21 @@ def test_nested_queries(env: Environment) -> None:
         local_refs={},
         global_refs={
             "x[y.z].title": _Span(3, 15),
-            "y.z": _Span(5, 9),
+            "y.z": _Span(5, 8),
         },
+    )
+
+
+def test_analyze_assign(env: Environment) -> None:
+    source = r"{% assign x = y | append: z %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={"x": _Span(10, 11)},
+        global_refs={
+            "y": _Span(14, 15),
+            "z": _Span(26, 27),
+        },
+        filters={"append": _Span(18, 24)},
+        tags={"assign": _Span(0, 30)},
     )

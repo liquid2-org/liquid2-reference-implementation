@@ -13,6 +13,7 @@ from . import Markup
 from .ast import BlockNode
 from .ast import ConditionalBlockNode
 from .builtin import FilteredExpression
+from .builtin import Identifier
 from .builtin import Query as QueryExpression
 from .builtin import StringLiteral
 from .builtin.tags.extends_tag import BlockNode as InheritanceBlockNode
@@ -23,7 +24,6 @@ from .exceptions import StopRender
 from .exceptions import TemplateInheritanceError
 from .exceptions import TemplateNotFound
 from .exceptions import TemplateTraversalError
-from .query import from_symbol
 from .utils import ReadOnlyChainMap
 
 if TYPE_CHECKING:
@@ -125,7 +125,7 @@ class _TemplateCounter:
         follow_partials: bool = True,
         raise_for_failures: bool = True,
         scope: None | ReadOnlyChainMap = None,
-        template_locals: None | DefaultDict[Query, list[Span]] = None,
+        template_locals: None | DefaultDict[Identifier, list[Span]] = None,
         partials: None | list[tuple[str, None | dict[str, str]]] = None,
     ) -> None:
         self.template = template
@@ -134,7 +134,7 @@ class _TemplateCounter:
         self.raise_for_failures = raise_for_failures
 
         # Names that are added to the template "local" scope.
-        self.template_locals: DefaultDict[Query, list[Span]] = (
+        self.template_locals: DefaultDict[Identifier, list[Span]] = (
             template_locals if template_locals is not None else defaultdict(list)
         )
 
@@ -267,7 +267,7 @@ class _TemplateCounter:
             _query = str(query.head())
             if (
                 _query not in self._scope
-                and from_symbol(_query, (0, 0)) not in self.template_locals
+                and Identifier(_query, token=token) not in self.template_locals
             ):
                 self.template_globals[query].append(
                     Span.from_token(self._template_name, token)
@@ -283,8 +283,8 @@ class _TemplateCounter:
             return
 
         for name in child.template_scope:
-            self.template_locals[from_symbol(name, (0, 0))].append(
-                Span.from_token(self._template_name, child.token)
+            self.template_locals[name].append(
+                Span.from_token(self._template_name, name.token)
             )
 
     def _update_expression_refs(self, expression: Expression) -> References:
@@ -366,7 +366,10 @@ class _TemplateCounter:
         # Partial templates rendered in "render" mode do not share the parent template
         # local namespace. We do not pass the current block scope stack to "rendered"
         # templates either.
-        scope = {n: None for n in child.block_scope} if child.block_scope else {}
+        scope: dict[str, object] = (
+            {n: None for n in child.block_scope} if child.block_scope else {}
+        )
+
         refs = _TemplateCounter(
             template,
             follow_partials=self.follow_partials,
@@ -389,7 +392,10 @@ class _TemplateCounter:
         except TemplateNotFound:
             return
 
-        scope = {n: None for n in child.block_scope} if child.block_scope else {}
+        scope: dict[str, object] = (
+            {n: None for n in child.block_scope} if child.block_scope else {}
+        )
+
         refs = await _TemplateCounter(
             template,
             follow_partials=self.follow_partials,
@@ -692,7 +698,7 @@ class _InheritanceChainCounter(_TemplateCounter):
         follow_partials: bool = True,
         raise_for_failures: bool = True,
         scope: ReadOnlyChainMap | None = None,
-        template_locals: DefaultDict[Query, list[Span]] | None = None,
+        template_locals: DefaultDict[Identifier, list[Span]] | None = None,
         partials: list[tuple[str, dict[str, str] | None]] | None = None,
     ) -> None:
         self.stack_context = stack_context
@@ -726,7 +732,7 @@ class _InheritanceChainCounter(_TemplateCounter):
 
         if self._contains_super(expression):
             template = self._make_template(self.parent_block_stack_item)
-            scope = {str(q.head()): None for q in self.template_locals}
+            scope: dict[str, object] = {ident: None for ident in self.template_locals}
             refs = _InheritanceChainCounter(
                 template,
                 self.stack_context,
@@ -748,7 +754,7 @@ class _InheritanceChainCounter(_TemplateCounter):
 
         if self._contains_super(expression):
             template = self._make_template(self.parent_block_stack_item)
-            scope = {str(ident.head()): None for ident in self.template_locals}
+            scope: dict[str, object] = {ident: None for ident in self.template_locals}
             refs = await _InheritanceChainCounter(
                 template,
                 self.stack_context,
@@ -784,7 +790,7 @@ class _InheritanceChainCounter(_TemplateCounter):
 
         block_stack_item = block_stacks[block.name][0]
         template = self._make_template(block_stack_item)
-        scope = {str(q.head()): None for q in self.template_locals}
+        scope: dict[str, object] = {ident: None for ident in self.template_locals}
 
         refs = _InheritanceChainCounter(
             template,
@@ -805,7 +811,7 @@ class _InheritanceChainCounter(_TemplateCounter):
 
         block_stack_item = block_stacks[block.name][0]
         template = self._make_template(block_stack_item)
-        scope = {str(q.head()): None for q in self.template_locals}
+        scope: dict[str, object] = {ident: None for ident in self.template_locals}
 
         refs = await _InheritanceChainCounter(
             template,

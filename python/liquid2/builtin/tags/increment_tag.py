@@ -15,6 +15,7 @@ from liquid2.tokens import TokenStream
 
 if TYPE_CHECKING:
     from liquid2 import TokenT
+    from liquid2.builtin import Identifier
     from liquid2.context import RenderContext
 
 
@@ -23,7 +24,7 @@ class IncrementNode(Node):
 
     __slots__ = ("name", "name")
 
-    def __init__(self, token: TokenT, name: str) -> None:
+    def __init__(self, token: TokenT, name: Identifier) -> None:
         super().__init__(token)
         self.name = name
 

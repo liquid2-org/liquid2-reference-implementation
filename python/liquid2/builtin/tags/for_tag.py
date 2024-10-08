@@ -12,6 +12,7 @@ from liquid2 import Markup
 from liquid2 import Node
 from liquid2.ast import BlockNode
 from liquid2.ast import MetaNode
+from liquid2.builtin import Identifier
 from liquid2.builtin import LoopExpression
 from liquid2.context import RenderContext
 from liquid2.exceptions import BreakLoop
@@ -126,7 +127,10 @@ class ForNode(Node):
                 token=self.block.token,
                 node=self.block,
                 expression=self.expression,
-                block_scope=[self.expression.identifier, "forloop"],
+                block_scope=[
+                    Identifier(self.expression.identifier, token=self.expression.token),
+                    Identifier("forloop", token=self.token),
+                ],
             )
         ]
         if self.default:

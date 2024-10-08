@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from _liquid2 import TokenT
 
     from .builtin import BooleanExpression
+    from .builtin import Identifier
     from .context import RenderContext
     from .expression import Expression
 
@@ -161,7 +162,7 @@ class MetaNode(NamedTuple):
     token: TokenT
     expression: Expression | None = None
     node: Node | None = None
-    template_scope: list[str] | None = None
-    block_scope: list[str] | None = None
+    template_scope: list[Identifier] | None = None
+    block_scope: list[Identifier] | None = None
     load_mode: Literal["render", "include", "extends"] | None = None
     load_context: dict[str, str] | None = None

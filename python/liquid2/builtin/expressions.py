@@ -301,7 +301,7 @@ class Query(Expression):
         return context.get(self.path, token=self.token)
 
     def children(self) -> list[Expression]:
-        return [Query(token=self.token, path=q) for q in self.path.children()]
+        return [Query(token=q.token, path=q) for q in self.path.children()]  # type: ignore
 
 
 Primitive = Literal[Any] | RangeLiteral | Query | Null
@@ -368,7 +368,7 @@ def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
                 return Empty(token=token)
             if value == "blank":
                 return Blank(token=token)
-            return Query(token, compile(parse_query(value), offset=span[0]))
+            return Query(token, compile(parse_query(value)))
         case Token.RangeLiteral(start, stop):
             return RangeLiteral(token, parse_primitive(start), parse_primitive(stop))
         case Token.StringLiteral(value) | RangeArgument.StringLiteral(value):
@@ -583,7 +583,7 @@ class Filter:
                                     PositionalArgument(
                                         Query(
                                             token,
-                                            compile(parse_query(value), offset=span[0]),
+                                            compile(parse_query(value)),
                                         )
                                     )
                                 )
@@ -737,7 +737,7 @@ def parse_boolean_primitive(  # noqa: PLR0912
             elif value == "blank":
                 left = Blank(token=token)
             else:
-                left = Query(token, compile(parse_query(value), offset=span[0]))
+                left = Query(token, compile(parse_query(value)))
         case Token.RangeLiteral(start, stop):
             left = RangeLiteral(token, parse_primitive(start), parse_primitive(stop))
         case Token.StringLiteral(value):
@@ -1344,18 +1344,39 @@ class LoopExpression(Expression):
         )
 
 
-def parse_identifier(token: TokenT | None) -> str:
+class Identifier(str):
+    """A string, token pair."""
+
+    def __new__(
+        cls, obj: object, *args: object, token: TokenT, **kwargs: object
+    ) -> Identifier:
+        instance = super().__new__(cls, obj, *args, **kwargs)
+        instance.token = token
+        return instance
+
+    def __init__(
+        self,
+        obj: object,  # noqa: ARG002
+        *args: object,  # noqa: ARG002
+        token: TokenT,  # noqa: ARG002
+        **kwargs: object,  # noqa: ARG002
+    ) -> None:
+        super().__init__()
+        self.token: TokenT
+
+
+def parse_identifier(token: TokenT | None) -> Identifier:
     """Parse _token_ as an identifier."""
     match token:
         case Token.Word(value):
-            return value
+            return Identifier(value, token=token)
         case Token.Query(path):
             word = path.as_word()
             if word is None:
                 raise LiquidSyntaxError(
                     "expected an identifier, found a path", token=token
                 )
-            return word
+            return Identifier(word, token=token)
         case _:
             raise LiquidSyntaxError(
                 f"expected an identifier, found {token.__class__.__name__}",
@@ -1363,20 +1384,20 @@ def parse_identifier(token: TokenT | None) -> str:
             )
 
 
-def parse_string_or_identifier(token: TokenT | None) -> str:
+def parse_string_or_identifier(token: TokenT | None) -> Identifier:
     """Parse _token_ as an identifier or a string literal."""
     match token:
         case Token.StringLiteral(value):
-            return value
+            return Identifier(value, token=token)
         case Token.Word(value):
-            return value
+            return Identifier(value, token=token)
         case Token.Query(path):
             word = path.as_word()
             if word is None:
                 raise LiquidSyntaxError(
                     "expected an identifier, found a path", token=token
                 )
-            return word
+            return Identifier(word, token=token)
         case _:
             raise LiquidSyntaxError(
                 f"expected an identifier, found {token.__class__.__name__}",

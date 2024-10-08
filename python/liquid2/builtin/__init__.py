@@ -15,6 +15,7 @@ from .expressions import FalseLiteral
 from .expressions import Filter
 from .expressions import FilteredExpression
 from .expressions import FloatLiteral
+from .expressions import Identifier
 from .expressions import IntegerLiteral
 from .expressions import KeywordArgument
 from .expressions import Literal
@@ -102,6 +103,7 @@ if TYPE_CHECKING:
 __all__ = (
     "AssignTag",
     "Blank",
+    "Identifier",
     "Boolean",
     "BooleanExpression",
     "BreakTag",

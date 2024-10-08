@@ -2,26 +2,31 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from liquid2 import TokenT
+
 
 class JSONPathError(Exception):
     """Base exception for all errors.
 
     Arguments:
         args: Arguments passed to `Exception`.
-        span: The start and end index of the token that caused this error.
+        token: The start and end index of the token that caused this error.
     """
 
-    def __init__(self, *args: object, span: tuple[int, int] | None = None) -> None:
+    def __init__(self, *args: object, token: TokenT | None = None) -> None:
         super().__init__(*args)
-        self.span: tuple[int, int] | None = span
+        self.token: TokenT | None = token
 
     def __str__(self) -> str:
         msg = super().__str__()
 
-        if not self.span:
+        if not self.token:
             return msg
 
-        # TODO: span or line/column
+        # TODO: token or line/column
         return f"{msg}"
 
 
@@ -30,12 +35,12 @@ class JSONPathSyntaxError(JSONPathError):
 
     Arguments:
         args: Arguments passed to `Exception`.
-        span: The start and end index of the token that caused this error.
+        token: The start and end index of the token that caused this error.
     """
 
-    def __init__(self, *args: object, span: tuple[int, int]) -> None:
+    def __init__(self, *args: object, token: TokenT) -> None:
         super().__init__(*args)
-        self.span = span
+        self.token = token
 
 
 class JSONPathTypeError(JSONPathError):
@@ -50,12 +55,12 @@ class JSONPathIndexError(JSONPathError):
 
     Arguments:
         args: Arguments passed to `Exception`.
-        span: The start and end index of the token that caused this error.
+        token: The start and end index of the token that caused this error.
     """
 
-    def __init__(self, *args: object, span: tuple[int, int]) -> None:
+    def __init__(self, *args: object, token: TokenT) -> None:
         super().__init__(*args)
-        self.span = span
+        self.token = token
 
 
 class JSONPathNameError(JSONPathError):
@@ -63,12 +68,12 @@ class JSONPathNameError(JSONPathError):
 
     Arguments:
         args: Arguments passed to `Exception`.
-        span: The start and end index of the token that caused this error.
+        token: The start and end index of the token that caused this error.
     """
 
-    def __init__(self, *args: object, span: tuple[int, int]) -> None:
+    def __init__(self, *args: object, token: TokenT) -> None:
         super().__init__(*args)
-        self.span = span
+        self.token = token
 
 
 class JSONPathLexerError(JSONPathError):
@@ -76,12 +81,12 @@ class JSONPathLexerError(JSONPathError):
 
     Arguments:
         args: Arguments passed to `Exception`.
-        span: The start and end index of the token that caused this error.
+        token: The start and end index of the token that caused this error.
     """
 
-    def __init__(self, *args: object, span: tuple[int, int]) -> None:
+    def __init__(self, *args: object, token: TokenT) -> None:
         super().__init__(*args)
-        self.span = span
+        self.token = token
 
 
 class JSONPathRecursionError(JSONPathError):
@@ -89,9 +94,9 @@ class JSONPathRecursionError(JSONPathError):
 
     Arguments:
         args: Arguments passed to `Exception`.
-        span: The start and end index of the token that caused this error.
+        token: The start and end index of the token that caused this error.
     """
 
-    def __init__(self, *args: object, span: tuple[int, int]) -> None:
+    def __init__(self, *args: object, token: TokenT) -> None:
         super().__init__(*args)
-        self.span = span
+        self.token = token

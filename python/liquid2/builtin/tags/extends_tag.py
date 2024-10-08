@@ -18,6 +18,7 @@ from liquid2 import Token
 from liquid2.ast import BlockNode as TemplateBlock
 from liquid2.ast import MetaNode
 from liquid2.ast import Node
+from liquid2.builtin import Identifier
 from liquid2.builtin import parse_string_or_identifier
 from liquid2.exceptions import RequiredBlockError
 from liquid2.exceptions import StopRender
@@ -216,7 +217,13 @@ class BlockNode(Node):
 
     def children(self) -> list[MetaNode]:
         """Return a list of child nodes and/or expressions associated with this node."""
-        return [MetaNode(token=self.token, node=self.block, block_scope=["block"])]
+        return [
+            MetaNode(
+                token=self.token,
+                node=self.block,
+                block_scope=[Identifier("block", token=self.token)],
+            )
+        ]
 
 
 class BlockTag(Tag):
@@ -252,7 +259,8 @@ class BlockTag(Tag):
                 end_block_name = parse_string_or_identifier(tokens.current())
                 if end_block_name != block_name:
                     raise TemplateInheritanceError(
-                        f"expected endblock for '{block_name}, found '{end_block_name}'",
+                        f"expected endblock for '{block_name}, "
+                        f"found '{end_block_name}'",
                         token=end_block_token,
                     )
                 tokens.next()

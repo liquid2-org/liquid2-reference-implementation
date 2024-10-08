@@ -17,6 +17,8 @@ from .selectors import NameSelector
 from .selectors import SingularQuerySelector
 
 if TYPE_CHECKING:
+    from liquid2 import TokenT
+
     from .environment import JSONValue
     from .environment import _JSONPathEnvironment
     from .segments import JSONPathSegment
@@ -36,7 +38,7 @@ class JSONPathQuery:
         segments: The `JSONPathSegment` instances that make up this query.
     """
 
-    __slots__ = ("env", "segments")
+    __slots__ = ("env", "segments", "token")
 
     def __init__(
         self,
@@ -46,6 +48,11 @@ class JSONPathQuery:
     ) -> None:
         self.env = env
         self.segments = segments
+
+        if segments:
+            self.token: TokenT | None = segments[0].token
+        else:
+            self.token = None
 
     def __str__(self) -> str:
         # TODO: test

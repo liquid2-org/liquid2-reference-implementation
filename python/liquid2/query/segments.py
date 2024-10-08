@@ -13,6 +13,8 @@ from .selectors import NameSelector
 from .selectors import WildcardSelector
 
 if TYPE_CHECKING:
+    from liquid2 import TokenT
+
     from .environment import _JSONPathEnvironment
     from .node import JSONPathNode
     from .selectors import JSONPathSelector
@@ -24,17 +26,17 @@ RE_SHORTHAND_NAME = re.compile(r"[\u0080-\uFFFFa-zA-Z_][\u0080-\uFFFFa-zA-Z0-9_-
 class JSONPathSegment(ABC):
     """Base class for all JSONPath segments."""
 
-    __slots__ = ("env", "span", "selectors")
+    __slots__ = ("env", "token", "selectors")
 
     def __init__(
         self,
         *,
         env: _JSONPathEnvironment,
-        span: tuple[int, int],
+        token: TokenT,
         selectors: tuple[JSONPathSelector, ...],
     ) -> None:
         self.env = env
-        self.span = span
+        self.token = token
         self.selectors = selectors
 
     @abstractmethod
@@ -56,7 +58,9 @@ class JSONPathChildSegment(JSONPathSegment):
         if len(self.selectors) == 1:
             match self.selectors[0]:
                 case NameSelector(name=name):
-                    return f".{name}"
+                    if RE_SHORTHAND_NAME.fullmatch(name):
+                        return f".{name}"
+                    return f"['{name}']"
                 case WildcardSelector():
                     return ".*"
 
@@ -66,7 +70,7 @@ class JSONPathChildSegment(JSONPathSegment):
         return (
             isinstance(__value, JSONPathChildSegment)
             and self.selectors == __value.selectors
-            and self.span == __value.span
+            and self.token == __value.token
         )
 
     def __hash__(self) -> int:
@@ -86,7 +90,7 @@ class JSONPathRecursiveDescentSegment(JSONPathSegment):
     def _visit(self, node: JSONPathNode, depth: int = 1) -> Iterable[JSONPathNode]:
         """Depth-first, pre-order node traversal."""
         if depth > self.env.max_recursion_depth:
-            raise JSONPathRecursionError("recursion limit exceeded", span=self.span)
+            raise JSONPathRecursionError("recursion limit exceeded", token=self.token)
 
         yield node
 
@@ -115,8 +119,8 @@ class JSONPathRecursiveDescentSegment(JSONPathSegment):
         return (
             isinstance(__value, JSONPathRecursiveDescentSegment)
             and self.selectors == __value.selectors
-            and self.span == __value.span
+            and self.token == __value.token
         )
 
     def __hash__(self) -> int:
-        return hash(("..", self.selectors, self.span))
+        return hash(("..", self.selectors, self.token))

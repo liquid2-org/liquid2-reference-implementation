@@ -278,55 +278,6 @@ class RangeArgument:
         @property
         def span(self) -> tuple[int, int]: ...
 
-TokenT: TypeAlias = (
-    Markup
-    | Token
-    | RangeArgument
-    | Markup.Content
-    | Markup.Raw
-    | Markup.Comment
-    | Markup.Output
-    | Markup.Tag
-    | Markup.Lines
-    | Token.True_
-    | Token.False_
-    | Token.And
-    | Token.Or
-    | Token.In
-    | Token.Not
-    | Token.Contains
-    | Token.Null
-    | Token.If
-    | Token.Else
-    | Token.With
-    | Token.Required
-    | Token.As
-    | Token.For
-    | Token.Eq
-    | Token.Ne
-    | Token.Ge
-    | Token.Gt
-    | Token.Le
-    | Token.Lt
-    | Token.Colon
-    | Token.Pipe
-    | Token.DoublePipe
-    | Token.Comma
-    | Token.LeftParen
-    | Token.RightParen
-    | Token.Assign
-    | Token.Word
-    | Token.StringLiteral
-    | Token.IntegerLiteral
-    | Token.FloatLiteral
-    | Token.RangeLiteral
-    | Token.Query
-    | RangeArgument.StringLiteral
-    | RangeArgument.IntegerLiteral
-    | RangeArgument.FloatLiteral
-    | RangeArgument.Query
-)
-
 class ComparisonOperator(Enum):
     Eq = ...
     Ne = ...
@@ -507,3 +458,74 @@ class LiquidTypeError(PyLiquidError): ...
 class LiquidSyntaxError(PyLiquidError): ...
 class LiquidNameError(PyLiquidError): ...
 class LiquidExtensionError(PyLiquidError): ...
+
+TokenT: TypeAlias = (
+    Markup
+    | Token
+    | RangeArgument
+    | Markup.Content
+    | Markup.Raw
+    | Markup.Comment
+    | Markup.Output
+    | Markup.Tag
+    | Markup.Lines
+    | Token.True_
+    | Token.False_
+    | Token.And
+    | Token.Or
+    | Token.In
+    | Token.Not
+    | Token.Contains
+    | Token.Null
+    | Token.If
+    | Token.Else
+    | Token.With
+    | Token.Required
+    | Token.As
+    | Token.For
+    | Token.Eq
+    | Token.Ne
+    | Token.Ge
+    | Token.Gt
+    | Token.Le
+    | Token.Lt
+    | Token.Colon
+    | Token.Pipe
+    | Token.DoublePipe
+    | Token.Comma
+    | Token.LeftParen
+    | Token.RightParen
+    | Token.Assign
+    | Token.Word
+    | Token.StringLiteral
+    | Token.IntegerLiteral
+    | Token.FloatLiteral
+    | Token.RangeLiteral
+    | Token.Query
+    | RangeArgument.StringLiteral
+    | RangeArgument.IntegerLiteral
+    | RangeArgument.FloatLiteral
+    | RangeArgument.Query
+    | FilterExpression
+    | FilterExpression.True_
+    | FilterExpression.False_
+    | FilterExpression.Null
+    | FilterExpression.StringLiteral
+    | FilterExpression.Int
+    | FilterExpression.Not
+    | FilterExpression.Logical
+    | FilterExpression.Comparison
+    | FilterExpression.RelativeQuery
+    | FilterExpression.RootQuery
+    | FilterExpression.Function
+    | Selector
+    | Selector.Name
+    | Selector.Index
+    | Selector.Slice
+    | Selector.Wild
+    | Selector.Filter
+    | Selector.SingularQuery
+    | Segment
+    | Segment.Child
+    | Segment.Recursive
+)

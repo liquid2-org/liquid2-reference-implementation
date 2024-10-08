@@ -17,6 +17,8 @@ from .function_extensions.filter_function import FilterFunction
 from .node import JSONPathNodeList
 
 if TYPE_CHECKING:
+    from liquid2 import TokenT
+
     from .environment import JSONValue
     from .environment import _JSONPathEnvironment
     from .query import JSONPathQuery
@@ -25,10 +27,10 @@ if TYPE_CHECKING:
 class Expression(ABC):
     """Base class for all filter expression nodes."""
 
-    __slots__ = ("span",)
+    __slots__ = ("token",)
 
-    def __init__(self, span: tuple[int, int]) -> None:
-        self.span = span
+    def __init__(self, token: TokenT) -> None:
+        self.token = token
 
     @abstractmethod
     def evaluate(self, context: FilterContext) -> object:
@@ -52,8 +54,8 @@ class FilterExpression(Expression):
 
     __slots__ = ("expression",)
 
-    def __init__(self, span: tuple[int, int], expression: Expression) -> None:
-        super().__init__(span)
+    def __init__(self, token: TokenT, expression: Expression) -> None:
+        super().__init__(token)
         self.expression = expression
 
     def __str__(self) -> str:
@@ -81,8 +83,8 @@ class FilterExpressionLiteral(Expression, Generic[LITERAL_T]):
 
     __slots__ = ("value",)
 
-    def __init__(self, span: tuple[int, int], value: LITERAL_T) -> None:
-        super().__init__(span=span)
+    def __init__(self, token: TokenT, value: LITERAL_T) -> None:
+        super().__init__(token=token)
         self.value = value
 
     def __str__(self) -> str:
@@ -144,10 +146,10 @@ class PrefixExpression(Expression):
 
     __slots__ = ("operator", "right")
 
-    def __init__(self, span: tuple[int, int], operator: str, right: Expression):
+    def __init__(self, token: TokenT, operator: str, right: Expression):
         self.operator = operator
         self.right = right
-        super().__init__(span)
+        super().__init__(token)
 
     def __str__(self) -> str:
         return f"{self.operator}{self.right}"
@@ -180,12 +182,12 @@ class LogicalExpression(Expression):
 
     def __init__(
         self,
-        span: tuple[int, int],
+        token: TokenT,
         left: Expression,
         operator: str,
         right: Expression,
     ):
-        super().__init__(span)
+        super().__init__(token)
         self.left = left
         self.operator = operator
         self.right = right
@@ -223,12 +225,12 @@ class ComparisonExpression(Expression):
 
     def __init__(
         self,
-        span: tuple[int, int],
+        token: TokenT,
         left: Expression,
         operator: str,
         right: Expression,
     ):
-        super().__init__(span)
+        super().__init__(token)
         self.left = left
         self.operator = operator
         self.right = right
@@ -269,9 +271,10 @@ class FilterQuery(Expression, ABC):
 
     __slots__ = ("query",)
 
-    def __init__(self, span: tuple[int, int], query: JSONPathQuery) -> None:
-        super().__init__(span)
+    def __init__(self, token: TokenT, query: JSONPathQuery) -> None:
+        super().__init__(token)
         self.query = query
+        self.query.token = token  # XXX: bit of a hack
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, FilterQuery) and str(self) == str(other)
@@ -323,10 +326,8 @@ class FunctionExtension(Expression):
 
     __slots__ = ("name", "args")
 
-    def __init__(
-        self, span: tuple[int, int], name: str, args: Sequence[Expression]
-    ) -> None:
-        super().__init__(span)
+    def __init__(self, token: TokenT, name: str, args: Sequence[Expression]) -> None:
+        super().__init__(token)
         self.name = name
         self.args = args
 
