@@ -43,12 +43,31 @@ RE_SPLIT_IDENT = re.compile(r"(\.|\[)")
 class Span:
     """The location of a variable, tag or filter in a template."""
 
-    __slots__ = ("template_name", "token", "start", "end")
+    __slots__ = ("template_name", "start", "end")
 
-    def __init__(self, template_name: str, token: TokenT) -> None:
+    def __init__(self, template_name: str, start: int, end: int) -> None:
         self.template_name = template_name
-        self.token = token
-        # TODO: span line/col
+        self.start = start
+        self.end = end
+
+    @staticmethod
+    def from_token(template_name: str, token: TokenT) -> Span:
+        """Return a new span taking start and end positions from _token_."""
+        return Span(template_name, token.span[0], token.span[1])  # type: ignore
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, Span)
+            and self.template_name == other.template_name
+            and self.start == other.start
+            and self.end == other.end
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.template_name, self.start, self.end))
+
+    def __str__(self) -> str:
+        return f"{self.template_name}[{self.start}:{self.end}]"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -238,24 +257,26 @@ class _TemplateCounter:
             return
 
         refs = self._update_expression_refs(child.expression)
-        for ref in refs.variable_references:
-            self.variables[ref].append(Span(self._template_name, child.token))
+        for query, token in refs.queries:
+            self.variables[query].append(Span.from_token(self._template_name, token))
 
         # Check refs that are not in scope or in the local namespace before
         # pushing the next block scope. This should highlight names that are
         # expected to be "global".
-        for ref in refs.variable_references:
-            _ref = str(ref.head())
+        for query, token in refs.queries:
+            _query = str(query.head())
             if (
-                _ref not in self._scope
-                and from_symbol(_ref, (0, 0)) not in self.template_locals
+                _query not in self._scope
+                and from_symbol(_query, (0, 0)) not in self.template_locals
             ):
-                self.template_globals[ref].append(
-                    Span(self._template_name, child.token)
+                self.template_globals[query].append(
+                    Span.from_token(self._template_name, token)
                 )
 
-        for f_ref in refs.filter_references:
-            self.filters[f_ref].append(Span(self._template_name, child.token))
+        for filter_name, token in refs.filters:
+            self.filters[filter_name].append(
+                Span.from_token(self._template_name, token)
+            )
 
     def _update_template_scope(self, child: MetaNode) -> None:
         if not child.template_scope:
@@ -263,7 +284,7 @@ class _TemplateCounter:
 
         for name in child.template_scope:
             self.template_locals[from_symbol(name, (0, 0))].append(
-                Span(self._template_name, child.token)
+                Span.from_token(self._template_name, child.token)
             )
 
     def _update_expression_refs(self, expression: Expression) -> References:
@@ -271,10 +292,10 @@ class _TemplateCounter:
         refs: References = References()
 
         if isinstance(expression, QueryExpression):
-            refs.append_variable(expression.path)
+            refs.append_variable(expression.path, expression.token)
 
         if isinstance(expression, FilteredExpression):
-            refs.append_filters([f.name for f in expression.filters or []])
+            refs.append_filters([(f.name, f.token) for f in expression.filters or []])
 
         for expr in expression.children():
             refs.extend(self._update_expression_refs(expr))
@@ -517,7 +538,7 @@ class _TemplateCounter:
         # literal string (or possibly an integer, but unlikely).
         if load_mode == "include" and not isinstance(child.expression, StringLiteral):
             self.unloadable_partials[str(child.expression)].append(
-                Span(self._template_name, child.token)
+                Span.from_token(self._template_name, child.token)
             )
             return None, None
 
@@ -552,7 +573,7 @@ class _TemplateCounter:
             )
         except TemplateNotFound:
             self.unloadable_partials[name].append(
-                Span(parent_name, token=parent_node.token)
+                Span.from_token(parent_name, token=parent_node.token)
             )
             raise
 
@@ -572,7 +593,7 @@ class _TemplateCounter:
             )
         except TemplateNotFound:
             self.unloadable_partials[name].append(
-                Span(parent_name, token=parent_node.token)
+                Span.from_token(parent_name, token=parent_node.token)
             )
             raise
 
@@ -589,11 +610,13 @@ class _TemplateCounter:
         # Count `extends` and `block` tags here, as we don't get the chance later.
         if count_tags and ast_extends_node:
             self.tags[ast_extends_node.name].append(
-                Span(template_name, token=ast_extends_node.token)
+                Span.from_token(template_name, token=ast_extends_node.token)
             )
 
         for ast_node in ast_block_nodes:
-            self.tags[ast_node.name].append(Span(template_name, token=ast_node.token))
+            self.tags[ast_node.name].append(
+                Span.from_token(template_name, token=ast_node.token)
+            )
 
         if ast_extends_node:
             return ast_extends_node.name, ast_block_nodes
@@ -604,7 +627,9 @@ class _TemplateCounter:
         if not isinstance(node, (BlockNode, ConditionalBlockNode)) and isinstance(
             token, Markup.Tag
         ):
-            self.tags[token.name].append(Span(self._template_name, token=token))
+            self.tags[token.name].append(
+                Span.from_token(self._template_name, token=token)
+            )
 
     def _update_reference_counters(self, refs: _TemplateCounter) -> None:
         # Accumulate references from the partial/child template into its parent.
@@ -806,18 +831,18 @@ class References:
     """Collect references for Template.analyze and friends."""
 
     def __init__(self) -> None:
-        self.variable_references: list[Query] = []
-        self.filter_references: list[str] = []
+        self.queries: list[tuple[Query, TokenT]] = []
+        self.filters: list[tuple[str, TokenT]] = []
 
-    def append_variable(self, var: Query) -> None:
+    def append_variable(self, var: Query, token: TokenT) -> None:
         """Add a variable reference."""
-        self.variable_references.append(var)
+        self.queries.append((var, token))
 
-    def append_filters(self, filters: list[str]) -> None:
+    def append_filters(self, filters: list[tuple[str, TokenT]]) -> None:
         """Add references to filters."""
-        self.filter_references.extend(filters)
+        self.filters.extend(filters)
 
     def extend(self, refs: References) -> None:
         """Incorporate references from another References."""
-        self.variable_references.extend(refs.variable_references)
-        self.filter_references.extend(refs.filter_references)
+        self.queries.extend(refs.queries)
+        self.filters.extend(refs.filters)

@@ -606,7 +606,7 @@
           3
         ]
       },
-      "result": "a-$['b']"
+      "result": "a-b"
     },
     {
       "name": "tags, for, name, range",

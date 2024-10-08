@@ -335,11 +335,11 @@ class FilteredExpression(Expression):
         return rv
 
     def children(self) -> list[Expression]:
-        _children = [self.left]
+        children = [self.left]
         if self.filters:
             for filter_ in self.filters:
-                _children.extend(filter_.children())
-        return _children
+                children.extend(filter_.children())
+        return children
 
     @staticmethod
     def parse(stream: TokenStream) -> FilteredExpression | TernaryFilteredExpression:
@@ -363,12 +363,12 @@ def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
             return FalseLiteral(token=token)
         case Token.Null():
             return Null(token=token)
-        case Token.Word(value):
+        case Token.Word(value, span):
             if value == "empty":
                 return Empty(token=token)
             if value == "blank":
                 return Blank(token=token)
-            return Query(token, compile(parse_query(value)))
+            return Query(token, compile(parse_query(value), offset=span[0]))
         case Token.RangeLiteral(start, stop):
             return RangeLiteral(token, parse_primitive(start), parse_primitive(stop))
         case Token.StringLiteral(value) | RangeArgument.StringLiteral(value):
@@ -567,22 +567,24 @@ class Filter:
                 while True:
                     token = stream.current()
                     match token:
-                        case Token.Word(value):
-                            if isinstance(
-                                stream.current(), (Token.Assign, Token.Colon)
-                            ):
+                        case Token.Word(value, span):
+                            if isinstance(stream.peek(), (Token.Assign, Token.Colon)):
                                 # A named or keyword argument
-                                next(stream)  # skip = or :
+                                stream.next()  # skip = or :
+                                stream.next()
                                 filter_arguments.append(
                                     KeywordArgument(
-                                        value, parse_primitive(next(stream, None))
+                                        value, parse_primitive(stream.current())
                                     )
                                 )
                             else:
                                 # A positional query that is a single word
                                 filter_arguments.append(
                                     PositionalArgument(
-                                        Query(token, compile(parse_query(value)))
+                                        Query(
+                                            token,
+                                            compile(parse_query(value), offset=span[0]),
+                                        )
                                     )
                                 )
                         case Token.Query(path):
@@ -599,7 +601,7 @@ class Filter:
                             )
                         case Token.Comma():
                             # XXX: leading, trailing and duplicate commas are OK
-                            next(stream, None)
+                            pass
                         case _:
                             break
 
@@ -729,13 +731,13 @@ def parse_boolean_primitive(  # noqa: PLR0912
             left = FalseLiteral(token=token)
         case Token.Null():
             left = Null(token=token)
-        case Token.Word(value):
+        case Token.Word(value, span):
             if value == "empty":
                 left = Empty(token=token)
             elif value == "blank":
                 left = Blank(token=token)
             else:
-                left = Query(token, compile(parse_query(value)))
+                left = Query(token, compile(parse_query(value), offset=span[0]))
         case Token.RangeLiteral(start, stop):
             left = RangeLiteral(token, parse_primitive(start), parse_primitive(stop))
         case Token.StringLiteral(value):

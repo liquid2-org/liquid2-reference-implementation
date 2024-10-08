@@ -166,7 +166,7 @@
       "name": "name",
       "template": "{% for a in b limit:1 %}{{ forloop.name }}{% endfor %}",
       "data": { "b": [1, 2, 3] },
-      "result": "a-$['b']"
+      "result": "a-b"
     },
     {
       "name": "name, range",

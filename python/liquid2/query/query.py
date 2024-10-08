@@ -48,8 +48,13 @@ class JSONPathQuery:
         self.segments = segments
 
     def __str__(self) -> str:
-        # TODO: canonical string repr or closer to legacy liquid?
-        return "$" + "".join(str(segment) for segment in self.segments)
+        # TODO: test
+        s = "".join(str(segment) for segment in self.segments)
+        if s.startswith(("[", "..")):
+            return "$" + s
+        if s.startswith("."):
+            return s[1:]
+        return s
 
     def __hash__(self) -> int:
         return hash(self.segments)

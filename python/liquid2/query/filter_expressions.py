@@ -25,10 +25,10 @@ if TYPE_CHECKING:
 class Expression(ABC):
     """Base class for all filter expression nodes."""
 
-    __slots__ = ("line_col",)
+    __slots__ = ("span",)
 
-    def __init__(self, line_col: tuple[int, int]) -> None:
-        self.line_col = line_col
+    def __init__(self, span: tuple[int, int]) -> None:
+        self.span = span
 
     @abstractmethod
     def evaluate(self, context: FilterContext) -> object:
@@ -52,8 +52,8 @@ class FilterExpression(Expression):
 
     __slots__ = ("expression",)
 
-    def __init__(self, line_col: tuple[int, int], expression: Expression) -> None:
-        super().__init__(line_col)
+    def __init__(self, span: tuple[int, int], expression: Expression) -> None:
+        super().__init__(span)
         self.expression = expression
 
     def __str__(self) -> str:
@@ -81,8 +81,8 @@ class FilterExpressionLiteral(Expression, Generic[LITERAL_T]):
 
     __slots__ = ("value",)
 
-    def __init__(self, line_col: tuple[int, int], value: LITERAL_T) -> None:
-        super().__init__(line_col=line_col)
+    def __init__(self, span: tuple[int, int], value: LITERAL_T) -> None:
+        super().__init__(span=span)
         self.value = value
 
     def __str__(self) -> str:
@@ -144,10 +144,10 @@ class PrefixExpression(Expression):
 
     __slots__ = ("operator", "right")
 
-    def __init__(self, line_col: tuple[int, int], operator: str, right: Expression):
+    def __init__(self, span: tuple[int, int], operator: str, right: Expression):
         self.operator = operator
         self.right = right
-        super().__init__(line_col)
+        super().__init__(span)
 
     def __str__(self) -> str:
         return f"{self.operator}{self.right}"
@@ -158,6 +158,9 @@ class PrefixExpression(Expression):
             and self.operator == other.operator
             and self.right == other.right
         )
+
+    def __hash__(self) -> int:
+        return hash((self.operator, self.right))
 
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
@@ -177,12 +180,12 @@ class LogicalExpression(Expression):
 
     def __init__(
         self,
-        line_col: tuple[int, int],
+        span: tuple[int, int],
         left: Expression,
         operator: str,
         right: Expression,
     ):
-        super().__init__(line_col)
+        super().__init__(span)
         self.left = left
         self.operator = operator
         self.right = right
@@ -209,6 +212,9 @@ class LogicalExpression(Expression):
         """Return a list of child expressions for this expression."""
         return [self.left, self.right]
 
+    def __hash__(self) -> int:
+        return hash((self.left, self.operator, self.right))
+
 
 class ComparisonExpression(Expression):
     """A pair of expressions and a comparison operator."""
@@ -217,12 +223,12 @@ class ComparisonExpression(Expression):
 
     def __init__(
         self,
-        line_col: tuple[int, int],
+        span: tuple[int, int],
         left: Expression,
         operator: str,
         right: Expression,
     ):
-        super().__init__(line_col)
+        super().__init__(span)
         self.left = left
         self.operator = operator
         self.right = right
@@ -237,6 +243,9 @@ class ComparisonExpression(Expression):
             and self.operator == other.operator
             and self.right == other.right
         )
+
+    def __hash__(self) -> int:
+        return hash((self.left, self.operator, self.right))
 
     def evaluate(self, context: FilterContext) -> bool:
         """Evaluate the filter expression in the given _context_."""
@@ -260,8 +269,8 @@ class FilterQuery(Expression, ABC):
 
     __slots__ = ("query",)
 
-    def __init__(self, line_col: tuple[int, int], query: JSONPathQuery) -> None:
-        super().__init__(line_col)
+    def __init__(self, span: tuple[int, int], query: JSONPathQuery) -> None:
+        super().__init__(span)
         self.query = query
 
     def __eq__(self, other: object) -> bool:
@@ -279,6 +288,9 @@ class RelativeFilterQuery(FilterQuery):
 
     def __str__(self) -> str:
         return "@" + str(self.query)[1:]
+
+    def __hash__(self) -> int:
+        return hash(self.query)
 
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
@@ -298,6 +310,9 @@ class RootFilterQuery(FilterQuery):
     def __str__(self) -> str:
         return str(self.query)
 
+    def __hash__(self) -> int:
+        return hash(self.query)
+
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
         return JSONPathNodeList(self.query.find(context.root))
@@ -309,9 +324,9 @@ class FunctionExtension(Expression):
     __slots__ = ("name", "args")
 
     def __init__(
-        self, line_col: tuple[int, int], name: str, args: Sequence[Expression]
+        self, span: tuple[int, int], name: str, args: Sequence[Expression]
     ) -> None:
-        super().__init__(line_col)
+        super().__init__(span)
         self.name = name
         self.args = args
 
@@ -325,6 +340,9 @@ class FunctionExtension(Expression):
             and other.name == self.name
             and other.args == self.args
         )
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.args))
 
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""

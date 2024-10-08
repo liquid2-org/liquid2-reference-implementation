@@ -47,6 +47,9 @@ from .filters.array import sort_natural
 from .filters.array import sum_
 from .filters.array import uniq
 from .filters.array import where
+from .filters.misc import date
+from .filters.misc import default
+from .filters.misc import size
 from .filters.string import append
 from .filters.string import capitalize
 from .filters.string import downcase
@@ -151,6 +154,9 @@ __all__ = (
     "parse_keyword_arguments",
     "ExtendsTag",
     "BlockTag",
+    "date",
+    "default",
+    "size",
 )
 
 
@@ -168,6 +174,10 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.filters["where"] = where
     env.filters["uniq"] = uniq
     env.filters["compact"] = compact
+
+    env.filters["date"] = date
+    env.filters["default"] = default
+    env.filters["size"] = size
 
     env.filters["capitalize"] = capitalize
     env.filters["append"] = append

@@ -26,11 +26,11 @@ if TYPE_CHECKING:
 class JSONPathSelector(ABC):
     """Base class for all JSONPath selectors."""
 
-    __slots__ = ("env", "line_col")
+    __slots__ = ("env", "span")
 
-    def __init__(self, *, env: _JSONPathEnvironment, line_col: tuple[int, int]) -> None:
+    def __init__(self, *, env: _JSONPathEnvironment, span: tuple[int, int]) -> None:
         self.env = env
-        self.line_col = line_col
+        self.span = span
 
     @abstractmethod
     def resolve(self, node: JSONPathNode) -> Iterable[JSONPathNode]:
@@ -53,10 +53,10 @@ class NameSelector(JSONPathSelector):
         self,
         *,
         env: _JSONPathEnvironment,
-        line_col: tuple[int, int],
+        span: tuple[int, int],
         name: str,
     ) -> None:
-        super().__init__(env=env, line_col=line_col)
+        super().__init__(env=env, span=span)
         self.name = name
 
     def __str__(self) -> str:
@@ -66,11 +66,11 @@ class NameSelector(JSONPathSelector):
         return (
             isinstance(__value, NameSelector)
             and self.name == __value.name
-            and self.line_col == __value.line_col
+            and self.span == __value.span
         )
 
     def __hash__(self) -> int:
-        return hash((self.name, self.line_col))
+        return hash(self.name)
 
     def resolve(self, node: JSONPathNode) -> Iterable[JSONPathNode]:
         """Select a value from a dict/object by its property/key."""
@@ -88,13 +88,13 @@ class IndexSelector(JSONPathSelector):
         self,
         *,
         env: _JSONPathEnvironment,
-        line_col: tuple[int, int],
+        span: tuple[int, int],
         index: int,
     ) -> None:
         if index < env.min_int_index or index > env.max_int_index:
-            raise JSONPathIndexError("index out of range", span=line_col)
+            raise JSONPathIndexError("index out of range", span=span)
 
-        super().__init__(env=env, line_col=line_col)
+        super().__init__(env=env, span=span)
         self.index = index
         self._as_key = str(self.index)
 
@@ -105,11 +105,11 @@ class IndexSelector(JSONPathSelector):
         return (
             isinstance(__value, IndexSelector)
             and self.index == __value.index
-            and self.line_col == __value.line_col
+            and self.span == __value.span
         )
 
     def __hash__(self) -> int:
-        return hash((self.index, self.line_col))
+        return hash((self.index, self.span))
 
     def _normalized_index(self, obj: Sequence[object]) -> int:
         if self.index < 0 and len(obj) >= abs(self.index):
@@ -133,12 +133,12 @@ class SliceSelector(JSONPathSelector):
         self,
         *,
         env: _JSONPathEnvironment,
-        line_col: tuple[int, int],
+        span: tuple[int, int],
         start: int | None = None,
         stop: int | None = None,
         step: int | None = None,
     ) -> None:
-        super().__init__(env=env, line_col=line_col)
+        super().__init__(env=env, span=span)
         self._check_range(start, stop, step)
         self.slice = slice(start, stop, step)
 
@@ -152,18 +152,18 @@ class SliceSelector(JSONPathSelector):
         return (
             isinstance(__value, SliceSelector)
             and self.slice == __value.slice
-            and self.line_col == __value.line_col
+            and self.span == __value.span
         )
 
     def __hash__(self) -> int:
-        return hash((str(self), self.line_col))
+        return hash((str(self), self.span))
 
     def _check_range(self, *indices: int | None) -> None:
         for i in indices:
             if i is not None and (
                 i < self.env.min_int_index or i > self.env.max_int_index
             ):
-                raise JSONPathIndexError("index out of range", span=self.line_col)
+                raise JSONPathIndexError("index out of range", span=self.span)
 
     def _normalized_index(self, obj: Sequence[object], index: int) -> int:
         if index < 0 and len(obj) >= abs(index):
@@ -183,19 +183,17 @@ class SliceSelector(JSONPathSelector):
 class WildcardSelector(JSONPathSelector):
     """The wildcard selector."""
 
-    def __init__(self, *, env: _JSONPathEnvironment, line_col: tuple[int, int]) -> None:
-        super().__init__(env=env, line_col=line_col)
+    def __init__(self, *, env: _JSONPathEnvironment, span: tuple[int, int]) -> None:
+        super().__init__(env=env, span=span)
 
     def __str__(self) -> str:
         return "*"
 
     def __eq__(self, __value: object) -> bool:
-        return (
-            isinstance(__value, WildcardSelector) and self.line_col == __value.line_col
-        )
+        return isinstance(__value, WildcardSelector) and self.span == __value.span
 
     def __hash__(self) -> int:
-        return hash(self.line_col)
+        return hash(self.span)
 
     def resolve(self, node: JSONPathNode) -> Iterable[JSONPathNode]:
         """Select all elements from a array/list or values from a dict/object."""
@@ -224,10 +222,10 @@ class Filter(JSONPathSelector):
         self,
         *,
         env: _JSONPathEnvironment,
-        line_col: tuple[int, int],
+        span: tuple[int, int],
         expression: FilterExpression,
     ) -> None:
-        super().__init__(env=env, line_col=line_col)
+        super().__init__(env=env, span=span)
         self.expression = expression
 
     def __str__(self) -> str:
@@ -237,11 +235,11 @@ class Filter(JSONPathSelector):
         return (
             isinstance(__value, Filter)
             and self.expression == __value.expression
-            and self.line_col == __value.line_col
+            and self.span == __value.span
         )
 
     def __hash__(self) -> int:
-        return hash((str(self.expression), self.line_col))
+        return hash((str(self.expression), self.span))
 
     def resolve(self, node: JSONPathNode) -> Iterable[JSONPathNode]:  # noqa: PLR0912
         """Select array/list items or dict/object values where with a filter."""
@@ -264,7 +262,7 @@ class Filter(JSONPathSelector):
                         yield node.new_child(val, name)
                 except JSONPathTypeError as err:
                     if not err.span:
-                        err.span = self.line_col
+                        err.span = self.span
                     raise
 
         elif isinstance(node.value, Sequence):
@@ -279,7 +277,7 @@ class Filter(JSONPathSelector):
                         yield node.new_child(element, i)
                 except JSONPathTypeError as err:
                     if not err.span:
-                        err.span = self.line_col
+                        err.span = self.span
                     raise
 
 
@@ -292,10 +290,10 @@ class SingularQuerySelector(JSONPathSelector):
         self,
         *,
         env: _JSONPathEnvironment,
-        line_col: tuple[int, int],
+        span: tuple[int, int],
         query: JSONPathQuery,
     ) -> None:
-        super().__init__(env=env, line_col=line_col)
+        super().__init__(env=env, span=span)
         self.query = query
 
     def __str__(self) -> str:
@@ -305,11 +303,11 @@ class SingularQuerySelector(JSONPathSelector):
         return (
             isinstance(value, SingularQuerySelector)
             and self.query == value.query
-            and self.line_col == value.line_col
+            and self.span == value.span
         )
 
     def __hash__(self) -> int:
-        return hash((str(self.query), self.line_col))
+        return hash((str(self.query), self.span))
 
     def _normalized_index(self, index: int, obj: Sequence[object]) -> int:
         if index < 0 and len(obj) >= abs(index):

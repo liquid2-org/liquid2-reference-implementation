@@ -77,19 +77,20 @@ class _JSONPathEnvironment:
 
         self.setup_function_extensions()
 
-    def compile(self, query: _Query) -> JSONPathQuery:  # noqa: A003
+    def compile(self, query: _Query, offset: int = 0) -> JSONPathQuery:  # noqa: A003
         return JSONPathQuery(
-            env=self, segments=tuple(self._parse_segment(s) for s in query.segments)
+            env=self,
+            segments=tuple(self._parse_segment(s, offset) for s in query.segments),
         )
 
-    def from_symbol(self, s: str, line_col: tuple[int, int]) -> JSONPathQuery:
+    def from_symbol(self, s: str, span: tuple[int, int]) -> JSONPathQuery:
         return JSONPathQuery(
             env=self,
             segments=(
                 JSONPathChildSegment(
                     env=self,
-                    line_col=line_col,
-                    selectors=(NameSelector(env=self, line_col=line_col, name=s),),
+                    span=span,
+                    selectors=(NameSelector(env=self, span=span, name=s),),
                 ),
             ),
         )
@@ -102,97 +103,129 @@ class _JSONPathEnvironment:
         self.function_extensions["search"] = function_extensions.Search()
         self.function_extensions["value"] = function_extensions.Value()
 
-    def _parse_segment(self, segment: _Segment) -> JSONPathSegment:
+    # TODO: change span to token!
+
+    def _parse_segment(self, segment: _Segment, offset: int) -> JSONPathSegment:
         match segment:
-            case _Segment.Child(selectors, line_col):
+            case _Segment.Child(selectors, span):
                 return JSONPathChildSegment(
                     env=self,
-                    line_col=line_col,
-                    selectors=tuple(self._parse_selector(s) for s in selectors),
+                    span=(span[0] + offset, span[1] + offset),
+                    selectors=tuple(self._parse_selector(s, offset) for s in selectors),
                 )
-            case _Segment.Recursive(selectors, line_col):
+            case _Segment.Recursive(selectors, span):
                 return JSONPathRecursiveDescentSegment(
                     env=self,
-                    line_col=line_col,
-                    selectors=tuple(self._parse_selector(s) for s in selectors),
+                    span=(span[0] + offset, span[1] + offset),
+                    selectors=tuple(self._parse_selector(s, offset) for s in selectors),
                 )
             case _:
                 raise Exception(":(")
 
-    def _parse_selector(self, selector: _Selector) -> JSONPathSelector:
+    def _parse_selector(self, selector: _Selector, offset: int) -> JSONPathSelector:
         match selector:
-            case _Selector.Name(name, line_col):
-                return NameSelector(env=self, line_col=line_col, name=name)
-            case _Selector.Index(index, line_col):
-                return IndexSelector(env=self, line_col=line_col, index=index)
-            case _Selector.Slice(start, stop, step, line_col):
-                return SliceSelector(
-                    env=self, line_col=line_col, start=start, stop=stop, step=step
+            case _Selector.Name(name, span):
+                return NameSelector(
+                    env=self, span=(span[0] + offset, span[1] + offset), name=name
                 )
-            case _Selector.Wild(line_col):
-                return WildcardSelector(env=self, line_col=line_col)
-            case _Selector.Filter(expression, line_col):
+            case _Selector.Index(index, span):
+                return IndexSelector(
+                    env=self, span=(span[0] + offset, span[1] + offset), index=index
+                )
+            case _Selector.Slice(start, stop, step, span):
+                return SliceSelector(
+                    env=self,
+                    span=(span[0] + offset, span[1] + offset),
+                    start=start,
+                    stop=stop,
+                    step=step,
+                )
+            case _Selector.Wild(span):
+                return WildcardSelector(
+                    env=self, span=(span[0] + offset, span[1] + offset)
+                )
+            case _Selector.Filter(expression, span):
                 return Filter(
                     env=self,
-                    line_col=line_col,
+                    span=(span[0] + offset, span[1] + offset),
                     expression=FilterExpression(
-                        line_col=line_col,
-                        expression=self._parse_filter_expression(expression),
+                        span=(span[0] + offset, span[1] + offset),
+                        expression=self._parse_filter_expression(expression, offset),
                     ),
                 )
-            case _Selector.SingularQuery(query, line_col):
+            case _Selector.SingularQuery(query, span):
                 return SingularQuerySelector(
-                    env=self, line_col=line_col, query=self.compile(query)
+                    env=self,
+                    span=(span[0] + offset, span[1] + offset),
+                    query=self.compile(query, offset),
                 )
             case _:
                 raise NotImplementedError(selector.__class__.__name__)
 
     def _parse_filter_expression(  # noqa: PLR0912
-        self, expression: _FilterExpression
+        self, expression: _FilterExpression, offset: int
     ) -> Expression:
         expr: Expression
         match expression:
-            case _FilterExpression.True_(line_col):
-                expr = BooleanLiteral(line_col=line_col, value=True)
-            case _FilterExpression.False_(line_col):
-                expr = BooleanLiteral(line_col=line_col, value=False)
-            case _FilterExpression.Null(line_col):
-                expr = NullLiteral(line_col=line_col, value=None)
-            case _FilterExpression.StringLiteral(value, line_col):
-                expr = StringLiteral(line_col=line_col, value=value)
-            case _FilterExpression.Int(value, line_col):
-                expr = IntegerLiteral(line_col=line_col, value=value)
-            case _FilterExpression.Float(value, line_col):
-                expr = FloatLiteral(line_col=line_col, value=value)
-            case _FilterExpression.Not(_expr, line_col):
+            case _FilterExpression.True_(span):
+                expr = BooleanLiteral(
+                    span=(span[0] + offset, span[1] + offset), value=True
+                )
+            case _FilterExpression.False_(span):
+                expr = BooleanLiteral(
+                    span=(span[0] + offset, span[1] + offset), value=False
+                )
+            case _FilterExpression.Null(span):
+                expr = NullLiteral(
+                    span=(span[0] + offset, span[1] + offset), value=None
+                )
+            case _FilterExpression.StringLiteral(value, span):
+                expr = StringLiteral(
+                    span=(span[0] + offset, span[1] + offset), value=value
+                )
+            case _FilterExpression.Int(value, span):
+                expr = IntegerLiteral(
+                    span=(span[0] + offset, span[1] + offset), value=value
+                )
+            case _FilterExpression.Float(value, span):
+                expr = FloatLiteral(
+                    span=(span[0] + offset, span[1] + offset), value=value
+                )
+            case _FilterExpression.Not(_expr, span):
                 expr = PrefixExpression(
-                    line_col=line_col,
+                    span=(span[0] + offset, span[1] + offset),
                     operator="!",
-                    right=self._parse_filter_expression(_expr),
+                    right=self._parse_filter_expression(_expr, offset),
                 )
-            case _FilterExpression.Logical(left, operator, right, line_col):
+            case _FilterExpression.Logical(left, operator, right, span):
                 expr = LogicalExpression(
-                    line_col=line_col,
-                    left=self._parse_filter_expression(left),
+                    span=(span[0] + offset, span[1] + offset),
+                    left=self._parse_filter_expression(left, offset),
                     operator=str(operator),
-                    right=self._parse_filter_expression(right),
+                    right=self._parse_filter_expression(right, offset),
                 )
-            case _FilterExpression.Comparison(left, operator, right, line_col):
+            case _FilterExpression.Comparison(left, operator, right, span):
                 expr = ComparisonExpression(
-                    line_col=line_col,
-                    left=self._parse_filter_expression(left),
+                    span=(span[0] + offset, span[1] + offset),
+                    left=self._parse_filter_expression(left, offset),
                     operator=str(operator),
-                    right=self._parse_filter_expression(right),
+                    right=self._parse_filter_expression(right, offset),
                 )
-            case _FilterExpression.RelativeQuery(query, line_col):
-                expr = RelativeFilterQuery(line_col=line_col, query=self.compile(query))
-            case _FilterExpression.RootQuery(query, line_col):
-                expr = RootFilterQuery(line_col=line_col, query=self.compile(query))
-            case _FilterExpression.Function(name, args, line_col):
+            case _FilterExpression.RelativeQuery(query, span):
+                expr = RelativeFilterQuery(
+                    span=(span[0] + offset, span[1] + offset),
+                    query=self.compile(query, offset),
+                )
+            case _FilterExpression.RootQuery(query, span):
+                expr = RootFilterQuery(
+                    span=(span[0] + offset, span[1] + offset),
+                    query=self.compile(query, offset),
+                )
+            case _FilterExpression.Function(name, args, span):
                 expr = FunctionExtension(
-                    line_col=line_col,
+                    span=(span[0] + offset, span[1] + offset),
                     name=name,
-                    args=[self._parse_filter_expression(arg) for arg in args],
+                    args=[self._parse_filter_expression(arg, offset) for arg in args],
                 )
             case _:
                 # TODO
