@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Mapping
+from typing import Sequence
 from typing import TypeAlias
 
 import pytest
@@ -49,7 +50,7 @@ class MockSpan:
 
 
 _Span = MockSpan
-MockRefs: TypeAlias = Mapping[str, MockSpan | tuple[MockSpan, ...]]
+MockRefs: TypeAlias = Mapping[str, MockSpan | Sequence[MockSpan]]
 
 
 def _assert(
@@ -172,4 +173,97 @@ def test_analyze_assign(env: Environment) -> None:
         },
         filters={"append": _Span(18, 24)},
         tags={"assign": _Span(0, 30)},
+    )
+
+
+def test_analyze_capture(env: Environment) -> None:
+    source = r"{% capture x %}{% if y %}z{% endif %}{% endcapture %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={"x": _Span(11, 12)},
+        global_refs={
+            "y": _Span(21, 22),
+        },
+        tags={
+            "capture": _Span(0, 15),
+            "if": _Span(15, 25),
+        },
+    )
+
+
+def test_analyze_case(env: Environment) -> None:
+    source = "\n".join(
+        [
+            "{% case x %}",
+            "{% when y %}",
+            "  {{ a }}",
+            "{% when z %}",
+            "  {{ b }}",
+            "{% endcase %}",
+        ]
+    )
+
+    # TODO: else
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(8, 9),
+            "y": _Span(21, 22),
+            "a": _Span(31, 32),
+            "z": _Span(44, 45),
+            "b": _Span(54, 55),
+        },
+        tags={
+            "case": _Span(0, 12),
+            "when": [
+                _Span(13, 25),
+                _Span(36, 48),
+            ],
+        },
+    )
+
+
+def test_analyze_cycle(env: Environment) -> None:
+    source = r"{% cycle x: a, b %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "a": _Span(12, 13),
+            "b": _Span(15, 16),
+        },
+        tags={"cycle": _Span(0, 19)},
+    )
+
+
+def test_analyze_decrement(env: Environment) -> None:
+    source = r"{% decrement x %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={"x": _Span(13, 14)},
+        global_refs={},
+        tags={"decrement": _Span(0, 17)},
+    )
+
+
+def test_analyze_echo(env: Environment) -> None:
+    source = r"{% echo x | default: y, allow_false: z %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(8, 9),
+            "y": _Span(21, 22),
+            "z": _Span(37, 38),
+        },
+        filters={
+            "default": _Span(12, 19),
+        },
+        tags={"echo": _Span(0, 41)},
     )

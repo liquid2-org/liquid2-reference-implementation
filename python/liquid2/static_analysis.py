@@ -92,7 +92,7 @@ class TemplateAnalysis:
     """
 
     variables: dict[Query, list[Span]]
-    local_variables: dict[Query, list[Span]]
+    local_variables: dict[Identifier, list[Span]]
     global_variables: dict[Query, list[Span]]
     failed_visits: dict[str, list[Span]]
     unloadable_partials: dict[str, list[Span]]
