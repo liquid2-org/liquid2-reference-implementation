@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeAlias
 
 import pytest
+from liquid2 import DictLoader
 from liquid2 import Environment
 from liquid2.static_analysis import Span
 
@@ -105,9 +106,9 @@ def _as_strings(
     _refs: dict[str, list[str]] = {}
     for k, v in refs.items():
         if isinstance(v, Iterable):
-            _refs[str(k)] = [str(_v) for _v in v]
+            _refs[str(k)] = sorted([str(_v) for _v in v])
         else:
-            _refs[str(k)] = [str(v)]
+            _refs[str(k)] = sorted([str(v)])
     return _refs
 
 
@@ -397,4 +398,178 @@ def test_analyze_unless(env: Environment) -> None:
         tags={
             "unless": _Span(0, 14),
         },
+    )
+
+
+def test_analyze_include() -> None:
+    loader = DictLoader({"a": "{{ x }}"})
+    env = Environment(loader=loader)
+    source = "{% include 'a' %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(3, 4, template_name="a"),
+        },
+        tags={
+            "include": _Span(0, 17),
+        },
+    )
+
+
+def test_analyze_included_assign() -> None:
+    loader = DictLoader({"a": "{{ x }}{% assign y = 42 %}"})
+    env = Environment(loader=loader)
+    source = "{% include 'a' %}{{ y }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={
+            "y": _Span(17, 18, template_name="a"),
+        },
+        global_refs={
+            "x": _Span(3, 4, template_name="a"),
+        },
+        all_refs={
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(20, 21),
+        },
+        tags={
+            "include": _Span(0, 17),
+            "assign": _Span(7, 26, template_name="a"),
+        },
+    )
+
+
+def test_analyze_include_once() -> None:
+    loader = DictLoader({"a": "{{ x }}"})
+    env = Environment(loader=loader)
+    source = "{% include 'a' %}{% include 'a' %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(3, 4, template_name="a"),
+        },
+        tags={
+            "include": [_Span(0, 17), _Span(17, 34)],
+        },
+    )
+
+
+def test_analyze_include_recursive() -> None:
+    loader = DictLoader({"a": "{{ x }}{% include 'a' %}"})
+    env = Environment(loader=loader)
+    source = "{% include 'a' %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(3, 4, template_name="a"),
+        },
+        tags={
+            "include": [
+                _Span(0, 17),
+                _Span(7, 24, template_name="a"),
+            ],
+        },
+    )
+
+
+def test_analyze_include_with_bound_variable() -> None:
+    loader = DictLoader({"a": "{{ x | append: y }}{{ a }}"})
+    env = Environment(loader=loader)
+    source = "{% include 'a' with z %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "z": _Span(20, 21),
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(15, 16, template_name="a"),
+        },
+        all_refs={
+            "z": _Span(20, 21),
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(15, 16, template_name="a"),
+            "a": _Span(22, 23, template_name="a"),
+        },
+        tags={"include": [_Span(0, 24)]},
+        filters={"append": _Span(7, 13, template_name="a")},
+    )
+
+
+def test_analyze_include_with_bound_alias() -> None:
+    loader = DictLoader({"a": "{{ x | append: y }}"})
+    env = Environment(loader=loader)
+    source = "{% include 'a' with z as y %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "z": _Span(20, 21),
+            "x": _Span(3, 4, template_name="a"),
+        },
+        all_refs={
+            "z": _Span(20, 21),
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(15, 16, template_name="a"),
+        },
+        tags={"include": [_Span(0, 29)]},
+        filters={"append": _Span(7, 13, template_name="a")},
+    )
+
+
+def test_analyze_include_with_arguments() -> None:
+    loader = DictLoader({"a": "{{ x | append: y }}"})
+    env = Environment(loader=loader)
+    source = "{% include 'a', x:y, z:42 %}{{ x }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "y": [_Span(15, 16, template_name="a"), _Span(18, 19)],
+            "x": _Span(31, 32),
+        },
+        all_refs={
+            "y": [_Span(18, 19), _Span(15, 16, template_name="a")],
+            "x": [_Span(31, 32), _Span(3, 4, template_name="a")],
+        },
+        tags={"include": [_Span(0, 28)]},
+        filters={"append": _Span(7, 13, template_name="a")},
+    )
+
+
+def test_analyze_include_with_variable_name(env: Environment) -> None:
+    source = "{% include b %}{{ x }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "b": _Span(11, 12),
+            "x": _Span(18, 19),
+        },
+        tags={"include": [_Span(0, 15)]},
+        unloadable={"b": _Span(11, 12)},
+        raise_for_failures=False,
+    )
+
+
+def test_analyze_include_string_template_not_found(env: Environment) -> None:
+    source = "{% include 'nosuchthing' %}{{ x }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={"x": _Span(30, 31)},
+        tags={"include": [_Span(0, 27)]},
+        unloadable={"nosuchthing": _Span(12, 23)},
+        raise_for_failures=False,
     )

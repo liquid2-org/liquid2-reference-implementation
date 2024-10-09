@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from .environment import JSONValue
     from .environment import _JSONPathEnvironment
     from .segments import JSONPathSegment
-    from .selectors import JSONPathSelector
 
 
 class JSONPathQuery:
@@ -62,6 +61,9 @@ class JSONPathQuery:
         if s.startswith("."):
             return s[1:]
         return s
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, JSONPathQuery) and self.segments == other.segments
 
     def __hash__(self) -> int:
         return hash(self.segments)

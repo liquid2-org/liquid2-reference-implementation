@@ -66,6 +66,9 @@ class FilterExpression(Expression):
             isinstance(other, FilterExpression) and self.expression == other.expression
         )
 
+    def __hash__(self) -> int:
+        return hash(self.expression)
+
     def evaluate(self, context: FilterContext) -> bool:
         """Evaluate the filter expression in the given _context_."""
         return _is_truthy(self.expression.evaluate(context))

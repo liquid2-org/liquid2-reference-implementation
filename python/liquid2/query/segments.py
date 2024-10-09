@@ -70,7 +70,6 @@ class JSONPathChildSegment(JSONPathSegment):
         return (
             isinstance(__value, JSONPathChildSegment)
             and self.selectors == __value.selectors
-            and self.token == __value.token
         )
 
     def __hash__(self) -> int:
@@ -119,8 +118,7 @@ class JSONPathRecursiveDescentSegment(JSONPathSegment):
         return (
             isinstance(__value, JSONPathRecursiveDescentSegment)
             and self.selectors == __value.selectors
-            and self.token == __value.token
         )
 
     def __hash__(self) -> int:
-        return hash(("..", self.selectors, self.token))
+        return hash(("..", self.selectors))

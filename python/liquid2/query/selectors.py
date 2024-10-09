@@ -65,11 +65,7 @@ class NameSelector(JSONPathSelector):
         return repr(self.name)
 
     def __eq__(self, __value: object) -> bool:
-        return (
-            isinstance(__value, NameSelector)
-            and self.name == __value.name
-            and self.token == __value.token
-        )
+        return isinstance(__value, NameSelector) and self.name == __value.name
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -104,14 +100,10 @@ class IndexSelector(JSONPathSelector):
         return str(self.index)
 
     def __eq__(self, __value: object) -> bool:
-        return (
-            isinstance(__value, IndexSelector)
-            and self.index == __value.index
-            and self.token == __value.token
-        )
+        return isinstance(__value, IndexSelector) and self.index == __value.index
 
     def __hash__(self) -> int:
-        return hash((self.index, self.token))
+        return hash(self.index)
 
     def _normalized_index(self, obj: Sequence[object]) -> int:
         if self.index < 0 and len(obj) >= abs(self.index):
@@ -151,14 +143,10 @@ class SliceSelector(JSONPathSelector):
         return f"{start}:{stop}:{step}"
 
     def __eq__(self, __value: object) -> bool:
-        return (
-            isinstance(__value, SliceSelector)
-            and self.slice == __value.slice
-            and self.token == __value.token
-        )
+        return isinstance(__value, SliceSelector) and self.slice == __value.slice
 
     def __hash__(self) -> int:
-        return hash((str(self), self.token))
+        return hash(str(self))
 
     def _check_range(self, *indices: int | None) -> None:
         for i in indices:
@@ -192,10 +180,10 @@ class WildcardSelector(JSONPathSelector):
         return "*"
 
     def __eq__(self, __value: object) -> bool:
-        return isinstance(__value, WildcardSelector) and self.token == __value.token
+        return isinstance(__value, WildcardSelector)
 
     def __hash__(self) -> int:
-        return hash(self.token)
+        return hash("*")
 
     def resolve(self, node: JSONPathNode) -> Iterable[JSONPathNode]:
         """Select all elements from a array/list or values from a dict/object."""
@@ -234,14 +222,10 @@ class Filter(JSONPathSelector):
         return f"?{self.expression}"
 
     def __eq__(self, __value: object) -> bool:
-        return (
-            isinstance(__value, Filter)
-            and self.expression == __value.expression
-            and self.token == __value.token
-        )
+        return isinstance(__value, Filter) and self.expression == __value.expression
 
     def __hash__(self) -> int:
-        return hash((str(self.expression), self.token))
+        return hash(str(self.expression))
 
     def resolve(self, node: JSONPathNode) -> Iterable[JSONPathNode]:  # noqa: PLR0912
         """Select array/list items or dict/object values where with a filter."""
@@ -303,14 +287,10 @@ class SingularQuerySelector(JSONPathSelector):
         return str(self.query)
 
     def __eq__(self, value: object) -> bool:
-        return (
-            isinstance(value, SingularQuerySelector)
-            and self.query == value.query
-            and self.token == value.token
-        )
+        return isinstance(value, SingularQuerySelector) and self.query == value.query
 
     def __hash__(self) -> int:
-        return hash((str(self.query), self.token))
+        return hash(str(self.query))
 
     def _normalized_index(self, index: int, obj: Sequence[object]) -> int:
         if index < 0 and len(obj) >= abs(index):

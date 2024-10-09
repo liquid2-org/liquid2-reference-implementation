@@ -129,7 +129,7 @@ class IncludeNode(Node):
 
         _children = [
             MetaNode(
-                token=self.token,
+                token=self.name.token,
                 node=None,
                 expression=self.name,
                 block_scope=block_scope,
