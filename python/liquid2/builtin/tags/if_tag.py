@@ -87,9 +87,8 @@ class IfNode(Node):
         _children.extend(
             [
                 MetaNode(
-                    token=self.token,
+                    token=alt.token,
                     node=alt,
-                    expression=alt.expression,
                 )
                 for alt in self.alternatives
             ]

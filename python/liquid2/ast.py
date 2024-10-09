@@ -104,7 +104,7 @@ class ConditionalBlockNode(Node):
     def __init__(
         self,
         token: TokenT,
-        nodes: list[Node],
+        nodes: list[Node],  # TODO: change to block node
         expression: BooleanExpression,
     ) -> None:
         super().__init__(token)
@@ -129,6 +129,7 @@ class ConditionalBlockNode(Node):
 
     def children(self) -> list[MetaNode]:
         """Return a list of child nodes and/or expressions associated with this node."""
+        # TODO: fix me
         return [
             MetaNode(token=self.token, expression=self.expression, node=node)
             for node in self.nodes

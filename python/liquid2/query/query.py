@@ -178,16 +178,22 @@ class JSONPathQuery:
                 yield child.query
             self._find_filter_queries(child)
 
-    def head(self) -> JSONPathSelector | None:
+    def head(self) -> str | None:
         """Return the first selector from this query."""
         try:
-            return self.segments[0].selectors[0]
+            selector = self.segments[0].selectors[0]
+            if isinstance(selector, NameSelector):
+                return selector.name
+            return None
         except IndexError:
             return None
 
-    def tail(self) -> JSONPathSelector | None:
+    def tail(self) -> str | None:
         """Return the last selector from this query."""
         try:
-            return self.segments[-1].selectors[-1]
+            selector = self.segments[-1].selectors[-1]
+            if isinstance(selector, NameSelector):
+                return selector.name
+            return None
         except IndexError:
             return None

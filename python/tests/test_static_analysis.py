@@ -267,3 +267,64 @@ def test_analyze_echo(env: Environment) -> None:
         },
         tags={"echo": _Span(0, 41)},
     )
+
+
+def test_analyze_for(env: Environment) -> None:
+    source = "\n".join(
+        [
+            r"{% for x in (1..y) %}",
+            r"  {{ x }}",
+            r"{% break %}",
+            r"{% else %}",
+            r"  {{ z }}",
+            r"{% continue %}",
+            r"{% endfor %}",
+        ]
+    )
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "y": _Span(16, 17),
+            "z": _Span(60, 61),
+        },
+        all_refs={
+            "y": _Span(16, 17),
+            "x": _Span(27, 28),
+            "z": _Span(60, 61),
+        },
+        filters={},
+        tags={
+            "for": _Span(0, 21),
+            "break": _Span(32, 43),
+            "continue": _Span(65, 79),
+        },
+    )
+
+
+def test_analyze_if(env: Environment) -> None:
+    source = "\n".join(
+        [
+            r"{% if x %}",
+            r"  {{ a }}",
+            r"{% elsif y %}",
+            r"  {{ b }}",
+            r"{% endif %}",
+        ]
+    )
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(6, 7),
+            "a": _Span(16, 17),
+            "y": _Span(30, 31),
+            "b": _Span(40, 41),
+        },
+        filters={},
+        tags={
+            "if": _Span(0, 10),
+        },
+    )

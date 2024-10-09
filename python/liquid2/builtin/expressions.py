@@ -1364,6 +1364,12 @@ class Identifier(str):
         super().__init__()
         self.token: TokenT
 
+    def __eq__(self, value: object) -> bool:
+        return super().__eq__(value)
+
+    def __hash__(self) -> int:
+        return super().__hash__()
+
 
 def parse_identifier(token: TokenT | None) -> Identifier:
     """Parse _token_ as an identifier."""
