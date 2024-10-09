@@ -44,7 +44,7 @@ output_expr = _{ (S ~ tag_token)+ }
 
 liquid_tag        =  { tag_start ~ "liquid" ~ (s ~ line_statements)? ~ tag_end }
 line_statements   =  { line_statement ~ (line_term ~ line_statement)* }
-line_statement    = _{ LS ~ (line_comment | line_tag) }
+line_statement    = _{ LS ~ (line_comment | line_tag)? }
 line_comment      =  { "#" ~ line_comment_text }
 line_comment_text =  { line_comment_char* }
 line_comment_char = _{ !(line_term | tag_end) ~ ANY }

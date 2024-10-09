@@ -34,6 +34,7 @@ pub enum Markup {
     },
     Lines {
         wc: (Whitespace, Whitespace),
+        name: String,
         statements: Vec<Markup>,
         span: (usize, usize),
     },

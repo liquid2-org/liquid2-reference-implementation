@@ -16,6 +16,7 @@ from .builtin import FilteredExpression
 from .builtin import Identifier
 from .builtin import Query as QueryExpression
 from .builtin import StringLiteral
+from .builtin.tags.case_tag import MultiExpressionBlockNode
 from .builtin.tags.extends_tag import BlockNode as InheritanceBlockNode
 from .builtin.tags.extends_tag import _BlockStackItem
 from .builtin.tags.extends_tag import stack_blocks
@@ -630,9 +631,9 @@ class _TemplateCounter:
 
     def _count_tag(self, node: Node) -> None:
         token = node.token
-        if not isinstance(node, (BlockNode, ConditionalBlockNode)) and isinstance(
-            token, Markup.Tag
-        ):
+        if not isinstance(
+            node, (BlockNode, ConditionalBlockNode, MultiExpressionBlockNode)
+        ) and isinstance(token, (Markup.Tag, Markup.Lines)):
             self.tags[token.name].append(
                 Span.from_token(self._template_name, token=token)
             )

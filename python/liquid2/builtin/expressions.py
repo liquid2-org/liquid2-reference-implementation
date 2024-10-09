@@ -363,7 +363,7 @@ def parse_primitive(token: TokenT | None) -> Expression:  # noqa: PLR0911
             return FalseLiteral(token=token)
         case Token.Null():
             return Null(token=token)
-        case Token.Word(value, span):
+        case Token.Word(value):
             if value == "empty":
                 return Empty(token=token)
             if value == "blank":

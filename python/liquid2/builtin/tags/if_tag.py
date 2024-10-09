@@ -46,7 +46,7 @@ class IfNode(Node):
 
         for alternative in self.alternatives:
             if alternative.expression.evaluate(context):
-                return sum(node.render(context, buffer) for node in alternative.nodes)
+                return alternative.block.render(context, buffer)
 
         if self.default:
             return self.default.render(context, buffer)
@@ -62,12 +62,7 @@ class IfNode(Node):
 
         for alternative in self.alternatives:
             if await alternative.expression.evaluate_async(context):
-                return sum(
-                    [
-                        await node.render_async(context, buffer)
-                        for node in alternative.nodes
-                    ]
-                )
+                return await alternative.render_async(context, buffer)
 
         if self.default:
             return await self.default.render_async(context, buffer)
@@ -138,7 +133,9 @@ class IfTag(Tag):
                 TokenStream(alternative_token.expression)
             )
 
-            alternative_block = parse_block(stream, self.end_block)
+            alternative_block = BlockNode(
+                token=alternative_token, nodes=parse_block(stream, self.end_block)
+            )
             alternatives.append(
                 ConditionalBlockNode(
                     alternative_token,
@@ -150,8 +147,10 @@ class IfTag(Tag):
         if stream.is_tag("else"):
             next(stream)
             alternative_token = stream.current()
-            alternative_block = parse_block(stream, self.end_block)
-            alternative = BlockNode(alternative_token, alternative_block)
+            assert alternative_token is not None
+            alternative = BlockNode(
+                alternative_token, parse_block(stream, self.end_block)
+            )
 
         return self.node_class(
             token,

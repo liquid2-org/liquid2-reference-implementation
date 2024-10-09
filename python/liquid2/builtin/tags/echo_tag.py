@@ -51,7 +51,7 @@ class EchoNode(Node):
 
     def children(self) -> list[MetaNode]:
         """Return a list of child nodes and/or expressions associated with this node."""
-        return [MetaNode(token=self.token, expression=self.expression)]
+        return [MetaNode(token=self.expression.token, expression=self.expression)]
 
 
 class EchoTag(Tag):

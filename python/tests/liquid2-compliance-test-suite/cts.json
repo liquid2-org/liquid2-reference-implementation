@@ -2536,6 +2536,18 @@
       "invalid": true
     },
     {
+      "name": "tags, liquid, empty line",
+      "template": "{% liquid\necho 'a'\n\n\necho 'b' %}",
+      "data": {},
+      "result": "ab"
+    },
+    {
+      "name": "tags, liquid, blank line",
+      "template": "{% liquid\necho 'a'\n \t\n\necho 'b' %}",
+      "data": {},
+      "result": "ab"
+    },
+    {
       "name": "tags, decrement, named counter",
       "template": "{% decrement a %} {% decrement a %}",
       "data": {},

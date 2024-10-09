@@ -200,11 +200,11 @@ def test_analyze_case(env: Environment) -> None:
             "  {{ a }}",
             "{% when z %}",
             "  {{ b }}",
+            "{% else %}",
+            "  {{ c }}",
             "{% endcase %}",
         ]
     )
-
-    # TODO: else
 
     _assert(
         env.from_string(source),
@@ -215,14 +215,9 @@ def test_analyze_case(env: Environment) -> None:
             "a": _Span(31, 32),
             "z": _Span(44, 45),
             "b": _Span(54, 55),
+            "c": _Span(75, 76),
         },
-        tags={
-            "case": _Span(0, 12),
-            "when": [
-                _Span(13, 25),
-                _Span(36, 48),
-            ],
-        },
+        tags={"case": _Span(0, 12)},
     )
 
 
@@ -310,6 +305,8 @@ def test_analyze_if(env: Environment) -> None:
             r"  {{ a }}",
             r"{% elsif y %}",
             r"  {{ b }}",
+            r"{% else %}",
+            r"  {{ c }}",
             r"{% endif %}",
         ]
     )
@@ -322,9 +319,82 @@ def test_analyze_if(env: Environment) -> None:
             "a": _Span(16, 17),
             "y": _Span(30, 31),
             "b": _Span(40, 41),
+            "c": _Span(61, 62),
         },
         filters={},
         tags={
             "if": _Span(0, 10),
+        },
+    )
+
+
+def test_analyze_increment(env: Environment) -> None:
+    source = r"{% increment x %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={"x": _Span(13, 14)},
+        global_refs={},
+        tags={"increment": _Span(0, 17)},
+    )
+
+
+def test_analyze_liquid(env: Environment) -> None:
+    source = """\
+{% liquid
+if product.title
+    echo foo | upcase
+else
+    echo 'product-1' | upcase
+endif
+
+for i in (0..5)
+    echo i
+endfor %}"""
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "product.title": _Span(13, 26),
+            "foo": _Span(36, 39),
+        },
+        all_refs={
+            "product.title": _Span(13, 26),
+            "foo": _Span(36, 39),
+            "i": _Span(116, 117),
+        },
+        filters={"upcase": [_Span(42, 48), _Span(77, 83)]},
+        tags={
+            "liquid": _Span(0, 127),
+            "echo": [_Span(31, 48), _Span(58, 83), _Span(111, 117)],
+            "for": _Span(91, 106),
+            "if": _Span(10, 26),
+        },
+    )
+
+
+def test_analyze_unless(env: Environment) -> None:
+    source = """\
+{% unless x %}
+  {{ a }}
+{% elsif y %}
+  {{ b }}
+{% else %}
+  {{ c }}
+{% endunless %}"""
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(10, 11),
+            "a": _Span(20, 21),
+            "y": _Span(34, 35),
+            "b": _Span(44, 45),
+            "c": _Span(65, 66),
+        },
+        tags={
+            "unless": _Span(0, 14),
         },
     )

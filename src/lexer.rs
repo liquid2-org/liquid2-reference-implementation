@@ -166,6 +166,7 @@ impl Lexer {
         let wc_right = Whitespace::from_str(it.next().unwrap().as_str());
         Ok(Markup::Lines {
             wc: (wc_left, wc_right),
+            name: "liquid".to_owned(),
             statements,
             span: (span.start(), span.end()),
         })

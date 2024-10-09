@@ -99,22 +99,22 @@ class BlockNode(Node):
 class ConditionalBlockNode(Node):
     """A node containing a sequence of other nodes guarded by a Boolean expression."""
 
-    __slots__ = ("nodes", "expression")
+    __slots__ = ("block", "expression")
 
     def __init__(
         self,
         token: TokenT,
-        nodes: list[Node],  # TODO: change to block node
+        block: BlockNode,
         expression: BooleanExpression,
     ) -> None:
         super().__init__(token)
-        self.nodes = nodes
+        self.block = block
         self.expression = expression
 
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         if self.expression.evaluate(context):
-            return sum(node.render(context, buffer) for node in self.nodes)
+            return self.block.render(context, buffer)
         return 0
 
     async def render_to_output_async(
@@ -122,18 +122,12 @@ class ConditionalBlockNode(Node):
     ) -> int:
         """Render the node to the output buffer."""
         if await self.expression.evaluate_async(context):
-            return sum(
-                [await node.render_async(context, buffer) for node in self.nodes]
-            )
+            return await self.block.render_async(context, buffer)
         return 0
 
     def children(self) -> list[MetaNode]:
         """Return a list of child nodes and/or expressions associated with this node."""
-        # TODO: fix me
-        return [
-            MetaNode(token=self.token, expression=self.expression, node=node)
-            for node in self.nodes
-        ]
+        return [MetaNode(token=self.token, expression=self.expression, node=self.block)]
 
 
 class MetaNode(NamedTuple):
@@ -160,7 +154,7 @@ class MetaNode(NamedTuple):
             of a partial template.
     """
 
-    token: TokenT
+    token: TokenT  # XXX: every expression and node has a token already
     expression: Expression | None = None
     node: Node | None = None
     template_scope: list[Identifier] | None = None
