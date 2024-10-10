@@ -48,6 +48,17 @@ from .filters.array import sort_natural
 from .filters.array import sum_
 from .filters.array import uniq
 from .filters.array import where
+from .filters.math import abs_
+from .filters.math import at_least
+from .filters.math import at_most
+from .filters.math import ceil
+from .filters.math import divided_by
+from .filters.math import floor
+from .filters.math import minus
+from .filters.math import modulo
+from .filters.math import plus
+from .filters.math import round_
+from .filters.math import times
 from .filters.misc import date
 from .filters.misc import default
 from .filters.misc import size
@@ -120,6 +131,17 @@ __all__ = (
     "Empty",
     "EqExpression",
     "FalseLiteral",
+    "abs_",
+    "at_least",
+    "at_most",
+    "ceil",
+    "divided_by",
+    "floor",
+    "minus",
+    "modulo",
+    "plus",
+    "round_",
+    "times",
     "Filter",
     "FilteredExpression",
     "FilteredExpression",
@@ -176,6 +198,18 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.filters["where"] = where
     env.filters["uniq"] = uniq
     env.filters["compact"] = compact
+
+    env.filters["abs"] = abs_
+    env.filters["at_least"] = at_least
+    env.filters["at_most"] = at_most
+    env.filters["ceil"] = ceil
+    env.filters["divided_by"] = divided_by
+    env.filters["floor"] = floor
+    env.filters["minus"] = minus
+    env.filters["modulo"] = modulo
+    env.filters["plus"] = plus
+    env.filters["round"] = round_
+    env.filters["times"] = times
 
     env.filters["date"] = date
     env.filters["default"] = default

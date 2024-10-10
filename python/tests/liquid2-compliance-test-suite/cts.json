@@ -275,6 +275,125 @@
       "result": "B"
     },
     {
+      "name": "filters, abs, positive integer",
+      "template": "{{ 5 | abs }}",
+      "data": {},
+      "result": "5"
+    },
+    {
+      "name": "filters, abs, negative integer",
+      "template": "{{ -5 | abs }}",
+      "data": {},
+      "result": "5"
+    },
+    {
+      "name": "filters, abs, positive float",
+      "template": "{{ 5.4 | abs }}",
+      "data": {},
+      "result": "5.4"
+    },
+    {
+      "name": "filters, abs, negative float",
+      "template": "{{ -5.4 | abs }}",
+      "data": {},
+      "result": "5.4"
+    },
+    {
+      "name": "filters, abs, zero",
+      "template": "{{ 0 | abs }}",
+      "data": {},
+      "result": "0"
+    },
+    {
+      "name": "filters, abs, positive string integer",
+      "template": "{{ '5' | abs }}",
+      "data": {},
+      "result": "5"
+    },
+    {
+      "name": "filters, abs, negative string integer",
+      "template": "{{ '-5' | abs }}",
+      "data": {},
+      "result": "5"
+    },
+    {
+      "name": "filters, abs, positive string float",
+      "template": "{{ '5.1' | abs }}",
+      "data": {},
+      "result": "5.1"
+    },
+    {
+      "name": "filters, abs, negative string float",
+      "template": "{{ '-5.1' | abs }}",
+      "data": {},
+      "result": "5.1"
+    },
+    {
+      "name": "filters, abs, unexpected argument",
+      "template": "{{ -3 | abs: 1 }}",
+      "invalid": true
+    },
+    {
+      "name": "filters, abs, string not a number",
+      "template": "{{ 'hello' | abs }}",
+      "data": {},
+      "result": "0"
+    },
+    {
+      "name": "filters, abs, not a string, int or float",
+      "template": "{{ a | abs }}",
+      "data": {
+        "a": {}
+      },
+      "result": "0"
+    },
+    {
+      "name": "filters, abs, undefined left value",
+      "template": "{{ nosuchthing | abs }}",
+      "data": {},
+      "result": "0"
+    },
+    {
+      "name": "filters, append, concat",
+      "template": "{{ \"hello\" | append: \"there\" }}",
+      "data": {},
+      "result": "hellothere"
+    },
+    {
+      "name": "filters, append, not a string",
+      "template": "{{ 5 | append: 'there' }}",
+      "data": {},
+      "result": "5there"
+    },
+    {
+      "name": "filters, append, argument not a string",
+      "template": "{{ \"hello\" | append: 5 }}",
+      "data": {},
+      "result": "hello5"
+    },
+    {
+      "name": "filters, append, missing argument",
+      "template": "{{ \"hello\" | append }}",
+      "invalid": true
+    },
+    {
+      "name": "filters, append, too many arguments",
+      "template": "{{ \"hello\" | append: \"how\", \"are\", \"you\" }}",
+      "invalid": true
+    },
+    {
+      "name": "filters, append, undefined left value",
+      "template": "{{ nosuchthing | append: \"hi\" }}",
+      "data": {},
+      "result": "hi"
+    },
+    {
+      "name": "filters, append, undefined argument",
+      "template": "{{ \"hi\" | append: nosuchthing }}",
+      "data": {},
+      "result": "hi"
+    },
+    {
       "name": "tags, for, range literal",
       "template": "{% for a in (1..3) %}{{ a }},{% endfor %}",
       "data": {},
