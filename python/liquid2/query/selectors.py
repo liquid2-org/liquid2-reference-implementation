@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .filter_expressions import FilterExpression
     from .node import JSONPathNode
     from .query import JSONPathQuery
+    from .query import SelectorTuple
 
 
 class JSONPathSelector(ABC):
@@ -45,6 +46,10 @@ class JSONPathSelector(ABC):
             The `JSONPathNode` instances created by applying this selector to _node_.
         """
 
+    def as_tuple(self) -> SelectorTuple | str:
+        """Return this selector as a tuple of strings and/or nested tuples."""
+        return str(self)
+
 
 class NameSelector(JSONPathSelector):
     """The name selector."""
@@ -62,7 +67,7 @@ class NameSelector(JSONPathSelector):
         self.name = name
 
     def __str__(self) -> str:
-        return repr(self.name)
+        return self.name
 
     def __eq__(self, __value: object) -> bool:
         return isinstance(__value, NameSelector) and self.name == __value.name
@@ -314,3 +319,7 @@ class SingularQuerySelector(JSONPathSelector):
         if isinstance(value, str) and isinstance(node.value, Mapping):
             with suppress(KeyError):
                 yield node.new_child(node.value[value], value)
+
+    def as_tuple(self) -> SelectorTuple | str:
+        """Return this selector as a tuple of strings and/or nested tuples."""
+        return self.query.as_tuple()

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from .environment import _JSONPathEnvironment
     from .node import JSONPathNode
+    from .query import SelectorTuple
     from .selectors import JSONPathSelector
 
 
@@ -42,6 +43,12 @@ class JSONPathSegment(ABC):
     @abstractmethod
     def resolve(self, nodes: Iterable[JSONPathNode]) -> Iterable[JSONPathNode]:
         """Apply this segment to each `JSONPathNode` in _nodes_."""
+
+    def as_tuple(self) -> SelectorTuple | str:
+        """Return this segment's selectors as a tuple of strings or nested tuples."""
+        if len(self.selectors) == 1:
+            return self.selectors[0].as_tuple()
+        return tuple(selector.as_tuple() for selector in self.selectors)
 
 
 class JSONPathChildSegment(JSONPathSegment):

@@ -36,9 +36,6 @@ if TYPE_CHECKING:
     from .query import Query
     from .template import Template
 
-# TODO: Var parts moves to JSONPathQuery.as_tuple()
-
-
 RE_SPLIT_IDENT = re.compile(r"(\.|\[)")
 
 
@@ -632,17 +629,17 @@ class _TemplateCounter:
 
         # Count `extends` and `block` tags here, as we don't get the chance later.
         if count_tags and ast_extends_node:
-            self.tags[ast_extends_node.name].append(
+            self.tags[ast_extends_node.tag].append(
                 Span.from_token(template_name, token=ast_extends_node.token)
             )
 
         for ast_node in ast_block_nodes:
-            self.tags[ast_node.name].append(
+            self.tags[ast_node.tag].append(
                 Span.from_token(template_name, token=ast_node.token)
             )
 
         if ast_extends_node:
-            return ast_extends_node.name, ast_block_nodes
+            return ast_extends_node.name.value, ast_block_nodes
         return None, ast_block_nodes
 
     def _count_tag(self, node: Node) -> None:

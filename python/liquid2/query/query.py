@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Iterator
+from typing import TypeAlias
+from typing import Union
 
 from .filter_expressions import Expression
 from .filter_expressions import FilterQuery
@@ -22,6 +24,9 @@ if TYPE_CHECKING:
     from .environment import JSONValue
     from .environment import _JSONPathEnvironment
     from .segments import JSONPathSegment
+
+
+SelectorTuple: TypeAlias = tuple[Union[str, "SelectorTuple"], ...]
 
 
 class JSONPathQuery:
@@ -67,6 +72,11 @@ class JSONPathQuery:
 
     def __hash__(self) -> int:
         return hash(self.segments)
+
+    def as_tuple(self) -> SelectorTuple:
+        """Return this query's path as a tuple of strings and/or nested tuples."""
+        # TODO: test
+        return tuple(segment.as_tuple() for segment in self.segments)
 
     def finditer(
         self,

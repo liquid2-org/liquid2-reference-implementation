@@ -746,3 +746,76 @@ def test_analyze_render_template_not_found(env: Environment) -> None:
         unloadable={"nosuchthing": _Span(11, 22)},
         raise_for_failures=False,
     )
+
+
+def test_variable_parts(env: Environment) -> None:
+    source = "{{ a['b.c'] }}{{ d[e.f] }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "a['b.c']": _Span(3, 11),
+            "d[e.f]": _Span(17, 23),
+            "e.f": _Span(19, 22),
+        },
+    )
+
+    analysis = env.from_string(source).analyze()
+    queries = list(analysis.variables.keys())
+    assert len(queries) == 3  # noqa: PLR2004
+    assert queries[0].as_tuple() == ("a", "b.c")
+    assert queries[1].as_tuple() == ("d", ("e", "f"))
+    assert queries[2].as_tuple() == ("e", "f")
+
+
+def test_analyze_inheritance_chain() -> None:
+    loader = DictLoader(
+        {
+            "base": (
+                "Hello, "
+                "{% assign x = 'foo' %}"
+                "{% block content %}{{ x | upcase }}{% endblock %}!"
+                "{% block foo %}{% endblock %}!"
+            ),
+            "other": (
+                "{% extends 'base' %}"
+                "{% block content %}{{ x | downcase }}{% endblock %}"
+                "{% block foo %}{% assign z = 7 %}{% endblock %}"
+            ),
+            "some": (
+                "{% extends 'other' %}{{ y | append: x }}"
+                "{% block foo %}{% endblock %}"
+            ),
+        }
+    )
+
+    env = Environment(loader=loader)
+
+    _assert(
+        env.get_template("some"),
+        local_refs={
+            "x": _Span(17, 18, template_name="base"),
+        },
+        global_refs={},
+        all_refs={
+            "x": _Span(42, 43, template_name="other"),
+        },
+        tags={
+            "assign": _Span(7, 29, template_name="base"),
+            "extends": [
+                _Span(0, 21, template_name="some"),
+                _Span(0, 20, template_name="other"),
+            ],
+            "block": [
+                _Span(29, 48, template_name="base"),
+                _Span(79, 94, template_name="base"),
+                _Span(20, 39, template_name="other"),
+                _Span(71, 86, template_name="other"),
+                _Span(40, 55, template_name="some"),
+            ],
+        },
+        filters={
+            "downcase": _Span(46, 54, template_name="other"),
+        },
+    )

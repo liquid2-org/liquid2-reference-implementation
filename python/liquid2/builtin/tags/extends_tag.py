@@ -19,6 +19,7 @@ from liquid2.ast import BlockNode as TemplateBlock
 from liquid2.ast import MetaNode
 from liquid2.ast import Node
 from liquid2.builtin import Identifier
+from liquid2.builtin import StringLiteral
 from liquid2.builtin import parse_string_or_identifier
 from liquid2.exceptions import RequiredBlockError
 from liquid2.exceptions import StopRender
@@ -38,7 +39,7 @@ class ExtendsNode(Node):
     __slots__ = ("name",)
     tag = "extends"
 
-    def __init__(self, token: TokenT, name: str) -> None:
+    def __init__(self, token: TokenT, name: StringLiteral) -> None:
         super().__init__(token)
         self.name = name
 
@@ -47,7 +48,7 @@ class ExtendsNode(Node):
         base_template = build_block_stacks(
             context,
             context.template,
-            self.name,
+            self.name.value,
             "extends",
         )
 
@@ -62,7 +63,7 @@ class ExtendsNode(Node):
         base_template = await build_block_stacks_async(
             context,
             context.template,
-            self.name,
+            self.name.value,
             "extends",
         )
 
@@ -74,7 +75,10 @@ class ExtendsNode(Node):
         """Return a list of child nodes and/or expressions associated with this node."""
         return [
             MetaNode(
-                token=self.token, load_mode="extends", load_context={"tag": self.tag}
+                token=self.name.token,
+                expression=self.name,
+                load_mode="extends",
+                load_context={"tag": self.tag},
             )
         ]
 
@@ -91,16 +95,21 @@ class ExtendsTag(Tag):
         assert isinstance(token, Markup.Tag)
 
         tokens = TokenStream(token.expression)
-        name = parse_string_or_identifier(tokens.next())
+        name_token = tokens.next()
+        assert name_token is not None
+        name = parse_string_or_identifier(name_token)
         tokens.expect_eos()
 
-        return self.node_class(token=token, name=name)
+        return self.node_class(
+            token=token, name=StringLiteral(token=name_token, value=name)
+        )
 
 
 class BlockNode(Node):
     """The standard _block_ tag."""
 
     __slots__ = ("name", "block", "required")
+    tag = "block"
 
     def __init__(
         self, token: TokenT, name: str, block: TemplateBlock, *, required: bool
@@ -359,12 +368,12 @@ def build_block_stacks(
     extends_node, _ = stack_blocks(context, template)
     parent = context.env.get_template(parent_name, context=context, tag=tag)
     assert extends_node
-    seen.add(extends_node.name)
+    seen.add(extends_node.name.value)
 
     extends_node, _ = stack_blocks(context, parent)
 
     if extends_node:
-        parent_template_name: str | None = extends_node.name
+        parent_template_name: str | None = extends_node.name.value
         assert parent_template_name
         if parent_template_name in seen:
             raise TemplateInheritanceError(
@@ -383,7 +392,7 @@ def build_block_stacks(
         extends_node, _ = stack_blocks(context, parent)
 
         if extends_node:
-            parent_template_name = extends_node.name
+            parent_template_name = extends_node.name.value
             assert parent_template_name
             if parent_template_name in seen:
                 raise TemplateInheritanceError(
@@ -423,12 +432,12 @@ async def build_block_stacks_async(
     extends_node, _ = stack_blocks(context, template)
     parent = await context.env.get_template_async(parent_name, context=context, tag=tag)
     assert extends_node
-    seen.add(extends_node.name)
+    seen.add(extends_node.name.value)
 
     extends_node, _ = stack_blocks(context, parent)
 
     if extends_node:
-        parent_template_name: str | None = extends_node.name
+        parent_template_name: str | None = extends_node.name.value
         assert parent_template_name
         if parent_template_name in seen:
             raise TemplateInheritanceError(
@@ -447,7 +456,7 @@ async def build_block_stacks_async(
         extends_node, _ = stack_blocks(context, parent)
 
         if extends_node:
-            parent_template_name = extends_node.name
+            parent_template_name = extends_node.name.value
             assert parent_template_name
             if parent_template_name in seen:
                 raise TemplateInheritanceError(
