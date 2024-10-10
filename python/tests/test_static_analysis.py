@@ -13,6 +13,7 @@ from typing import TypeAlias
 import pytest
 from liquid2 import DictLoader
 from liquid2 import Environment
+from liquid2.exceptions import TemplateInheritanceError
 from liquid2.static_analysis import Span
 
 if TYPE_CHECKING:
@@ -817,5 +818,63 @@ def test_analyze_inheritance_chain() -> None:
         },
         filters={
             "downcase": _Span(46, 54, template_name="other"),
+        },
+    )
+
+
+def test_analyze_recursive_extends() -> None:
+    loader = DictLoader(
+        {
+            "some": "{% extends 'other' %}",
+            "other": "{% extends 'some' %}",
+        }
+    )
+    env = Environment(loader=loader)
+    template = env.get_template("some")
+
+    with pytest.raises(TemplateInheritanceError):
+        template.analyze()
+
+    async def coro(template: Template) -> TemplateAnalysis:
+        return await template.analyze_async()
+
+    with pytest.raises(TemplateInheritanceError):
+        asyncio.run(coro(template))
+
+
+def test_analyze_super() -> None:
+    loader = DictLoader(
+        {
+            "base": "Hello, {% block content %}{{ foo | upcase }}{% endblock %}!",
+            "some": (
+                "{% extends 'base' %}"
+                "{% block content %}{{ block.super }}!{% endblock %}"
+            ),
+        }
+    )
+
+    env = Environment(loader=loader)
+
+    _assert(
+        env.get_template("some"),
+        local_refs={},
+        global_refs={
+            "foo": _Span(29, 32, template_name="base"),
+        },
+        all_refs={
+            "foo": _Span(29, 32, template_name="base"),
+            "block.super": _Span(42, 53, template_name="some"),
+        },
+        tags={
+            "extends": [
+                _Span(0, 20, template_name="some"),
+            ],
+            "block": [
+                _Span(20, 39, template_name="some"),
+                _Span(7, 26, template_name="base"),
+            ],
+        },
+        filters={
+            "upcase": _Span(35, 41, template_name="base"),
         },
     )
