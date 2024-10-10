@@ -165,7 +165,7 @@ class Template:
 
         return TemplateAnalysis(
             variables=dict(refs.variables),
-            local_variables=dict(refs.template_locals),
+            local_variables={**refs.template_locals, **refs.partial_locals},
             global_variables=dict(refs.template_globals),
             failed_visits=dict(refs.failed_visits),
             unloadable_partials=dict(refs.unloadable_partials),
@@ -188,7 +188,7 @@ class Template:
 
         return TemplateAnalysis(
             variables=dict(refs.variables),
-            local_variables=dict(refs.template_locals),
+            local_variables={**refs.template_locals, **refs.partial_locals},
             global_variables=dict(refs.template_globals),
             failed_visits=dict(refs.failed_visits),
             unloadable_partials=dict(refs.unloadable_partials),

@@ -60,7 +60,7 @@ impl fmt::Display for Markup {
                     .into_iter()
                     .map(|e| e.to_string())
                     .collect::<Vec<String>>()
-                    .join("");
+                    .join(" ");
                 write!(f, "{{{{{} {} {}}}}}", wc.0, expr, wc.1)
             }
             Markup::Tag {

@@ -470,7 +470,7 @@ class TernaryFilteredExpression(Expression):
 
         if isinstance(stream.current(), Token.Else):
             next(stream)
-            alternative = parse_primitive(next(stream, None))
+            alternative = parse_primitive(stream.next())
 
             if isinstance(stream.current(), Token.Pipe):
                 filters = Filter.parse(stream, delim=(Token.Pipe,))
@@ -567,7 +567,7 @@ class Filter:
                 while True:
                     token = stream.current()
                     match token:
-                        case Token.Word(value, span):
+                        case Token.Word(value):
                             if isinstance(stream.peek(), (Token.Assign, Token.Colon)):
                                 # A named or keyword argument
                                 stream.next()  # skip = or :
@@ -597,7 +597,7 @@ class Filter:
                             | Token.StringLiteral()
                         ):
                             filter_arguments.append(
-                                PositionalArgument(parse_primitive(next(stream)))
+                                PositionalArgument(parse_primitive(stream.current()))
                             )
                         case Token.Comma():
                             # XXX: leading, trailing and duplicate commas are OK
@@ -605,7 +605,7 @@ class Filter:
                         case _:
                             break
 
-                    next(stream, None)
+                    stream.next()
 
             filters.append(Filter(filter_token, filter_name, filter_arguments))
 
@@ -731,7 +731,7 @@ def parse_boolean_primitive(  # noqa: PLR0912
             left = FalseLiteral(token=token)
         case Token.Null():
             left = Null(token=token)
-        case Token.Word(value, span):
+        case Token.Word(value):
             if value == "empty":
                 left = Empty(token=token)
             elif value == "blank":

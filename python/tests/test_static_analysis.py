@@ -162,6 +162,39 @@ def test_nested_queries(env: Environment) -> None:
     )
 
 
+def test_analyze_ternary(env: Environment) -> None:
+    source = r"{{ a if b.c else d }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "a": _Span(3, 4),
+            "b.c": _Span(8, 11),
+            "d": _Span(17, 18),
+        },
+    )
+
+
+def test_analyze_ternary_filters(env: Environment) -> None:
+    source = r"{{ a | upcase if b.c else d | default: 'x' || append: y }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "a": _Span(3, 4),
+            "b.c": _Span(17, 20),
+            "d": _Span(26, 27),
+            "y": _Span(54, 55),
+        },
+        filters={
+            "default": _Span(30, 37),
+            "append": _Span(46, 52),
+        },
+    )
+
+
 def test_analyze_assign(env: Environment) -> None:
     source = r"{% assign x = y | append: z %}"
 
@@ -571,5 +604,145 @@ def test_analyze_include_string_template_not_found(env: Environment) -> None:
         global_refs={"x": _Span(30, 31)},
         tags={"include": [_Span(0, 27)]},
         unloadable={"nosuchthing": _Span(12, 23)},
+        raise_for_failures=False,
+    )
+
+
+def test_analyze_render_assign() -> None:
+    loader = DictLoader({"a": "{{ x }}{% assign y = 42 %}"})
+    env = Environment(loader=loader)
+    source = "{% render 'a' %}{{ y }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={
+            "y": _Span(17, 18, template_name="a"),
+        },
+        global_refs={
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(19, 20),
+        },
+        tags={
+            "render": _Span(0, 16),
+            "assign": _Span(7, 26, template_name="a"),
+        },
+    )
+
+
+def test_analyze_render_once() -> None:
+    loader = DictLoader({"a": "{{ x }}"})
+    env = Environment(loader=loader)
+    source = "{% render 'a' %}{% render 'a' %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(3, 4, template_name="a"),
+        },
+        tags={
+            "render": [_Span(0, 16), _Span(16, 32)],
+        },
+    )
+
+
+def test_analyze_render_recursive() -> None:
+    loader = DictLoader({"a": "{{ x }}{% render 'a' %}"})
+    env = Environment(loader=loader)
+    source = "{% render 'a' %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "x": _Span(3, 4, template_name="a"),
+        },
+        tags={
+            "render": [
+                _Span(0, 16),
+                _Span(7, 23, template_name="a"),
+            ],
+        },
+    )
+
+
+def test_analyze_render_with_bound_variable() -> None:
+    loader = DictLoader({"a": "{{ x | append: y }}{{ a }}"})
+    env = Environment(loader=loader)
+    source = "{% render 'a' with z %}"
+
+    # Defaults to binding the value at `z` to the rendered template's name.
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "z": _Span(19, 20),
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(15, 16, template_name="a"),
+        },
+        all_refs={
+            "z": _Span(19, 20),
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(15, 16, template_name="a"),
+            "a": _Span(22, 23, template_name="a"),
+        },
+        tags={"render": [_Span(0, 23)]},
+        filters={"append": _Span(7, 13, template_name="a")},
+    )
+
+
+def test_analyze_render_with_bound_alias() -> None:
+    loader = DictLoader({"a": "{{ x | append: y }}"})
+    env = Environment(loader=loader)
+    source = "{% render 'a' with z as y %}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "z": _Span(19, 20),
+            "x": _Span(3, 4, template_name="a"),
+        },
+        all_refs={
+            "z": _Span(19, 20),
+            "x": _Span(3, 4, template_name="a"),
+            "y": _Span(15, 16, template_name="a"),
+        },
+        tags={"render": [_Span(0, 28)]},
+        filters={"append": _Span(7, 13, template_name="a")},
+    )
+
+
+def test_analyze_render_with_arguments() -> None:
+    loader = DictLoader({"a": "{{ x | append: y }}"})
+    env = Environment(loader=loader)
+    source = "{% render 'a', x:y, z:42 %}{{ x }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={
+            "y": [_Span(15, 16, template_name="a"), _Span(17, 18)],
+            "x": _Span(30, 31),
+        },
+        all_refs={
+            "y": [_Span(17, 18), _Span(15, 16, template_name="a")],
+            "x": [_Span(30, 31), _Span(3, 4, template_name="a")],
+        },
+        tags={"render": [_Span(0, 27)]},
+        filters={"append": _Span(7, 13, template_name="a")},
+    )
+
+
+def test_analyze_render_template_not_found(env: Environment) -> None:
+    source = "{% render 'nosuchthing' %}{{ x }}"
+
+    _assert(
+        env.from_string(source),
+        local_refs={},
+        global_refs={"x": _Span(29, 30)},
+        tags={"render": [_Span(0, 26)]},
+        unloadable={"nosuchthing": _Span(11, 22)},
         raise_for_failures=False,
     )

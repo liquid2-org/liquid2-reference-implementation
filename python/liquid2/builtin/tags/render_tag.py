@@ -11,6 +11,7 @@ from liquid2 import Node
 from liquid2 import Token
 from liquid2.ast import MetaNode
 from liquid2.builtin import Identifier
+from liquid2.builtin import StringLiteral
 from liquid2.builtin import parse_keyword_arguments
 from liquid2.builtin import parse_primitive
 from liquid2.builtin import parse_string_or_identifier
@@ -39,7 +40,7 @@ class RenderNode(Node):
     def __init__(
         self,
         token: TokenT,
-        name: Identifier,
+        name: StringLiteral,
         *,
         loop: bool,
         var: Expression | None,
@@ -55,7 +56,9 @@ class RenderNode(Node):
 
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
-        template = context.env.get_template(self.name, context=context, tag=self.tag)
+        template = context.env.get_template(
+            self.name.value, context=context, tag=self.tag
+        )
         namespace: dict[str, object] = dict(arg.evaluate(context) for arg in self.args)
 
         character_count = 0
@@ -108,7 +111,7 @@ class RenderNode(Node):
     ) -> int:
         """Render the node to the output buffer."""
         template = await context.env.get_template_async(
-            self.name, context=context, tag=self.tag
+            self.name.value, context=context, tag=self.tag
         )
 
         namespace: dict[str, object] = dict(
@@ -165,10 +168,11 @@ class RenderNode(Node):
         block_scope: list[Identifier] = [
             Identifier(arg.name, token=arg.token) for arg in self.args
         ]
-        _children = [
+
+        children = [
             MetaNode(
-                token=self.token,
-                node=None,
+                token=self.name.token,
+                expression=self.name,
                 block_scope=block_scope,
                 load_mode="render",
                 load_context={"tag": "render"},
@@ -178,10 +182,13 @@ class RenderNode(Node):
         if self.var:
             if self.alias:
                 block_scope.append(self.alias)
+            else:
                 block_scope.append(
-                    Identifier(str(self.name).split(".", 1)[0], token=self.name.token)
+                    Identifier(
+                        str(self.name.value).split(".", 1)[0], token=self.name.token
+                    )
                 )
-            _children.append(
+            children.append(
                 MetaNode(
                     token=self.token,
                     expression=self.var,
@@ -189,8 +196,8 @@ class RenderNode(Node):
             )
 
         for arg in self.args:
-            _children.append(MetaNode(token=arg.token, expression=arg.value))
-        return _children
+            children.append(MetaNode(token=arg.token, expression=arg.value))
+        return children
 
 
 class RenderTag(Tag):
@@ -215,7 +222,7 @@ class RenderTag(Tag):
         name_token = tokens.next()
         match name_token:
             case Token.StringLiteral(value):
-                name = Identifier(value, token=name_token)
+                name = StringLiteral(token=name_token, value=value)
             case _token:
                 raise LiquidSyntaxError(
                     "expected the name of a template to render as a string literal, "

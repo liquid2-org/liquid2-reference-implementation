@@ -16,6 +16,7 @@ from .builtin import FilteredExpression
 from .builtin import Identifier
 from .builtin import Query as QueryExpression
 from .builtin import StringLiteral
+from .builtin import TernaryFilteredExpression
 from .builtin.tags.case_tag import MultiExpressionBlockNode
 from .builtin.tags.extends_tag import BlockNode as InheritanceBlockNode
 from .builtin.tags.extends_tag import _BlockStackItem
@@ -127,6 +128,7 @@ class _TemplateCounter:
         raise_for_failures: bool = True,
         scope: None | ReadOnlyChainMap = None,
         template_locals: None | DefaultDict[Identifier, list[Span]] = None,
+        partial_locals: None | DefaultDict[Identifier, list[Span]] = None,
         partials: None | list[tuple[str, None | dict[str, str]]] = None,
     ) -> None:
         self.template = template
@@ -137,6 +139,10 @@ class _TemplateCounter:
         # Names that are added to the template "local" scope.
         self.template_locals: DefaultDict[Identifier, list[Span]] = (
             template_locals if template_locals is not None else defaultdict(list)
+        )
+
+        self.partial_locals: DefaultDict[Identifier, list[Span]] = (
+            partial_locals if partial_locals is not None else defaultdict(list)
         )
 
         # Names that are referenced but are not in the template local scope
@@ -295,8 +301,14 @@ class _TemplateCounter:
         if isinstance(expression, QueryExpression):
             refs.append_variable(expression.path, expression.token)
 
-        if isinstance(expression, FilteredExpression):
+        elif isinstance(expression, FilteredExpression):
             refs.append_filters([(f.name, f.token) for f in expression.filters or []])
+
+        elif isinstance(expression, TernaryFilteredExpression):
+            refs.append_filters([(f.name, f.token) for f in expression.filters or []])
+            refs.append_filters(
+                [(f.name, f.token) for f in expression.tail_filters or []]
+            )
 
         for expr in expression.children():
             refs.extend(self._update_expression_refs(expr))
@@ -323,6 +335,7 @@ class _TemplateCounter:
             follow_partials=self.follow_partials,
             scope=self._scope,
             template_locals=self.template_locals,
+            partial_locals=self.partial_locals,
             raise_for_failures=self.raise_for_failures,
             partials=self._partials,
         ).analyze()
@@ -346,6 +359,7 @@ class _TemplateCounter:
             follow_partials=self.follow_partials,
             scope=self._scope,
             template_locals=self.template_locals,
+            partial_locals=self.partial_locals,
             raise_for_failures=self.raise_for_failures,
             partials=self._partials,
         ).analyze_async()
@@ -379,7 +393,7 @@ class _TemplateCounter:
             partials=self._partials,
         ).analyze()
 
-        self._update_reference_counters(refs)
+        self._update_reference_counters(refs, update_locals=True)
 
     async def _analyze_render_async(self, child: MetaNode) -> None:
         name, load_context = self._make_load_context(child, "render")
@@ -405,7 +419,7 @@ class _TemplateCounter:
             partials=self._partials,
         ).analyze_async()
 
-        self._update_reference_counters(refs)
+        self._update_reference_counters(refs, update_locals=True)
 
     def _analyze_template_inheritance_chain(
         self,
@@ -467,6 +481,7 @@ class _TemplateCounter:
             follow_partials=self.follow_partials,
             scope=ReadOnlyChainMap({"block": None}, self._scope),
             template_locals=self.template_locals,
+            partial_locals=self.partial_locals,
             raise_for_failures=self.raise_for_failures,
             partials=self._partials,
         ).analyze()
@@ -531,6 +546,7 @@ class _TemplateCounter:
             follow_partials=self.follow_partials,
             scope=ReadOnlyChainMap({"block": None}, self._scope),
             template_locals=self.template_locals,
+            partial_locals=self.partial_locals,
             raise_for_failures=self.raise_for_failures,
             partials=self._partials,
         ).analyze_async()
@@ -638,25 +654,31 @@ class _TemplateCounter:
                 Span.from_token(self._template_name, token=token)
             )
 
-    def _update_reference_counters(self, refs: _TemplateCounter) -> None:
+    def _update_reference_counters(
+        self, refs: _TemplateCounter, *, update_locals: bool = False
+    ) -> None:
         # Accumulate references from the partial/child template into its parent.
-        for _name, _refs in refs.variables.items():
-            self.variables[_name].extend(_refs)
+        for query, locations in refs.variables.items():
+            self.variables[query].extend(locations)
 
-        for _name, _refs in refs.template_globals.items():
-            self.template_globals[_name].extend(_refs)
+        if update_locals:
+            for ident, locations in refs.template_locals.items():
+                self.partial_locals[ident].extend(locations)
 
-        for node_name, _refs in refs.failed_visits.items():
-            self.failed_visits[node_name].extend(_refs)
+        for query, locations in refs.template_globals.items():
+            self.template_globals[query].extend(locations)
 
-        for template_name, _refs in refs.unloadable_partials.items():
-            self.unloadable_partials[template_name].extend(_refs)
+        for node_name, locations in refs.failed_visits.items():
+            self.failed_visits[node_name].extend(locations)
 
-        for filter_name, _refs in refs.filters.items():
-            self.filters[filter_name].extend(_refs)
+        for template_name, locations in refs.unloadable_partials.items():
+            self.unloadable_partials[template_name].extend(locations)
 
-        for tag_name, _refs in refs.tags.items():
-            self.tags[tag_name].extend(_refs)
+        for filter_name, locations in refs.filters.items():
+            self.filters[filter_name].extend(locations)
+
+        for tag_name, locations in refs.tags.items():
+            self.tags[tag_name].extend(locations)
 
     def _raise_for_failures(self) -> None:
         if self.raise_for_failures and self.failed_visits:
@@ -700,6 +722,7 @@ class _InheritanceChainCounter(_TemplateCounter):
         raise_for_failures: bool = True,
         scope: ReadOnlyChainMap | None = None,
         template_locals: DefaultDict[Identifier, list[Span]] | None = None,
+        partial_locals: DefaultDict[Identifier, list[Span]] | None = None,
         partials: list[tuple[str, dict[str, str] | None]] | None = None,
     ) -> None:
         self.stack_context = stack_context
@@ -710,6 +733,7 @@ class _InheritanceChainCounter(_TemplateCounter):
             raise_for_failures=raise_for_failures,
             scope=scope,
             template_locals=template_locals,
+            partial_locals=partial_locals,
             partials=partials,
         )
 
@@ -774,6 +798,8 @@ class _InheritanceChainCounter(_TemplateCounter):
             and expression.path.tail() == "super"
         ):
             return True
+
+        # XXX: TODO: TernaryFilteredExpression
 
         if isinstance(expression, FilteredExpression) and (
             isinstance(expression.left, QueryExpression)
