@@ -21,6 +21,7 @@ dependencies = [
     "iregexp-check>=0.1.3",
     "MarkupSafe>=2",
     "more-itertools>=10",
+    "python-dateutil>=2.9",
 ]
 
 [project.optional-dependencies]
@@ -130,3 +131,4 @@ convention = "google"
 "python/liquid2/builtin/expressions.py" = ["D101", "D102"]
 "python/tests/test_compliance.py" = ["D103"]
 "python/tests/test_jsonpath_compliance.py" = ["D103"]
+"python/tests/test_static_analysis.py" = ["D103"]

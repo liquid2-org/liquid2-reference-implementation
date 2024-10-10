@@ -4,17 +4,29 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Iterable
+from typing import Iterator
+from typing import TypeAlias
+from typing import Union
 
+from .filter_expressions import Expression
+from .filter_expressions import FilterQuery
 from .node import JSONPathNode
 from .node import JSONPathNodeList
 from .segments import JSONPathRecursiveDescentSegment
+from .selectors import Filter
 from .selectors import IndexSelector
 from .selectors import NameSelector
+from .selectors import SingularQuerySelector
 
 if TYPE_CHECKING:
+    from liquid2 import TokenT
+
     from .environment import JSONValue
     from .environment import _JSONPathEnvironment
     from .segments import JSONPathSegment
+
+
+SelectorTuple: TypeAlias = tuple[Union[str, "SelectorTuple"], ...]
 
 
 class JSONPathQuery:
@@ -30,7 +42,7 @@ class JSONPathQuery:
         segments: The `JSONPathSegment` instances that make up this query.
     """
 
-    __slots__ = ("env", "segments")
+    __slots__ = ("env", "segments", "token")
 
     def __init__(
         self,
@@ -41,12 +53,30 @@ class JSONPathQuery:
         self.env = env
         self.segments = segments
 
+        if segments:
+            self.token: TokenT | None = segments[0].token
+        else:
+            self.token = None
+
     def __str__(self) -> str:
-        # TODO: canonical string repr or closer to legacy liquid?
-        return "$" + "".join(str(segment) for segment in self.segments)
+        # TODO: test
+        s = "".join(str(segment) for segment in self.segments)
+        if s.startswith(("[", "..")):
+            return "$" + s
+        if s.startswith("."):
+            return s[1:]
+        return s
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, JSONPathQuery) and self.segments == other.segments
 
     def __hash__(self) -> int:
         return hash(self.segments)
+
+    def as_tuple(self) -> SelectorTuple:
+        """Return this query's path as a tuple of strings and/or nested tuples."""
+        # TODO: test
+        return tuple(segment.as_tuple() for segment in self.segments)
 
     def finditer(
         self,
@@ -137,3 +167,45 @@ class JSONPathQuery:
     def empty(self) -> bool:
         """Return `True` if this query has no segments."""
         return not bool(self.segments)
+
+    def children(self) -> list[JSONPathQuery]:
+        """Return a list of child queries from this query.
+
+        Child queries are those found in filter selectors and singular query selectors.
+        """
+        children: list[JSONPathQuery] = []
+
+        for segment in self.segments:
+            for selector in segment.selectors:
+                if isinstance(selector, SingularQuerySelector):
+                    children.append(selector.query)
+                elif isinstance(selector, Filter):
+                    children.extend(self._find_filter_queries(selector.expression))
+
+        return children
+
+    def _find_filter_queries(self, root: Expression) -> Iterator[JSONPathQuery]:
+        for child in root.children():
+            if isinstance(child, FilterQuery):
+                yield child.query
+            self._find_filter_queries(child)
+
+    def head(self) -> str | None:
+        """Return the first selector from this query."""
+        try:
+            selector = self.segments[0].selectors[0]
+            if isinstance(selector, NameSelector):
+                return selector.name
+            return None
+        except IndexError:
+            return None
+
+    def tail(self) -> str | None:
+        """Return the last selector from this query."""
+        try:
+            selector = self.segments[-1].selectors[-1]
+            if isinstance(selector, NameSelector):
+                return selector.name
+            return None
+        except IndexError:
+            return None

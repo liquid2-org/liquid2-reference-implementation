@@ -11,6 +11,8 @@ from typing import TextIO
 from liquid2 import Markup
 from liquid2 import Node
 from liquid2.ast import BlockNode
+from liquid2.ast import MetaNode
+from liquid2.builtin import Identifier
 from liquid2.builtin import LoopExpression
 from liquid2.context import RenderContext
 from liquid2.exceptions import BreakLoop
@@ -39,14 +41,6 @@ class ForNode(Node):
         self.expression = expression
         self.block = block
         self.default = default
-
-    def __str__(self) -> str:
-        tag_str = f"for ({self.expression}) {{ {self.block} }}"
-
-        if self.default:
-            tag_str += f" else {{ {self.default} }}"
-
-        return tag_str
 
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
@@ -125,6 +119,28 @@ class ForNode(Node):
             return character_count
 
         return await self.default.render_async(context, buffer) if self.default else 0
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        _children = [
+            MetaNode(
+                token=self.block.token,
+                node=self.block,
+                expression=self.expression,
+                block_scope=[
+                    Identifier(self.expression.identifier, token=self.expression.token),
+                    Identifier("forloop", token=self.token),
+                ],
+            )
+        ]
+        if self.default:
+            _children.append(
+                MetaNode(
+                    token=self.default.token,
+                    node=self.default,
+                )
+            )
+        return _children
 
 
 class ForTag(Tag):
@@ -272,6 +288,10 @@ class BreakNode(Node):
         """Render the node to the output buffer."""
         raise BreakLoop("break")
 
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return []
+
 
 class ContinueNode(Node):
     """Parse tree node for the standard _continue_ tag."""
@@ -282,6 +302,10 @@ class ContinueNode(Node):
     def render_to_output(self, _context: RenderContext, _buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         raise ContinueLoop("continue")
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return []
 
 
 class BreakTag(Tag):

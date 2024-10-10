@@ -74,11 +74,11 @@ impl fmt::Display for Query {
 pub enum Segment {
     Child {
         selectors: Vec<Selector>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Recursive {
         selectors: Vec<Selector>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Eoi {}, // Is this needed?
 }
@@ -118,28 +118,28 @@ impl fmt::Display for Segment {
 pub enum Selector {
     Name {
         name: String,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Index {
         index: i64,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Slice {
         start: Option<i64>,
         stop: Option<i64>,
         step: Option<i64>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Wild {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Filter {
         expression: Box<FilterExpression>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     SingularQuery {
         query: Box<Query>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
 }
 
@@ -176,54 +176,54 @@ impl fmt::Display for Selector {
 #[derive(Debug, Clone)]
 pub enum FilterExpression {
     True_ {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     False_ {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Null {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     StringLiteral {
         value: String,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Int {
         value: i64,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Float {
         value: f64,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Not {
         expression: Box<FilterExpression>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Logical {
         left: Box<FilterExpression>,
         operator: LogicalOperator,
         right: Box<FilterExpression>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Comparison {
         left: Box<FilterExpression>,
         operator: ComparisonOperator,
         right: Box<FilterExpression>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     RelativeQuery {
         query: Box<Query>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     RootQuery {
         query: Box<Query>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Function {
         name: String,
         args: Vec<FilterExpression>,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
 }
 

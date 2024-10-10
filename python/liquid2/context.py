@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import sys
+from collections import defaultdict
 from contextlib import contextmanager
 from functools import partial
 from functools import reduce
@@ -89,6 +90,7 @@ class RenderContext:
         self.tag_namespace: dict[str, Any] = {
             "cycles": {},
             "stopindex": {},
+            "extends": defaultdict(list),
         }
 
         # As stack of forloop objects. Used for populating forloop.parentloop.

@@ -9,6 +9,7 @@ from liquid2 import Markup
 from liquid2 import Node
 from liquid2.ast import BlockNode
 from liquid2.ast import ConditionalBlockNode
+from liquid2.ast import MetaNode
 from liquid2.builtin import BooleanExpression
 from liquid2.context import RenderContext
 from liquid2.tag import Tag
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 class UnlessNode(Node):
     """The standard _unless_ tag."""
 
-    __slots__ = ("condition", "consequence", "alternatives", "alternative")
+    __slots__ = ("condition", "consequence", "alternatives", "default")
 
     def __init__(
         self,
@@ -30,25 +31,13 @@ class UnlessNode(Node):
         condition: BooleanExpression,
         consequence: BlockNode,
         alternatives: list[ConditionalBlockNode],
-        alternative: BlockNode | None,
+        default: BlockNode | None,
     ) -> None:
         super().__init__(token)
         self.condition = condition
         self.consequence = consequence
         self.alternatives = alternatives
-        self.alternative = alternative
-
-    def __str__(self) -> str:
-        buf = [
-            f"unless {self.condition} {{ {self.consequence} }}",
-        ]
-
-        for alt in self.alternatives:
-            buf.append(f"elsif {alt}")
-
-        if self.alternative:
-            buf.append(f"else {{ {self.alternative} }}")
-        return " ".join(buf)
+        self.default = default
 
     def render_to_output(self, context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
@@ -57,10 +46,10 @@ class UnlessNode(Node):
 
         for alternative in self.alternatives:
             if alternative.expression.evaluate(context):
-                return sum(node.render(context, buffer) for node in alternative.nodes)
+                return alternative.block.render(context, buffer)
 
-        if self.alternative:
-            return self.alternative.render(context, buffer)
+        if self.default:
+            return self.default.render(context, buffer)
 
         return 0
 
@@ -73,23 +62,49 @@ class UnlessNode(Node):
 
         for alternative in self.alternatives:
             if await alternative.expression.evaluate_async(context):
-                return sum(
-                    [
-                        await node.render_async(context, buffer)
-                        for node in alternative.nodes
-                    ]
-                )
+                return await alternative.block.render_async(context, buffer)
 
-        if self.alternative:
-            return await self.alternative.render_async(context, buffer)
+        if self.default:
+            return await self.default.render_async(context, buffer)
 
         return 0
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        _children = [
+            MetaNode(
+                token=self.token,
+                node=self.consequence,
+                expression=self.condition,
+            )
+        ]
+
+        _children.extend(
+            [
+                MetaNode(
+                    token=alt.token,
+                    node=alt,
+                )
+                for alt in self.alternatives
+            ]
+        )
+
+        if self.default:
+            _children.append(
+                MetaNode(
+                    token=self.default.token,
+                    node=self.default,
+                    expression=None,
+                )
+            )
+
+        return _children
 
 
 class UnlessTag(Tag):
     """The standard _unless_ tag."""
 
-    block = False
+    block = True
     node_class = UnlessNode
     end_block = frozenset(["endunless", "elsif", "else"])
 
@@ -105,7 +120,10 @@ class UnlessTag(Tag):
 
         block_token = stream.current()
         assert block_token is not None
-        consequence = BlockNode(block_token, parse_block(stream, end=self.end_block))
+        consequence = BlockNode(
+            block_token,
+            parse_block(stream, end=self.end_block),
+        )
 
         alternatives: list[ConditionalBlockNode] = []
         alternative: BlockNode | None = None
@@ -118,7 +136,11 @@ class UnlessTag(Tag):
                 TokenStream(alternative_token.expression)
             )
 
-            alternative_block = parse_block(stream, self.end_block)
+            alternative_block = BlockNode(
+                token=alternative_token,
+                nodes=parse_block(stream, self.end_block),
+            )
+
             alternatives.append(
                 ConditionalBlockNode(
                     alternative_token,
@@ -130,8 +152,11 @@ class UnlessTag(Tag):
         if stream.is_tag("else"):
             next(stream)
             alternative_token = stream.current()
-            alternative_block = parse_block(stream, self.end_block)
-            alternative = BlockNode(alternative_token, alternative_block)
+            assert alternative_token is not None
+            alternative = BlockNode(
+                token=alternative_token,
+                nodes=parse_block(stream, self.end_block),
+            )
 
         return self.node_class(
             token,

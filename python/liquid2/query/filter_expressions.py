@@ -17,6 +17,8 @@ from .function_extensions.filter_function import FilterFunction
 from .node import JSONPathNodeList
 
 if TYPE_CHECKING:
+    from liquid2 import TokenT
+
     from .environment import JSONValue
     from .environment import _JSONPathEnvironment
     from .query import JSONPathQuery
@@ -25,10 +27,10 @@ if TYPE_CHECKING:
 class Expression(ABC):
     """Base class for all filter expression nodes."""
 
-    __slots__ = ("line_col",)
+    __slots__ = ("token",)
 
-    def __init__(self, line_col: tuple[int, int]) -> None:
-        self.line_col = line_col
+    def __init__(self, token: TokenT) -> None:
+        self.token = token
 
     @abstractmethod
     def evaluate(self, context: FilterContext) -> object:
@@ -42,14 +44,18 @@ class Expression(ABC):
             The result of evaluating the expression.
         """
 
+    @abstractmethod
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+
 
 class FilterExpression(Expression):
     """An expression that evaluates to `true` or `false`."""
 
     __slots__ = ("expression",)
 
-    def __init__(self, line_col: tuple[int, int], expression: Expression) -> None:
-        super().__init__(line_col)
+    def __init__(self, token: TokenT, expression: Expression) -> None:
+        super().__init__(token)
         self.expression = expression
 
     def __str__(self) -> str:
@@ -60,9 +66,16 @@ class FilterExpression(Expression):
             isinstance(other, FilterExpression) and self.expression == other.expression
         )
 
+    def __hash__(self) -> int:
+        return hash(self.expression)
+
     def evaluate(self, context: FilterContext) -> bool:
         """Evaluate the filter expression in the given _context_."""
         return _is_truthy(self.expression.evaluate(context))
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.expression]
 
 
 LITERAL_T = TypeVar("LITERAL_T")
@@ -73,8 +86,8 @@ class FilterExpressionLiteral(Expression, Generic[LITERAL_T]):
 
     __slots__ = ("value",)
 
-    def __init__(self, line_col: tuple[int, int], value: LITERAL_T) -> None:
-        super().__init__(line_col=line_col)
+    def __init__(self, token: TokenT, value: LITERAL_T) -> None:
+        super().__init__(token=token)
         self.value = value
 
     def __str__(self) -> str:
@@ -89,6 +102,10 @@ class FilterExpressionLiteral(Expression, Generic[LITERAL_T]):
     def evaluate(self, _: FilterContext) -> LITERAL_T:
         """Return the value associated with this literal."""
         return self.value
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return []
 
 
 class BooleanLiteral(FilterExpressionLiteral[bool]):
@@ -132,10 +149,10 @@ class PrefixExpression(Expression):
 
     __slots__ = ("operator", "right")
 
-    def __init__(self, line_col: tuple[int, int], operator: str, right: Expression):
+    def __init__(self, token: TokenT, operator: str, right: Expression):
         self.operator = operator
         self.right = right
-        super().__init__(line_col)
+        super().__init__(token)
 
     def __str__(self) -> str:
         return f"{self.operator}{self.right}"
@@ -147,11 +164,18 @@ class PrefixExpression(Expression):
             and self.right == other.right
         )
 
+    def __hash__(self) -> int:
+        return hash((self.operator, self.right))
+
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
         if self.operator == "!":
             return not _is_truthy(self.right.evaluate(context))
         raise JSONPathTypeError(f"unknown operator {self.operator} {self.right}")
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.right]
 
 
 class LogicalExpression(Expression):
@@ -161,12 +185,12 @@ class LogicalExpression(Expression):
 
     def __init__(
         self,
-        line_col: tuple[int, int],
+        token: TokenT,
         left: Expression,
         operator: str,
         right: Expression,
     ):
-        super().__init__(line_col)
+        super().__init__(token)
         self.left = left
         self.operator = operator
         self.right = right
@@ -189,6 +213,13 @@ class LogicalExpression(Expression):
             self.left.evaluate(context), self.operator, self.right.evaluate(context)
         )
 
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.left, self.right]
+
+    def __hash__(self) -> int:
+        return hash((self.left, self.operator, self.right))
+
 
 class ComparisonExpression(Expression):
     """A pair of expressions and a comparison operator."""
@@ -197,12 +228,12 @@ class ComparisonExpression(Expression):
 
     def __init__(
         self,
-        line_col: tuple[int, int],
+        token: TokenT,
         left: Expression,
         operator: str,
         right: Expression,
     ):
-        super().__init__(line_col)
+        super().__init__(token)
         self.left = left
         self.operator = operator
         self.right = right
@@ -218,6 +249,9 @@ class ComparisonExpression(Expression):
             and self.right == other.right
         )
 
+    def __hash__(self) -> int:
+        return hash((self.left, self.operator, self.right))
+
     def evaluate(self, context: FilterContext) -> bool:
         """Evaluate the filter expression in the given _context_."""
         left = self.left.evaluate(context)
@@ -230,18 +264,27 @@ class ComparisonExpression(Expression):
 
         return _compare(left, self.operator, right)
 
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return [self.left, self.right]
+
 
 class FilterQuery(Expression, ABC):
     """Base class for all query selectors."""
 
     __slots__ = ("query",)
 
-    def __init__(self, line_col: tuple[int, int], query: JSONPathQuery) -> None:
-        super().__init__(line_col)
+    def __init__(self, token: TokenT, query: JSONPathQuery) -> None:
+        super().__init__(token)
         self.query = query
+        self.query.token = token  # XXX: bit of a hack
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, FilterQuery) and str(self) == str(other)
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return []
 
 
 class RelativeFilterQuery(FilterQuery):
@@ -251,6 +294,9 @@ class RelativeFilterQuery(FilterQuery):
 
     def __str__(self) -> str:
         return "@" + str(self.query)[1:]
+
+    def __hash__(self) -> int:
+        return hash(self.query)
 
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
@@ -270,6 +316,9 @@ class RootFilterQuery(FilterQuery):
     def __str__(self) -> str:
         return str(self.query)
 
+    def __hash__(self) -> int:
+        return hash(self.query)
+
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
         return JSONPathNodeList(self.query.find(context.root))
@@ -280,10 +329,8 @@ class FunctionExtension(Expression):
 
     __slots__ = ("name", "args")
 
-    def __init__(
-        self, line_col: tuple[int, int], name: str, args: Sequence[Expression]
-    ) -> None:
-        super().__init__(line_col)
+    def __init__(self, token: TokenT, name: str, args: Sequence[Expression]) -> None:
+        super().__init__(token)
         self.name = name
         self.args = args
 
@@ -297,6 +344,9 @@ class FunctionExtension(Expression):
             and other.name == self.name
             and other.args == self.args
         )
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.args))
 
     def evaluate(self, context: FilterContext) -> object:
         """Evaluate the filter expression in the given _context_."""
@@ -332,6 +382,10 @@ class FunctionExtension(Expression):
                 _args.append(arg)
 
         return _args
+
+    def children(self) -> list[Expression]:
+        """Return a list of child expressions for this expression."""
+        return list(self.args)
 
 
 class FilterContext:

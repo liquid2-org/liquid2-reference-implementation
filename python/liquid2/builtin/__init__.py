@@ -15,6 +15,7 @@ from .expressions import FalseLiteral
 from .expressions import Filter
 from .expressions import FilteredExpression
 from .expressions import FloatLiteral
+from .expressions import Identifier
 from .expressions import IntegerLiteral
 from .expressions import KeywordArgument
 from .expressions import Literal
@@ -47,6 +48,9 @@ from .filters.array import sort_natural
 from .filters.array import sum_
 from .filters.array import uniq
 from .filters.array import where
+from .filters.misc import date
+from .filters.misc import default
+from .filters.misc import size
 from .filters.string import append
 from .filters.string import capitalize
 from .filters.string import downcase
@@ -80,6 +84,8 @@ from .tags.case_tag import CaseTag
 from .tags.cycle_tag import CycleTag
 from .tags.decrement_tag import DecrementTag
 from .tags.echo_tag import EchoTag
+from .tags.extends_tag import BlockTag
+from .tags.extends_tag import ExtendsTag
 from .tags.for_tag import BreakTag
 from .tags.for_tag import ContinueTag
 from .tags.for_tag import ForTag
@@ -97,6 +103,7 @@ if TYPE_CHECKING:
 __all__ = (
     "AssignTag",
     "Blank",
+    "Identifier",
     "Boolean",
     "BooleanExpression",
     "BreakTag",
@@ -147,6 +154,11 @@ __all__ = (
     "parse_primitive",
     "parse_string_or_identifier",
     "parse_keyword_arguments",
+    "ExtendsTag",
+    "BlockTag",
+    "date",
+    "default",
+    "size",
 )
 
 
@@ -164,6 +176,10 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.filters["where"] = where
     env.filters["uniq"] = uniq
     env.filters["compact"] = compact
+
+    env.filters["date"] = date
+    env.filters["default"] = default
+    env.filters["size"] = size
 
     env.filters["capitalize"] = capitalize
     env.filters["append"] = append
@@ -210,3 +226,5 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.tags["include"] = IncludeTag(env)
     env.tags["render"] = RenderTag(env)
     env.tags["__LINES"] = LiquidTag(env)
+    env.tags["block"] = BlockTag(env)
+    env.tags["extends"] = ExtendsTag(env)

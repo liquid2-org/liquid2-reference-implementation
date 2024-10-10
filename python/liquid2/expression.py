@@ -11,8 +11,6 @@ if TYPE_CHECKING:
 
     from .context import RenderContext
 
-# TODO: move me
-
 
 class Expression(ABC):
     """Base class for all Liquid expressions."""
@@ -30,6 +28,6 @@ class Expression(ABC):
         """An async version of `liquid.expression.Expression.evaluate`."""
         return self.evaluate(context)
 
+    @abstractmethod
     def children(self) -> list[Expression]:
         """Return a list of child expressions."""
-        raise NotImplementedError(f"{self.__class__.__name__}.children")

@@ -1,4 +1,4 @@
-"""The built in, standard implementation of the _raw_ tag."""
+"""The standard _raw_ tag."""
 
 from __future__ import annotations
 
@@ -11,12 +11,13 @@ from liquid2.tag import Tag
 
 if TYPE_CHECKING:
     from liquid2 import TokenT
+    from liquid2.ast import MetaNode
     from liquid2.context import RenderContext
     from liquid2.tokens import TokenStream
 
 
 class RawNode(Node):
-    """The built in, standard implementation of the _raw_ node."""
+    """The standard _raw_ tag."""
 
     __slots__ = ("text",)
 
@@ -24,12 +25,13 @@ class RawNode(Node):
         super().__init__(token)
         self.text = text
 
-    def __str__(self) -> str:
-        return self.text
-
     def render_to_output(self, _context: RenderContext, buffer: TextIO) -> int:
         """Render the node to the output buffer."""
         return buffer.write(self.text)
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return []
 
 
 class RawTag(Tag):

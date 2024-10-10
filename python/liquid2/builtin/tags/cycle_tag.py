@@ -8,6 +8,7 @@ from typing import TextIO
 from liquid2 import Markup
 from liquid2 import Node
 from liquid2 import Token
+from liquid2.ast import MetaNode
 from liquid2.builtin import parse_primitive
 from liquid2.builtin import parse_string_or_identifier
 from liquid2.context import RenderContext
@@ -55,6 +56,11 @@ class CycleNode(Node):
                 auto_escape=context.auto_escape,
             )
         )
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        # TODO: use arg.token
+        return [MetaNode(token=self.token, expression=arg) for arg in self.items]
 
 
 class CycleTag(Tag):

@@ -8,6 +8,7 @@ from typing import TextIO
 from liquid2 import Markup
 from liquid2 import Node
 from liquid2.ast import BlockNode
+from liquid2.ast import MetaNode
 from liquid2.context import RenderContext
 from liquid2.tag import Tag
 from liquid2.tokens import TokenStream
@@ -38,8 +39,11 @@ class LiquidNode(Node):
         self, context: RenderContext, buffer: TextIO
     ) -> int:
         """Render the node to the output buffer."""
-        print("!!!", self.block)
         return await self.block.render_async(context, buffer)
+
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return self.block.children()
 
 
 class LiquidTag(Tag):

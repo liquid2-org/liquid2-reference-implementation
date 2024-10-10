@@ -8,7 +8,9 @@ from typing import TextIO
 from liquid2 import Markup
 from liquid2 import Node
 from liquid2 import Token
+from liquid2.ast import MetaNode
 from liquid2.builtin import FilteredExpression
+from liquid2.builtin import Identifier
 from liquid2.builtin import parse_identifier
 from liquid2.context import RenderContext
 from liquid2.tag import Tag
@@ -25,7 +27,9 @@ class AssignNode(Node):
 
     __slots__ = ("name", "expression")
 
-    def __init__(self, token: TokenT, name: str, expression: Expression) -> None:
+    def __init__(
+        self, token: TokenT, *, name: Identifier, expression: Expression
+    ) -> None:
         super().__init__(token)
         self.name = name
         self.expression = expression
@@ -42,6 +46,16 @@ class AssignNode(Node):
         context.assign(self.name, await self.expression.evaluate_async(context))
         return 0
 
+    def children(self) -> list[MetaNode]:
+        """Return a list of child nodes and/or expressions associated with this node."""
+        return [
+            MetaNode(
+                token=self.token,
+                expression=self.expression,
+                template_scope=[self.name],
+            )
+        ]
+
 
 class AssignTag(Tag):
     """The standard _assign_ tag."""
@@ -55,10 +69,12 @@ class AssignTag(Tag):
         assert isinstance(token, Markup.Tag)
 
         expr_stream = TokenStream(token.expression)
-        name = parse_identifier(next(expr_stream, None))
+        name = parse_identifier(expr_stream.next())
         expr_stream.expect(Token.Assign)
         next(expr_stream)
 
         return self.node_class(
-            token, name=name, expression=FilteredExpression.parse(expr_stream)
+            token,
+            name=name,
+            expression=FilteredExpression.parse(expr_stream),
         )

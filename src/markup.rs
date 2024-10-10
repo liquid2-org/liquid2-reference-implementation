@@ -34,6 +34,7 @@ pub enum Markup {
     },
     Lines {
         wc: (Whitespace, Whitespace),
+        name: String,
         statements: Vec<Markup>,
         span: (usize, usize),
     },
@@ -59,7 +60,7 @@ impl fmt::Display for Markup {
                     .into_iter()
                     .map(|e| e.to_string())
                     .collect::<Vec<String>>()
-                    .join("");
+                    .join(" ");
                 write!(f, "{{{{{} {} {}}}}}", wc.0, expr, wc.1)
             }
             Markup::Tag {
@@ -138,107 +139,110 @@ impl Markup {
 #[derive(Debug, Clone)]
 pub enum Token {
     True_ {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     False_ {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     And {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Or {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     In {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Not {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Contains {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Null {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     If {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Else {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     With {
-        line_col: (usize, usize),
+        span: (usize, usize),
+    },
+    Required {
+        span: (usize, usize),
     },
     As {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     For {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Eq {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Ne {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Ge {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Gt {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Le {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Lt {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Colon {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Pipe {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     DoublePipe {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Comma {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     LeftParen {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     RightParen {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Assign {
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     StringLiteral {
         value: String,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     IntegerLiteral {
         value: i64,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     FloatLiteral {
         value: f64,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Word {
         value: String,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     RangeLiteral {
         start: RangeArgument,
         stop: RangeArgument,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
     Query {
         path: Query,
-        line_col: (usize, usize),
+        span: (usize, usize),
     },
 }
 
@@ -256,6 +260,7 @@ impl fmt::Display for Token {
             Token::If { .. } => f.write_str("if"),
             Token::Else { .. } => f.write_str("else"),
             Token::With { .. } => f.write_str("with"),
+            Token::Required { .. } => f.write_str("required"),
             Token::As { .. } => f.write_str("as"),
             Token::For { .. } => f.write_str("for"),
             Token::Eq { .. } => f.write_str("=="),
@@ -297,22 +302,10 @@ impl Token {
 #[pyclass(frozen)]
 #[derive(Debug, Clone)]
 pub enum RangeArgument {
-    StringLiteral {
-        value: String,
-        line_col: (usize, usize),
-    },
-    IntegerLiteral {
-        value: i64,
-        line_col: (usize, usize),
-    },
-    FloatLiteral {
-        value: f64,
-        line_col: (usize, usize),
-    },
-    Query {
-        path: Query,
-        line_col: (usize, usize),
-    },
+    StringLiteral { value: String, span: (usize, usize) },
+    IntegerLiteral { value: i64, span: (usize, usize) },
+    FloatLiteral { value: f64, span: (usize, usize) },
+    Query { path: Query, span: (usize, usize) },
 }
 
 impl fmt::Display for RangeArgument {
