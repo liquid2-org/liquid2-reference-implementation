@@ -133,6 +133,8 @@ multiline_single_quoted_char = _{
 
 multiline_unescaped = _{
     "\u{0A}"
+  | "\u{09}"
+  | "\u{0D}"
   | '\u{20}'..'\u{21}'
   | '\u{23}'..'\u{26}'
   | '\u{28}'..'\u{5B}'

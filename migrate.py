@@ -116,6 +116,5 @@ def extract(path: Path) -> None:
 
 if __name__ == "__main__":
     # print(migrate(cases))
-    filter_files = files(Path(sys.argv[1]))
-    print(filter_files[0])
-    extract(filter_files[0])
+    for infile in files(Path(sys.argv[1])):
+        extract(infile)
