@@ -98,10 +98,8 @@ reserved_word = {
   | "required"
 }
 
-// NOTE: borrowing int from JSONPath
 // NOTE: range literals can't contain newlines
 // XXX: range integers can be negative, but start must be less than stop, even when reversed
-// TODO: range elements can be strings r queries
 range          =  { "(" ~ LS ~ range_argument ~ LS ~ ".." ~ LS ~ range_argument ~ LS ~ ")" }
 range_argument = _{
     number

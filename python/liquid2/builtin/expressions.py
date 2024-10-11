@@ -770,7 +770,6 @@ def parse_boolean_primitive(  # noqa: PLR0912
         if token.__class__ not in BINARY_OPERATORS:
             return left
 
-        # next(stream)
         left = parse_infix_expression(stream, left)
 
     return left
