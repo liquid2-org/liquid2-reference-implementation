@@ -67,6 +67,7 @@
     {
       "name": "too many arguments",
       "template": "{{ None | default: 'foo', 'bar', 'baz' }}",
+      "data": {},
       "invalid": true
     },
     {

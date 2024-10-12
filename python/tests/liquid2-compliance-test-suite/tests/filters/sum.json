@@ -159,6 +159,13 @@
     {
       "name": "properties arguments with non-hash items",
       "template": "{{ a | sum: 'k' }}",
+      "data": {
+        "a": [
+          1,
+          2,
+          3
+        ]
+      },
       "invalid": true
     }
   ]

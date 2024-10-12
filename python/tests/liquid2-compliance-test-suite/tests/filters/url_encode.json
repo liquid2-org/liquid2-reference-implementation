@@ -15,6 +15,7 @@
     {
       "name": "unexpected argument",
       "template": "{{ \"hello\" | url_encode: 5 }}",
+      "data": {},
       "invalid": true
     },
     {

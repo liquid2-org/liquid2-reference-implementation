@@ -39,11 +39,26 @@
     {
       "name": "left value not an array",
       "template": "{{ a | map: 'title' | join: '#' }}",
+      "data": {
+        "a": 123
+      },
       "invalid": true
     },
     {
       "name": "array containing a non object",
       "template": "{{ a | map: 'title' | join: '#' }}",
+      "data": {
+        "a": [
+          {
+            "title": "foo"
+          },
+          {
+            "title": "bar"
+          },
+          5,
+          []
+        ]
+      },
       "invalid": true
     },
     {

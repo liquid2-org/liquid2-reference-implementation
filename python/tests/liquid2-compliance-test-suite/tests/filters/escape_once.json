@@ -21,6 +21,7 @@
     {
       "name": "unexpected argument",
       "template": "{{ \"HELLO\" | escape_once: 5 }}",
+      "data": {},
       "invalid": true
     },
     {

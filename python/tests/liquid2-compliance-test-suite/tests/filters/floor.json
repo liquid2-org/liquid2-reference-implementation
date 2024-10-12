@@ -45,6 +45,7 @@
     {
       "name": "unexpected argument",
       "template": "{{ -3.1 | floor: 1 }}",
+      "data": {},
       "invalid": true
     },
     {

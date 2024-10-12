@@ -65,6 +65,7 @@
     {
       "name": "too many arguments",
       "template": "{{ nosuchthing | uniq: 'foo', 'bar' }}",
+      "data": {},
       "invalid": true
     },
     {

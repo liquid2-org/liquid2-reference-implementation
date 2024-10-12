@@ -61,6 +61,12 @@
     {
       "name": "too many arguments",
       "template": "{{ a | sort: 'title', 'foo' | join: '#' }}",
+      "data": {
+        "a": [
+          "b",
+          "a"
+        ]
+      },
       "invalid": true
     },
     {
@@ -110,6 +116,14 @@
     {
       "name": "incompatible types",
       "template": "{{ a | sort }}",
+      "data": {
+        "a": [
+          [],
+          {},
+          1,
+          "4"
+        ]
+      },
       "invalid": true
     }
   ]

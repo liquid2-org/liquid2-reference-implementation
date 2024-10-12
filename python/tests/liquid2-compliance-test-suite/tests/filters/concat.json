@@ -30,11 +30,24 @@
     {
       "name": "missing argument is an error",
       "template": "{{ a | concat | join: '#' }}",
+      "data": {
+        "a": [
+          "a",
+          "b"
+        ]
+      },
       "invalid": true
     },
     {
       "name": "non array-like argument is an error",
       "template": "{{ a | concat: b | join: '#' }}",
+      "data": {
+        "a": [
+          "a",
+          "b"
+        ],
+        "b": 5
+      },
       "invalid": true
     },
     {
@@ -79,6 +92,12 @@
     {
       "name": "undefined argument is an error",
       "template": "{{ a | concat: nosuchthing | join: '#' }}",
+      "data": {
+        "a": [
+          "a",
+          "b"
+        ]
+      },
       "invalid": true
     },
     {

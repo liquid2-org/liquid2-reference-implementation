@@ -24,6 +24,7 @@
     {
       "name": "too many arguments",
       "template": "{{ a | compact: 'foo', 'bar' }}",
+      "data": {},
       "invalid": true
     },
     {

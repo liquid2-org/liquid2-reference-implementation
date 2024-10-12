@@ -57,6 +57,7 @@
     {
       "name": "unexpected argument",
       "template": "{{ -3 | abs: 1 }}",
+      "data": {},
       "invalid": true
     },
     {

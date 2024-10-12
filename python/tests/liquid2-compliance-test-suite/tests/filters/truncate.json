@@ -33,6 +33,7 @@
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | truncate: 5, \"foo\", \"bar\" }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -44,6 +45,7 @@
     {
       "name": "undefined first argument",
       "template": "{{ \"Ground control to Major Tom.\" | truncate: nosuchthing }}",
+      "data": {},
       "invalid": true
     },
     {

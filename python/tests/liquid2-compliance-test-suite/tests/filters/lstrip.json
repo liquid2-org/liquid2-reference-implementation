@@ -27,6 +27,7 @@
     {
       "name": "unexpected argument",
       "template": "{{ \"hello\" | lstrip: 5 }}",
+      "data": {},
       "invalid": true
     },
     {

@@ -62,6 +62,8 @@ TODO: if argument is a drop
 
    b. and the argument is a mapping, the mapping is converted to an array of key/value pairs.
 
+   TODO: undefined is an empty array?
+
    c. otherwise the argument is converted to a single element array with the argument value as the only element.
 
 5. If a range is expected

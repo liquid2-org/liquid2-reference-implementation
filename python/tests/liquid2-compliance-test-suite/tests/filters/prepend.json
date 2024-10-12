@@ -21,11 +21,13 @@
     {
       "name": "missing argument",
       "template": "{{ \"hello\" | prepend }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | prepend: \"how\", \"are\", \"you\" }}",
+      "data": {},
       "invalid": true
     },
     {

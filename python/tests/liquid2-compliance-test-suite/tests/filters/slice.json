@@ -39,11 +39,13 @@
     {
       "name": "first argument not an integer",
       "template": "{{ \"hello\" | slice: \"foo\" }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "second argument not an integer",
       "template": "{{ \"hello\" | slice: 5, \"foo\" }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -55,11 +57,13 @@
     {
       "name": "missing arguments",
       "template": "{{ \"hello\" | slice }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | slice: 1, 2, 3 }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -71,6 +75,7 @@
     {
       "name": "undefined first argument",
       "template": "{{ \"hello\" | slice: nosuchthing, 3 }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -96,11 +101,13 @@
     {
       "name": "first argument is a float",
       "template": "{{ 'Liquid' | slice: 2.2 }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "second argument is a float",
       "template": "{{ 'Liquid' | slice: 1, 2.2 }}",
+      "data": {},
       "invalid": true
     },
     {

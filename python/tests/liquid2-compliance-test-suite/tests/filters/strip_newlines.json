@@ -15,6 +15,7 @@
     {
       "name": "unexpected argument",
       "template": "{{ \"hello\" | strip_newlines: 5 }}",
+      "data": {},
       "invalid": true
     },
     {

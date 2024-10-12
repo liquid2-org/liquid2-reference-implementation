@@ -33,6 +33,7 @@
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | truncatewords: 5, \"foo\", \"bar\" }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -74,6 +75,7 @@
     {
       "name": "undefined first argument",
       "template": "{{ \"one two three four\" | truncatewords: nosuchthing }}",
+      "data": {},
       "invalid": true
     },
     {

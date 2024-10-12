@@ -27,11 +27,13 @@
     {
       "name": "missing arguments",
       "template": "{{ \"hello\" | replace_first }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | replace_first: \"how\", \"are\", \"you\" }}",
+      "data": {},
       "invalid": true
     },
     {

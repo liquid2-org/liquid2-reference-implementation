@@ -11,7 +11,7 @@ from typing import Any
 from dateutil import parser
 from markupsafe import Markup
 
-from liquid2.builtin import Empty
+from liquid2.builtin import is_empty
 from liquid2.exceptions import FilterArgumentError
 from liquid2.filter import liquid_filter
 from liquid2.filter import with_environment
@@ -53,7 +53,7 @@ def default(obj: Any, default_: object = "", *, allow_false: bool = False) -> An
     if allow_false is True and _obj is False:
         return obj
 
-    if _obj in (None, False) or isinstance(_obj, Empty):
+    if _obj in (None, False) or is_empty(_obj):
         return default_
 
     return obj

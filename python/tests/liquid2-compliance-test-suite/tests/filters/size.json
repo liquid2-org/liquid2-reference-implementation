@@ -42,6 +42,13 @@
     {
       "name": "unexpected argument",
       "template": "{{ a | size: 'foo' }}",
+      "data": {
+        "a": [
+          1,
+          2,
+          3
+        ]
+      },
       "invalid": true
     },
     {

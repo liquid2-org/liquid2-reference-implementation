@@ -31,6 +31,8 @@ from .expressions import StringLiteral
 from .expressions import SymbolArgument
 from .expressions import TernaryFilteredExpression
 from .expressions import TrueLiteral
+from .expressions import is_blank
+from .expressions import is_empty
 from .expressions import is_truthy
 from .expressions import parse_identifier
 from .expressions import parse_keyword_arguments
@@ -181,6 +183,8 @@ __all__ = (
     "date",
     "default",
     "size",
+    "is_blank",
+    "is_empty",
 )
 
 

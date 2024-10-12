@@ -17,9 +17,9 @@ from typing import Union
 
 from markupsafe import Markup
 
+from liquid2.builtin import Null
 from liquid2.exceptions import FilterArgumentError
 from liquid2.exceptions import FilterError
-from liquid2.filter import array_filter
 from liquid2.filter import decimal_arg
 from liquid2.filter import liquid_filter
 from liquid2.filter import sequence_filter
@@ -30,6 +30,19 @@ if TYPE_CHECKING:
     from ...environment import Environment  # noqa: TID252
 
 # TODO: Better. This was copied from python-liquid.
+
+
+class _Null:
+    """A null without a token for use in the map filter."""
+
+    def __eq__(self, other: object) -> bool:
+        return other is None or isinstance(other, (_Null, Null))
+
+    def __str__(self) -> str:  # pragma: no cover
+        return ""
+
+
+_NULL = _Null()
 
 ArrayT = Union[List[Any], Tuple[Any, ...]]
 """Array-like objects."""
@@ -134,18 +147,18 @@ def concat(sequence: ArrayT, second_array: ArrayT) -> ArrayT:
 def map_(sequence: ArrayT, key: object) -> List[object]:
     """Return an array/list of items in _sequence_ selected by _key_."""
     try:
-        return [_getitem(itm, str(key), default=None) for itm in sequence]
+        return [_getitem(itm, str(key), default=_NULL) for itm in sequence]
     except TypeError as err:
         raise FilterError("can't map sequence") from err
 
 
-@array_filter
+@sequence_filter
 def reverse(array: ArrayT) -> List[object]:
     """Reverses the order of the items in an array."""
     return list(reversed(array))
 
 
-@array_filter
+@sequence_filter
 def sort(sequence: ArrayT, key: object = None) -> List[object]:
     """Return a copy of _sequence_ in ascending order.
 
@@ -162,7 +175,7 @@ def sort(sequence: ArrayT, key: object = None) -> List[object]:
         raise FilterError("can't sort sequence") from err
 
 
-@array_filter
+@sequence_filter
 def sort_natural(sequence: ArrayT, key: object = None) -> List[object]:
     """Return a copy of _sequence_ in ascending order, with case-insensitive comparison.
 

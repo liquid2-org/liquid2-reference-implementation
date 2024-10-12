@@ -42,6 +42,7 @@ def migrate_one(old: Case) -> NewCase:
             name=old.description,
             template=old.template,
             templates=old.partials,
+            data=old.globals,
             invalid=old.error,
         )
     return NewCase(
@@ -64,6 +65,7 @@ def asdict(case: NewCase) -> dict[str, Any]:
         d = {
             "name": case.name,
             "template": case.template,
+            "data": case.data,
             "invalid": case.invalid,
         }
     else:

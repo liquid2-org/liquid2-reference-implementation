@@ -15,6 +15,7 @@
     {
       "name": "unexpected argument",
       "template": "{{ \"HELLO\" | downcase: 5 }}",
+      "data": {},
       "invalid": true
     },
     {

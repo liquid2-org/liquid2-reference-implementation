@@ -21,11 +21,13 @@
     {
       "name": "missing argument",
       "template": "{{ \"hello\" | remove_first }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | remove_first: \"how\", \"are\", \"you\" }}",
+      "data": {},
       "invalid": true
     },
     {

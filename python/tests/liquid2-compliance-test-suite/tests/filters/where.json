@@ -57,16 +57,45 @@
     {
       "name": "left value is not an array",
       "template": "{{ a | where: 'title' }}",
+      "data": {
+        "a": 123
+      },
       "invalid": true
     },
     {
       "name": "missing argument",
       "template": "{{ a | where }}",
+      "data": {
+        "a": [
+          {
+            "title": "foo"
+          },
+          {
+            "title": "bar"
+          },
+          {
+            "title": null
+          }
+        ]
+      },
       "invalid": true
     },
     {
       "name": "too many arguments",
       "template": "{{ a | where: 'title', 'foo', 'bar' }}",
+      "data": {
+        "a": [
+          {
+            "title": "foo"
+          },
+          {
+            "title": "bar"
+          },
+          {
+            "title": null
+          }
+        ]
+      },
       "invalid": true
     },
     {

@@ -45,11 +45,13 @@
     {
       "name": "arg string not a number",
       "template": "{{ \"10\" | divided_by: \"foo\" }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many args",
       "template": "{{ 5 | divided_by: 1, '5' }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -69,11 +71,13 @@
     {
       "name": "undefined argument",
       "template": "{{ 10 | divided_by: nosuchthing }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "divied by zero",
       "template": "{{ 10 | divided_by: 0 }}",
+      "data": {},
       "invalid": true
     },
     {

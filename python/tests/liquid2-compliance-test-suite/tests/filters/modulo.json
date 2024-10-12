@@ -33,11 +33,13 @@
     {
       "name": "arg string not a number",
       "template": "{{ \"10\" | modulo: \"foo\" }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many args",
       "template": "{{ 5 | modulo: 1, '5' }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -57,6 +59,7 @@
     {
       "name": "undefined argument",
       "template": "{{ 5 | modulo: nosuchthing }}",
+      "data": {},
       "invalid": true
     }
   ]

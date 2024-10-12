@@ -21,11 +21,13 @@
     {
       "name": "missing argument",
       "template": "{{ \"hello\" | append }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | append: \"how\", \"are\", \"you\" }}",
+      "data": {},
       "invalid": true
     },
     {

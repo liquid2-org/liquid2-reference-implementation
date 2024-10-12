@@ -21,16 +21,19 @@
     {
       "name": "missing argument",
       "template": "{{ \"hello\" | replace_last: \"ll\" }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "missing arguments",
       "template": "{{ \"hello\" | replace_last }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many arguments",
       "template": "{{ \"hello\" | replace_last: \"how\", \"are\", \"you\" }}",
+      "data": {},
       "invalid": true
     },
     {

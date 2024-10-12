@@ -94,6 +94,12 @@
     {
       "name": "too many arguments",
       "template": "{{ arr | join: '#', 42 }}",
+      "data": {
+        "arr": [
+          "a",
+          "b"
+        ]
+      },
       "invalid": true
     }
   ]

@@ -47,7 +47,6 @@
         {
           "required": ["invalid"],
           "properties": {
-            "data": false,
             "result": false
           }
         }

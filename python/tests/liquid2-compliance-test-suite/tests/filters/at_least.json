@@ -45,11 +45,13 @@
     {
       "name": "missing arg",
       "template": "{{ 5 | at_least }}",
+      "data": {},
       "invalid": true
     },
     {
       "name": "too many args",
       "template": "{{ 5 | at_least: 1, 2}}",
+      "data": {},
       "invalid": true
     },
     {

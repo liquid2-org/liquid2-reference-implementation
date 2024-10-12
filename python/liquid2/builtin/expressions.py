@@ -64,7 +64,7 @@ class Empty(Expression):
         return isinstance(other, (list, dict, str)) and not other
 
     def __str__(self) -> str:  # pragma: no cover
-        return "empty"
+        return ""
 
     def __hash__(self) -> int:
         return hash(self.__class__)
@@ -74,6 +74,11 @@ class Empty(Expression):
 
     def children(self) -> list[Expression]:
         return []
+
+
+def is_empty(obj: object) -> bool:
+    """Return True if _obj_ is considered empty."""
+    return isinstance(obj, (list, dict, str)) and not obj
 
 
 class Blank(Expression):
@@ -87,7 +92,7 @@ class Blank(Expression):
         return isinstance(other, Blank)
 
     def __str__(self) -> str:  # pragma: no cover
-        return "blank"
+        return ""
 
     def __hash__(self) -> int:
         return hash(self.__class__)
@@ -97,6 +102,13 @@ class Blank(Expression):
 
     def children(self) -> list[Expression]:
         return []
+
+
+def is_blank(obj: object) -> bool:
+    """Return True if _obj_ is considered blank."""
+    if isinstance(obj, str) and (not obj or obj.isspace()):
+        return True
+    return isinstance(obj, (list, dict)) and not obj
 
 
 class Continue(Expression):
@@ -547,7 +559,7 @@ class Filter:
         return [arg.value for arg in self.args]
 
     @staticmethod
-    def parse(
+    def parse(  # noqa: PLR0912
         stream: TokenStream,
         *,
         delim: tuple[Type[Token.Pipe] | Type[Token.DoublePipe], ...],
@@ -599,6 +611,16 @@ class Filter:
                             filter_arguments.append(
                                 PositionalArgument(parse_primitive(stream.current()))
                             )
+                        case Token.False_():
+                            filter_arguments.append(
+                                PositionalArgument(FalseLiteral(token))
+                            )
+                        case Token.True_():
+                            filter_arguments.append(
+                                PositionalArgument(TrueLiteral(token))
+                            )
+                        case Token.Null():
+                            filter_arguments.append(PositionalArgument(Null(token)))
                         case Token.Comma():
                             # XXX: leading, trailing and duplicate commas are OK
                             pass

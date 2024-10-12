@@ -9,6 +9,7 @@
     {
       "name": "too many arguments",
       "template": "{{ 'March 14, 2016' | date: '%b %d, %y', 'foo' }}",
+      "data": {},
       "invalid": true
     },
     {
@@ -20,6 +21,7 @@
     {
       "name": "missing argument",
       "template": "{{ 'March 14, 2016' | date }}",
+      "data": {},
       "invalid": true
     },
     {
