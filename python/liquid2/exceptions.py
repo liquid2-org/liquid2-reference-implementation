@@ -94,26 +94,6 @@ class NoSuchFilterFunc(LiquidError):  # noqa: N818
     """Exception raised when a filter lookup fails."""
 
 
-class FilterError(LiquidError):
-    """Exception raised when a filter fails."""
-
-    def __init__(
-        self,
-        *args: object,
-        filename: str | Path | None = None,
-        source: str | None = None,
-    ):
-        super().__init__(*args, token=None, filename=filename, source=source)
-
-
-class FilterArgumentError(FilterError):
-    """Exception raised when a filter's arguments are invalid."""
-
-
-class FilterValueError(FilterError):
-    """Exception raised when a filters value is invalid."""
-
-
 class TemplateNotFound(LiquidError):  # noqa: N818
     """Exception raised when a template could not be found."""
 
@@ -153,13 +133,7 @@ class LocalNamespaceLimitError(ResourceLimitError):
     """Exception raised when a local namespace limit has been exceeded."""
 
 
-# LiquidValueError inheriting from LiquidSyntaxError does not make complete sense.
-# The alternative is to have multiple to_int functions that raise more appropriate
-# exceptions depending on whether we are parsing or rendering when attempting to
-# convert long strings to integers.
-
-
-class LiquidValueError(LiquidSyntaxError):
+class LiquidValueError(LiquidError):
     """Exception raised when a cast from str to int exceeds the length limit."""
 
 
@@ -177,22 +151,6 @@ class ContinueLoop(LiquidInterrupt):
 
 class TemplateTraversalError(LiquidError):
     """Exception raised when an AST node or expression can not be visited."""
-
-
-class LiquidWarning(UserWarning):
-    """Base warning."""
-
-
-class LiquidSyntaxWarning(LiquidWarning):
-    """Replaces LiquidSyntaxError when in WARN mode."""
-
-
-class LiquidTypeWarning(LiquidWarning):
-    """Replaces LiquidTypeError when in WARN mode."""
-
-
-class FilterWarning(LiquidWarning):
-    """Replaces filter exceptions when in WARN mode."""
 
 
 class CacheCapacityValueError(ValueError):

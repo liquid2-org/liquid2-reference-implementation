@@ -11,6 +11,7 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Mapping
+from typing import TypeGuard
 
 from .exceptions import UndefinedError
 
@@ -75,6 +76,10 @@ class Undefined(Mapping[Any, object]):
 
     def __liquid__(self) -> bool:
         return False
+
+    def poke(self) -> bool:
+        """Prod the type, giving it the opertunity to raise an exception."""
+        return True
 
 
 class DebugUndefined(Undefined):
@@ -181,6 +186,6 @@ class StrictDefaultUndefined(StrictUndefined):
     )
 
 
-def is_undefined(obj: object) -> bool:
+def is_undefined(obj: object) -> TypeGuard[Undefined]:
     """Return `True` if `obj` is undefined. `False` otherwise."""
     return isinstance(obj, Undefined)

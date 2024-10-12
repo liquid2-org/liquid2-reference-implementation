@@ -10,26 +10,20 @@ from operator import getitem
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import List
 from typing import Sequence
-from typing import Tuple
-from typing import Union
 
 from markupsafe import Markup
 
 from liquid2.builtin import Null
-from liquid2.exceptions import FilterArgumentError
-from liquid2.exceptions import FilterError
+from liquid2.exceptions import LiquidTypeError
 from liquid2.filter import decimal_arg
-from liquid2.filter import liquid_filter
 from liquid2.filter import sequence_filter
 from liquid2.filter import with_environment
+from liquid2.stringify import to_liquid_string
 from liquid2.undefined import is_undefined
 
 if TYPE_CHECKING:
     from ...environment import Environment  # noqa: TID252
-
-# TODO: Better. This was copied from python-liquid.
 
 
 class _Null:
@@ -44,20 +38,11 @@ class _Null:
 
 _NULL = _Null()
 
-ArrayT = Union[List[Any], Tuple[Any, ...]]
-"""Array-like objects."""
-
 # Send objects with missing keys to the end when sorting a list.
 MAX_CH = chr(0x10FFFF)
 
 # Unique object for use with the uniq filter.
 MISSING = object()
-
-
-def _str_if_not(val: object) -> str:
-    if not isinstance(val, str):
-        return str(val)
-    return val
 
 
 def _getitem(sequence: Any, key: object, default: object = None) -> Any:
@@ -99,10 +84,9 @@ def join(
     if environment.auto_escape and separator == " ":
         separator = Markup(" ")
 
-    return separator.join(_str_if_not(item) for item in sequence)
+    return separator.join(to_liquid_string(item) for item in sequence)
 
 
-@liquid_filter
 def first(obj: Any) -> object:
     """Return the first item of collection _obj_."""
     if isinstance(obj, str):
@@ -117,7 +101,6 @@ def first(obj: Any) -> object:
         return None
 
 
-@liquid_filter
 def last(obj: Sequence[Any]) -> object:
     """Return the last item of array-like object _obj_."""
     if isinstance(obj, str):
@@ -130,36 +113,37 @@ def last(obj: Sequence[Any]) -> object:
 
 
 @sequence_filter
-def concat(sequence: ArrayT, second_array: ArrayT) -> ArrayT:
+def concat(sequence: Sequence[object], other: Sequence[object]) -> list[object]:
     """Return the concatenation of _sequence_ and _second_array_."""
-    if not isinstance(second_array, (list, tuple)):
-        raise FilterArgumentError(
-            f"concat expected an array, found {type(second_array).__name__}"
+    if not isinstance(other, (list, tuple)):
+        raise LiquidTypeError(
+            f"concat expected an array, found {type(other).__name__}",
+            token=None,
         )
 
     if is_undefined(sequence):
-        return second_array
+        return list(other)
 
-    return list(chain(sequence, second_array))
+    return list(chain(sequence, other))
 
 
 @sequence_filter
-def map_(sequence: ArrayT, key: object) -> List[object]:
+def map_(sequence: Sequence[object], key: object) -> list[object]:
     """Return an array/list of items in _sequence_ selected by _key_."""
     try:
         return [_getitem(itm, str(key), default=_NULL) for itm in sequence]
     except TypeError as err:
-        raise FilterError("can't map sequence") from err
+        raise LiquidTypeError("can't map sequence", token=None) from err
 
 
 @sequence_filter
-def reverse(array: ArrayT) -> List[object]:
+def reverse(array: Sequence[object]) -> list[object]:
     """Reverses the order of the items in an array."""
     return list(reversed(array))
 
 
 @sequence_filter
-def sort(sequence: ArrayT, key: object = None) -> List[object]:
+def sort(sequence: Sequence[Any], key: object = None) -> list[object]:
     """Return a copy of _sequence_ in ascending order.
 
     When a key string is provided, objects without the key property will
@@ -172,11 +156,11 @@ def sort(sequence: ArrayT, key: object = None) -> List[object]:
     try:
         return sorted(sequence)
     except TypeError as err:
-        raise FilterError("can't sort sequence") from err
+        raise LiquidTypeError("can't sort sequence", token=None) from err
 
 
 @sequence_filter
-def sort_natural(sequence: ArrayT, key: object = None) -> List[object]:
+def sort_natural(sequence: Sequence[object], key: object = None) -> list[object]:
     """Return a copy of _sequence_ in ascending order, with case-insensitive comparison.
 
     When a key string is provided, objects without the key property will
@@ -190,7 +174,9 @@ def sort_natural(sequence: ArrayT, key: object = None) -> List[object]:
 
 
 @sequence_filter
-def where(sequence: ArrayT, attr: object, value: object = None) -> List[object]:
+def where(
+    sequence: Sequence[object], attr: object, value: object = None
+) -> list[object]:
     """Return a list of items from _sequence_ where _attr_ equals _value_."""
     if value is not None and not is_undefined(value):
         return [itm for itm in sequence if _getitem(itm, attr) == value]
@@ -199,7 +185,7 @@ def where(sequence: ArrayT, attr: object, value: object = None) -> List[object]:
 
 
 @sequence_filter
-def uniq(sequence: ArrayT, key: object = None) -> List[object]:
+def uniq(sequence: Sequence[Any], key: object = None) -> list[object]:
     """Return a copy of _sequence_ with duplicate elements removed."""
     # Note that we're not using a dict or set for deduplication because we need
     # to handle sequences containing unhashable objects, like dictionaries.
@@ -214,8 +200,9 @@ def uniq(sequence: ArrayT, key: object = None) -> List[object]:
             except KeyError:
                 item = MISSING
             except TypeError as err:
-                raise FilterArgumentError(
-                    f"can't read property '{key}' of {obj}"
+                raise LiquidTypeError(
+                    f"can't read property '{key}' of {obj}",
+                    token=None,
                 ) from err
 
             if item not in keys:
@@ -228,18 +215,18 @@ def uniq(sequence: ArrayT, key: object = None) -> List[object]:
 
 
 @sequence_filter
-def compact(sequence: ArrayT, key: object = None) -> List[object]:
+def compact(sequence: Sequence[Any], key: object = None) -> list[object]:
     """Return a copy of _sequence_ with any NULL values removed."""
     if key is not None:
         try:
             return [itm for itm in sequence if itm[key] is not None]
         except TypeError as err:
-            raise FilterArgumentError(f"can't read property '{key}'") from err
+            raise LiquidTypeError(f"can't read property '{key}'", token=None) from err
     return [itm for itm in sequence if itm is not None]
 
 
 @sequence_filter
-def sum_(sequence: ArrayT, key: object = None) -> Union[float, int, Decimal]:
+def sum_(sequence: Sequence[object], key: object = None) -> float | int | Decimal:
     """Return the sum of all numeric elements in _sequence_.
 
     If _key_ is given, it is assumed that sequence items are mapping-like,

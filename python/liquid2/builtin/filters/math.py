@@ -3,15 +3,10 @@
 import decimal
 import math
 
-from liquid2.exceptions import FilterArgumentError
+from liquid2.exceptions import LiquidTypeError
 from liquid2.filter import math_filter
 from liquid2.filter import num_arg
 from liquid2.undefined import is_undefined
-
-# TODO: Version 2 - Either handle all filter function argument type
-# conversions in a decorator or all in the function itself. Having these type
-# conversions split between decorators and calls to helper functions does not
-# help with readability, or make it easy to write good doc strings.
 
 
 @math_filter
@@ -23,15 +18,13 @@ def abs_(left: float | int) -> float | int:
 @math_filter
 def at_most(left: float | int, arg: float | int) -> float | int:
     """Return _val_ or _other_, whichever is smaller."""
-    arg = num_arg(arg, default=0)
-    return min(left, arg)
+    return min(left, num_arg(arg, default=0))
 
 
 @math_filter
 def at_least(left: float | int, arg: float | int) -> float | int:
     """Return _val_ or _other_, whichever is greater."""
-    arg = num_arg(arg, default=0)
-    return max(left, arg)
+    return max(left, num_arg(arg, default=0))
 
 
 @math_filter
@@ -53,9 +46,7 @@ def divided_by(left: float | int, right: object) -> float | int:
             return left // right
         return left / right
     except ZeroDivisionError as err:
-        # TODO: [VERSION_2] move inclusion of filter name in error messages to
-        # FilteredExpression, where the filter is applied.
-        raise FilterArgumentError(f"divided_by: can't divide by {right}") from err
+        raise LiquidTypeError(f"can't divide by {right}", token=None) from err
 
 
 @math_filter
@@ -92,7 +83,7 @@ def round_(left: float | int, digits: int | None = None) -> float | int:
 
     try:
         _digits = num_arg(digits)
-    except FilterArgumentError:
+    except LiquidTypeError:
         # Probably a string that can't be cast to an int or float
         return round(left)
 
@@ -127,6 +118,7 @@ def modulo(left: float | int, right: float | int) -> float | int:
             return left % right
         return float(decimal.Decimal(str(left)) % decimal.Decimal(str(right)))
     except ZeroDivisionError as err:
-        # TODO: [VERSION_2] move inclusion of filter name in error messages to
-        # FilteredExpression, where the filter is applied.
-        raise FilterArgumentError(f"modulo: can't divide by {right}") from err
+        raise LiquidTypeError(
+            f"can't divide by {right}",
+            token=None,
+        ) from err

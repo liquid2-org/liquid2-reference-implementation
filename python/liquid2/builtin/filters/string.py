@@ -7,16 +7,16 @@ import re
 import urllib.parse
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from markupsafe import Markup
 from markupsafe import escape as markupsafe_escape
-from markupsafe import soft_str
 
-from liquid2.exceptions import FilterArgumentError
-from liquid2.filter import liquid_filter
+from liquid2.exceptions import LiquidTypeError
 from liquid2.filter import string_filter
 from liquid2.filter import with_environment
 from liquid2.limits import to_int
+from liquid2.stringify import to_liquid_string
 from liquid2.undefined import is_undefined
 from liquid2.utils.html import strip_tags
 from liquid2.utils.text import truncate_chars
@@ -85,8 +85,6 @@ RE_LINETERM = re.compile(r"\r?\n")
 @string_filter
 def newline_to_br(val: str, *, environment: Environment) -> str:
     """Return a copy of _val_ with LF or CRLF converted to `<br />`, plus a newline."""
-    # The reference implementation was changed to replace "\r\n" as well as "\n",
-    # but they don't seem to care about "\r" (Mac OS).
     if environment.auto_escape:
         val = markupsafe_escape(val)
         return Markup(RE_LINETERM.sub("<br />\n", val))
@@ -96,26 +94,26 @@ def newline_to_br(val: str, *, environment: Environment) -> str:
 @string_filter
 def prepend(val: str, arg: str) -> str:
     """Return a copy of _arg_ concatenated with _val_."""
-    return soft_str(arg) + val
+    return to_liquid_string(arg) + val
 
 
 @string_filter
 def remove(val: str, arg: str) -> str:
     """Return a copy of _val_ with all occurrences of _arg_ removed."""
-    return val.replace(soft_str(arg), "")
+    return val.replace(to_liquid_string(arg), "")
 
 
 @string_filter
 def remove_first(val: str, arg: str) -> str:
     """Return a copy of _val_ with the first occurrence of _arg_ removed."""
-    return val.replace(soft_str(arg), "", 1)
+    return val.replace(to_liquid_string(arg), "", 1)
 
 
 @string_filter
 def remove_last(val: str, arg: str) -> str:
     """Return a copy of _val_ with last occurrence of _arg_ removed."""
     try:
-        before, _, after = val.rpartition(soft_str(arg))
+        before, _, after = val.rpartition(to_liquid_string(arg))
     except ValueError:
         # empty separator
         return val
@@ -127,25 +125,25 @@ def remove_last(val: str, arg: str) -> str:
 @string_filter
 def replace(val: str, seq: str, sub: str = "") -> str:
     """Return a copy of _val_ with each occurrence of _seq_ replaced with _sub_."""
-    return val.replace(soft_str(seq), soft_str(sub))
+    return val.replace(to_liquid_string(seq), to_liquid_string(sub))
 
 
 @string_filter
 def replace_first(val: str, seq: str, sub: str = "") -> str:
     """Return a copy of _val_ with the first occurrence of _seq_ replaced with _sub_."""
-    return val.replace(soft_str(seq), soft_str(sub), 1)
+    return val.replace(to_liquid_string(seq), to_liquid_string(sub), 1)
 
 
 @string_filter
 def replace_last(val: str, seq: str, sub: str) -> str:
     """Return a copy of _val_ with the last occurrence of _seq_ replaced with _sub_."""
     try:
-        before, _, after = val.rpartition(soft_str(seq))
+        before, _, after = val.rpartition(to_liquid_string(seq))
     except ValueError:
         # empty separator
-        return val + soft_str(sub)
+        return val + to_liquid_string(sub)
     if before:
-        return before + soft_str(sub) + after
+        return before + to_liquid_string(sub) + after
     return val
 
 
@@ -160,35 +158,38 @@ MIN_SLICE_ARG = -(1 << 63)
 
 
 def _slice_arg(val: Any) -> int:
-    # The reference implementation does not cast floats to int.
     if isinstance(val, float):
-        raise FilterArgumentError(
-            f"slice expected an integer start, found {type(val).__name__}"
+        raise LiquidTypeError(
+            f"slice expected an integer, found {type(val).__name__}",
+            token=None,
         )
 
     try:
         rv = to_int(val)
     except (ValueError, TypeError) as err:
-        raise FilterArgumentError(
-            f"slice expected an integer start, found {type(val).__name__}"
+        raise LiquidTypeError(
+            f"slice expected an integer, found {type(val).__name__}",
+            token=None,
         ) from err
 
     rv = min(rv, MAX_SLICE_ARG)
     return max(rv, MIN_SLICE_ARG)
 
 
-@liquid_filter
 def slice_(val: Any, start: Any, length: Any = 1) -> str | list[object]:
     """Return the subsequence of _val_ starting at _start_ with up to _length_ chars.
 
     Array-like objects return a list, strings return a substring, all other objects are
     cast to a string before returning a substring.
     """
-    if not isinstance(val, (list, tuple, range, str)):
+    if not isinstance(val, Sequence):
         val = str(val)
 
     if is_undefined(start):
-        raise FilterArgumentError("slice expected an integer, found Undefined")
+        raise LiquidTypeError(
+            "slice expected an integer, found Undefined",
+            token=None,
+        )
 
     if is_undefined(length):
         length = 1
@@ -217,7 +218,7 @@ def split(val: str, sep: str) -> list[str]:
     if not sep:
         return list(val)
 
-    sep = soft_str(sep)
+    sep = to_liquid_string(sep)
     if not val or val == sep:
         return []
 
@@ -260,20 +261,23 @@ def strip_newlines(val: str, *, environment: Environment) -> str:
 def truncate(val: str, num: Any = 50, end: str = "...") -> str:
     """Return a copy of _val_ truncated to _num_ characters."""
     if is_undefined(num):
-        raise FilterArgumentError("truncate expected an integer, found Undefined")
+        raise LiquidTypeError(
+            "truncate expected an integer, found Undefined", token=None
+        )
 
     try:
         num = to_int(num)
     except ValueError as err:
-        raise FilterArgumentError(
-            f"truncate expected an integer, found {type(num).__name__}"
+        raise LiquidTypeError(
+            f"truncate expected an integer, found {type(num).__name__}",
+            token=None,
         ) from err
 
     end = str(end)
     return truncate_chars(val, num, end)
 
 
-# Mimic reference implementation's limit to the number of words that can be truncated.
+# Limit to the number of words that can be truncated.
 MAX_TRUNC_WORDS = (1 << 31) - 1
 
 
@@ -281,25 +285,27 @@ MAX_TRUNC_WORDS = (1 << 31) - 1
 def truncatewords(val: str, num: Any = 15, end: str = "...") -> str:
     """Return a copy of _val_ truncated to at most _num_ words."""
     if is_undefined(num):
-        raise FilterArgumentError("truncate expected an integer, found Undefined")
+        raise LiquidTypeError(
+            "truncate expected an integer, found Undefined", token=None
+        )
 
     try:
         num = to_int(num)
     except ValueError as err:
-        raise FilterArgumentError(
-            f"truncate expected an integer, found {type(num).__name__}"
+        raise LiquidTypeError(
+            f"truncate expected an integer, found {type(num).__name__}",
+            token=None,
         ) from err
 
     end = str(end)
 
-    # The reference implementation seems to force a minimum `num` of 1.
+    # Force a minimum `num` of 1.
     if num <= 0:
         num = 1
 
     # Replaces consecutive whitespace with a single newline.
     words = val.split()
 
-    # This too mimics the reference implementation's big integer work around.
     if num >= MAX_TRUNC_WORDS:
         return val
 
@@ -323,3 +329,12 @@ def url_decode(val: str) -> str:
     """Return a copy of _val_ after decoding percent-encoded sequences."""
     # Assuming URL decoded strings are all unsafe.
     return urllib.parse.unquote_plus(val)
+
+
+@with_environment
+@string_filter
+def safe(val: str, *, environment: Environment) -> str:
+    """Return a copy of _val_ that will not be automatically HTML escaped on output."""
+    if environment.auto_escape:
+        return Markup(val)
+    return val

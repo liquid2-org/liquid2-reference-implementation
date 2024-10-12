@@ -1,6 +1,7 @@
 # noqa: D104
 from typing import TYPE_CHECKING
 
+from _liquid2 import dummy_token
 from _liquid2 import Markup
 from _liquid2 import Token
 from _liquid2 import Whitespace
@@ -32,3 +33,5 @@ if TYPE_CHECKING:
     from _liquid2 import TokenT  # noqa: F401
 
     __all__.append("TokenT")
+
+DUMMY_TOKEN = dummy_token()

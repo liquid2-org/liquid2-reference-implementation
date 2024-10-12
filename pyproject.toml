@@ -133,3 +133,4 @@ convention = "google"
 "python/tests/test_jsonpath_compliance.py" = ["D103"]
 "python/tests/test_static_analysis.py" = ["D103"]
 "python/tests/test_auto_escape.py" = ["D101", "D103"]
+"python/tests/test_filter.py" = ["D101", "D103"]

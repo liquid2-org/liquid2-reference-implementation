@@ -79,6 +79,7 @@ from .filters.string import replace
 from .filters.string import replace_first
 from .filters.string import replace_last
 from .filters.string import rstrip
+from .filters.string import safe
 from .filters.string import slice_
 from .filters.string import split
 from .filters.string import strip
@@ -185,6 +186,7 @@ __all__ = (
     "size",
     "is_blank",
     "is_empty",
+    "safe",
 )
 
 
@@ -233,6 +235,7 @@ def register_standard_tags_and_filters(env: Environment) -> None:  # noqa: PLR09
     env.filters["replace"] = replace
     env.filters["replace_first"] = replace_first
     env.filters["replace_last"] = replace_last
+    env.filters["safe"] = safe
     env.filters["slice"] = slice_
     env.filters["split"] = split
     env.filters["upcase"] = upcase

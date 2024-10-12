@@ -12,8 +12,7 @@ from dateutil import parser
 from markupsafe import Markup
 
 from liquid2.builtin import is_empty
-from liquid2.exceptions import FilterArgumentError
-from liquid2.filter import liquid_filter
+from liquid2.exceptions import LiquidTypeError
 from liquid2.filter import with_environment
 from liquid2.undefined import is_undefined
 
@@ -21,7 +20,6 @@ if TYPE_CHECKING:
     from liquid2 import Environment
 
 
-@liquid_filter
 def size(obj: Any) -> int:
     """Return the length of _obj_.
 
@@ -33,7 +31,6 @@ def size(obj: Any) -> int:
         return 0
 
 
-@liquid_filter
 def default(obj: Any, default_: object = "", *, allow_false: bool = False) -> Any:
     """Return _obj_, or _default_ if _obj_ is nil, false, or empty."""
     _obj = obj
@@ -60,7 +57,6 @@ def default(obj: Any, default_: object = "", *, allow_false: bool = False) -> An
 
 
 @with_environment
-@liquid_filter
 @functools.lru_cache(maxsize=10)
 def date(  # noqa: PLR0912 PLR0911
     dat: datetime.datetime | str | int,
@@ -79,15 +75,12 @@ def date(  # noqa: PLR0912 PLR0911
         if dat in ("now", "today"):
             dat = datetime.datetime.now()
         elif dat.isdigit():
-            # The reference implementation does not support string
-            # representations of negative integers either.
             dat = datetime.datetime.fromtimestamp(int(dat))
         else:
             try:
                 dat = parser.parse(dat)
             except parser.ParserError:
-                # Input is returned unchanged. This is consistent
-                # with the reference implementation.
+                # Input is returned unchanged.
                 return str(dat)
     elif isinstance(dat, int):
         try:
@@ -98,8 +91,9 @@ def date(  # noqa: PLR0912 PLR0911
             return str(dat)
 
     if not isinstance(dat, (datetime.datetime, datetime.date)):
-        raise FilterArgumentError(
-            f"date expected datetime.datetime, found {type(dat).__name__}"
+        raise LiquidTypeError(
+            f"date expected datetime.datetime, found {type(dat).__name__}",
+            token=None,
         )
 
     try:
@@ -111,7 +105,7 @@ def date(  # noqa: PLR0912 PLR0911
         # Handle "%s" as a special case.
         if fmt == r"%s":
             return str(dat.timestamp()).split(".")[0]
-        raise FilterArgumentError(str(err)) from err
+        raise LiquidTypeError(str(err), token=None) from err
 
     if environment.auto_escape and isinstance(fmt, Markup):
         return Markup(rv)

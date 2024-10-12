@@ -7,10 +7,10 @@
       "result": "1#2#3"
     },
     {
-      "name": "joining a string is a noop",
+      "name": "string",
       "template": "{{ 'a,b' | join: '#' }}",
       "data": {},
-      "result": "a,b"
+      "result": "a#,#b"
     },
     {
       "name": "joining an int is a noop",
@@ -22,10 +22,7 @@
       "name": "join an array of strings",
       "template": "{{ arr | join: '#' }}",
       "data": {
-        "arr": [
-          "a",
-          "b"
-        ]
+        "arr": ["a", "b"]
       },
       "result": "a#b"
     },
@@ -33,10 +30,7 @@
       "name": "join an array of integers",
       "template": "{{ arr | join: '#' }}",
       "data": {
-        "arr": [
-          1,
-          2
-        ]
+        "arr": [1, 2]
       },
       "result": "1#2"
     },
@@ -44,10 +38,7 @@
       "name": "missing argument defaults to a space",
       "template": "{{ arr | join }}",
       "data": {
-        "arr": [
-          "a",
-          "b"
-        ]
+        "arr": ["a", "b"]
       },
       "result": "a b"
     },
@@ -55,10 +46,7 @@
       "name": "argument is not a string",
       "template": "{{ arr | join: 5 }}",
       "data": {
-        "arr": [
-          "a",
-          "b"
-        ]
+        "arr": ["a", "b"]
       },
       "result": "a5b"
     },
@@ -66,11 +54,7 @@
       "name": "left value contains non string",
       "template": "{{ arr | join: '#' }}",
       "data": {
-        "arr": [
-          "a",
-          "b",
-          1
-        ]
+        "arr": ["a", "b", 1]
       },
       "result": "a#b#1"
     },
@@ -84,10 +68,7 @@
       "name": "undefined argument",
       "template": "{{ arr | join: nosuchthing }}",
       "data": {
-        "arr": [
-          "a",
-          "b"
-        ]
+        "arr": ["a", "b"]
       },
       "result": "ab"
     },
@@ -95,10 +76,7 @@
       "name": "too many arguments",
       "template": "{{ arr | join: '#', 42 }}",
       "data": {
-        "arr": [
-          "a",
-          "b"
-        ]
+        "arr": ["a", "b"]
       },
       "invalid": true
     }

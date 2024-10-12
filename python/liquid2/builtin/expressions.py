@@ -516,7 +516,13 @@ class Filter:
     def evaluate(self, left: object, context: RenderContext) -> object:
         func = context.filter(self.name, token=self.token)
         positional_args, keyword_args = self.evaluate_args(context)
-        return func(left, *positional_args, **keyword_args)
+        try:
+            return func(left, *positional_args, **keyword_args)
+        except TypeError as err:
+            raise LiquidTypeError(f"{self.name}: {err}", token=self.token) from err
+        except LiquidTypeError as err:
+            err.token = self.token
+            raise err
 
     async def evaluate_async(self, left: object, context: RenderContext) -> object:
         func = context.filter(self.name, token=self.token)
@@ -525,7 +531,14 @@ class Filter:
         if hasattr(func, "filter_async"):
             # TODO:
             raise NotImplementedError(":(")
-        return func(left, *positional_args, **keyword_args)
+
+        try:
+            return func(left, *positional_args, **keyword_args)
+        except TypeError as err:
+            raise LiquidTypeError(f"{self.name}: {err}", token=self.token) from err
+        except LiquidTypeError as err:
+            err.token = self.token
+            raise err
 
     def evaluate_args(
         self, context: RenderContext

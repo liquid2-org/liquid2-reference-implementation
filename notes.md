@@ -38,13 +38,11 @@ TODO: if argument is a drop
 
    a. and the argument is a primitive value, the argument value is converted to its string representation.
 
-   b. and the argument is a singular query, the query result value is converted to its string representation.
-
-   c. and the argument is a non-singular query, it is an error condition.
+   b. and the argument is a drop, ...
 
 2. If a number is expected,
 
-   a. and the argument is a string, the argument is converted to its equivalent int or float.
+   a. and the argument is a string, the argument is converted to its equivalent int or float... or an error if the string can't be cast to a number
 
    b. otherwise it is an error condition
 
@@ -56,15 +54,13 @@ TODO: if argument is a drop
 
 4. If an array is expected
 
-   TODO: flatten arrays
+   a. an the argument is an array with nested arrays, the argument is flattened into an array of primitive values.
 
-   a. and the argument is a string, the string is converted to an array of unicode "characters".
+   b. and the argument is a string, the string is converted to an array of unicode "characters".
 
-   b. and the argument is a mapping, the mapping is converted to an array of key/value pairs.
+   c. and the argument is undefined, the argument is converted to an empty array
 
-   TODO: undefined is an empty array?
-
-   c. otherwise the argument is converted to a single element array with the argument value as the only element.
+   d. otherwise the argument is converted to a single element array with the argument value as the only element.
 
 5. If a range is expected
 

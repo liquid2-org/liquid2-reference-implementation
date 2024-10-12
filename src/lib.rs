@@ -39,6 +39,11 @@ fn unescape_string(s: &str) -> Result<String, LiquidError> {
     unescape::unescape(s, &(0, 0))
 }
 
+#[pyfunction]
+fn dummy_token() -> Markup {
+    Markup::EOI {}
+}
+
 #[pymodule]
 fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add(
@@ -67,6 +72,7 @@ fn _liquid2(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_jsonpath_query, m)?)?;
     m.add_function(wrap_pyfunction!(unescape_string, m)?)?;
     m.add_function(wrap_pyfunction!(dump_query, m)?)?;
+    m.add_function(wrap_pyfunction!(dummy_token, m)?)?;
     m.add_class::<query::Segment>()?;
     m.add_class::<query::Selector>()?;
     m.add_class::<query::ComparisonOperator>()?;
