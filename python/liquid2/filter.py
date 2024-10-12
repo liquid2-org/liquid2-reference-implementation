@@ -4,23 +4,18 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import wraps
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Iterator
 
+from markupsafe import soft_str
+
 from .exceptions import FilterArgumentError
-from .exceptions import FilterValueError
 from .limits import to_int
-from .undefined import Undefined
-
-if TYPE_CHECKING:
-    FilterT = Callable[..., Any]
-    NumberT = float | int
 
 
-def with_context(_filter: FilterT) -> FilterT:
+def with_context(_filter: Callable[..., Any]) -> Callable[..., Any]:
     """Pass the active render context to decorated filter functions.
 
     If a function is decorated with `with_context`, that function should
@@ -33,7 +28,7 @@ def with_context(_filter: FilterT) -> FilterT:
     return _filter
 
 
-def with_environment(_filter: FilterT) -> FilterT:
+def with_environment(_filter: Callable[..., Any]) -> Callable[..., Any]:
     """Pass the active environment to decorated filter functions.
 
     If a function is decorated with `with_environment`, that function should
@@ -46,22 +41,28 @@ def with_environment(_filter: FilterT) -> FilterT:
     return _filter
 
 
-def string_filter(_filter: FilterT) -> FilterT:
+def to_string(obj: object) -> str:
+    """Return a string representation of _obj_.
+
+    This function is safe to use on markupsafe.Markup.
+    """
+    return soft_str(obj)
+
+
+def string_filter(_filter: Callable[..., Any]) -> Callable[..., Any]:
     """A filter function decorator that converts the first argument to a string."""
 
     @wraps(_filter)
     def wrapper(val: object, *args: Any, **kwargs: Any) -> Any:
-        if not isinstance(val, str):
-            val = str(val)
         try:
-            return _filter(val, *args, **kwargs)
+            return _filter(to_string(val), *args, **kwargs)
         except TypeError as err:
             raise FilterArgumentError(err) from err
 
     return wrapper
 
 
-def sequence_filter(_filter: FilterT) -> FilterT:
+def sequence_filter(_filter: Callable[..., Any]) -> Callable[..., Any]:
     """Coerce the left value to sequence.
 
     This is intended to mimic the semantics of the reference implementation's
@@ -83,7 +84,7 @@ def sequence_filter(_filter: FilterT) -> FilterT:
     return wrapper
 
 
-def liquid_filter(_filter: FilterT) -> FilterT:
+def liquid_filter(_filter: Callable[..., Any]) -> Callable[..., Any]:
     """A filter function decorator that wraps `TypeError` in `FilterArgumentError`."""
 
     @wraps(_filter)
@@ -108,7 +109,9 @@ def int_arg(val: Any, default: int | None = None) -> int:
         ) from err
 
 
-def num_arg(val: Any, default: NumberT | None = None) -> NumberT:
+def num_arg(
+    val: Any, default: float | int | Decimal | None = None
+) -> float | int | Decimal:
     """Return `val` as an int or float.
 
     If `val` can't be cast to an int or float, return `default`.
@@ -172,7 +175,7 @@ def decimal_arg(val: Any, default: int | Decimal | None = None) -> int | Decimal
     )
 
 
-def math_filter(_filter: FilterT) -> FilterT:
+def math_filter(_filter: Callable[..., Any]) -> Callable[..., Any]:
     """Raise a `FilterArgumentError` if the filter value can not be a number."""
 
     @wraps(_filter)

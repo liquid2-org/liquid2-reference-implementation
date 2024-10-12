@@ -36,7 +36,6 @@ if TYPE_CHECKING:
 class Environment:
     """Template parsing and rendering configuration."""
 
-    auto_escape = False
     trim = Whitespace.Plus
 
     # Maximum number of times a context can be extended or wrapped before raising
@@ -63,10 +62,12 @@ class Environment:
         *,
         loader: BaseLoader | None = None,
         global_context_data: Mapping[str, object] | None = None,
+        auto_escape: bool = False,
         undefined: Type[Undefined] = Undefined,
     ) -> None:
         self.loader = loader or DictLoader({})
         self.global_context_data = global_context_data or {}
+        self.auto_escape = auto_escape
         self.undefined = undefined
 
         self.filters: dict[str, Callable[..., object]] = {}
@@ -78,6 +79,7 @@ class Environment:
         # TODO: raise if trim is set to "Default"
         # TODO: limits
         # TODO: template_class
+        # TODO: setup tags and filters
 
     def parse(self, source: str) -> list[Node]:
         """Compile template source text and return an abstract syntax tree."""
